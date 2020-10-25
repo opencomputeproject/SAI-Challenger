@@ -3,7 +3,6 @@ SAI testing infrastructure that is based on SONiC sairedis project
 
 ## To build sai-challenger
 ```sh
-cd scripts
 docker build -t sai-challenger .
 ```
 
