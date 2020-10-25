@@ -8,7 +8,7 @@ docker build -t sai-challenger .
 
 ## To run sai-challenger
 ```sh
-docker run --name sai-challenger-run -d sai-challenger
+docker run --name sai-challenger-run -v $(pwd)/tests:/tests -d sai-challenger
 docker exec -ti sai-challenger-run bash
 ```
 
