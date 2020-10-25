@@ -74,9 +74,9 @@ RUN sed -ri 's/^daemonize yes/daemonize no/' /etc/redis/redis.conf
 # Disable kernel logging support
 RUN sed -ri '/imklog/s/^/#/' /etc/rsyslog.conf
 
-COPY sai.profile /etc/sai.d/sai.profile
-COPY lanemap.ini /usr/share/sonic/hwsku/lanemap.ini
-COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY scripts/sai.profile /etc/sai.d/sai.profile
+COPY scripts/lanemap.ini /usr/share/sonic/hwsku/lanemap.ini
+COPY scripts/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 CMD ["/usr/bin/supervisord"]
 
