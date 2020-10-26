@@ -8,7 +8,7 @@ docker build -t sai-challenger .
 
 ## To run sai-challenger
 ```sh
-docker run --name sai-challenger-run -v $(pwd)/tests:/tests -d sai-challenger
+docker run --name sai-challenger-run -v $(pwd)/tests:/tests --cap-add=NET_ADMIN --device /dev/net/tun:/dev/net/tun -d sai-challenger
 docker exec -ti sai-challenger-run bash
 ```
 
@@ -35,13 +35,27 @@ When Orchagent creates new SAI object, it actually performs two operations on Re
 Where 'op' string consists of two parts: DB operation ("S" - set, "D" - delete) and
 SAI operation ("create", "notify", "set", etc);
 
+Both orchagent and syncd use VIDCOUNTER to generate new VID values.
+
+```sh
+/*
+ * Current VID format:
+ *
+ * bits 63..56 - switch index
+ * bits 55..48 - SAI object type
+ * bits 47..40 - global context
+ * bits 40..0  - object index
+ */
+```
+For more information, please refer to VirtualObjectIdManager::allocateNewObjectId() located in:
+sonic-sairedis/lib/src/VirtualObjectIdManager.cpp
+
+
 ### Example:
 
 #### Create SAI object request
 ```sh
-LPUSH ASIC_STATE_KEY_VALUE_OP_QUEUE "SAI_OBJECT_TYPE_SWITCH:oid:0x21000000000000" \
-    '["SAI_SWITCH_ATTR_INIT_SWITCH","true","SAI_SWITCH_ATTR_SRC_MAC_ADDRESS","52:54:00:EE:BB:70"]' \
-    Screate
+LPUSH ASIC_STATE_KEY_VALUE_OP_QUEUE "SAI_OBJECT_TYPE_SWITCH:oid:0x21000000000000" '["SAI_SWITCH_ATTR_INIT_SWITCH","true","SAI_SWITCH_ATTR_SRC_MAC_ADDRESS","52:54:00:EE:BB:70"]' Screate
 PUBLISH  ASIC_STATE_CHANNEL  G
 ```
 
@@ -60,8 +74,7 @@ redis-cli -n 1 DEL GETRESPONSE_KEY_VALUE_OP_QUEUE
 
 #### Get SAI object's attribute request
 ```sh
-LPUSH ASIC_STATE_KEY_VALUE_OP_QUEUE "SAI_OBJECT_TYPE_SWITCH:oid:0x21000000000000" \
-    '["SAI_SWITCH_ATTR_DEFAULT_VIRTUAL_ROUTER_ID","oid:0x0"]'  Sget
+LPUSH ASIC_STATE_KEY_VALUE_OP_QUEUE "SAI_OBJECT_TYPE_SWITCH:oid:0x21000000000000" '["SAI_SWITCH_ATTR_DEFAULT_VIRTUAL_ROUTER_ID","oid:0x0"]' Sget
 PUBLISH  ASIC_STATE_CHANNEL  G
 ```
 

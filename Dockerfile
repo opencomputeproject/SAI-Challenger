@@ -79,6 +79,7 @@ RUN sed -ri '/imklog/s/^/#/' /etc/rsyslog.conf
 COPY scripts/sai.profile /etc/sai.d/sai.profile
 COPY scripts/lanemap.ini /usr/share/sonic/hwsku/lanemap.ini
 COPY scripts/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY scripts/veth-create.sh /usr/bin/veth-create.sh
 
 CMD ["/usr/bin/supervisord"]
 
