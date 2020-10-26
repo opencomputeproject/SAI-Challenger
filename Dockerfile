@@ -32,6 +32,8 @@ RUN apt-get update && apt-get install -y \
         rsyslog \
         supervisor
 
+RUN python3 -m pip install redis pytest
+
 # Install dependencies
 RUN apt-get install -y redis-server libhiredis0.14
 
