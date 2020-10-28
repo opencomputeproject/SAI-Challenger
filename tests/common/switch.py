@@ -2,6 +2,7 @@ from enum import Enum
 import redis
 import time
 
+
 class Sai:
 
     attempts = 40
@@ -16,7 +17,7 @@ class Sai:
         elif value in self.cache[obj_type.name]:
             return self.cache[obj_type.name][value]
 
-        vid = self.r.incr("VICOUNTER")
+        vid = self.r.incr("VIDCOUNTER")
         oid = hex((obj_type.value << 48) | vid)
         self.cache[obj_type.name][value] = oid
         return oid
