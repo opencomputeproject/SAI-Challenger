@@ -8,11 +8,24 @@ class Sai:
 
     def __init__(self):
         self.r = redis.Redis(db=1)
+        self.cache = {}
 
-    def alloc_vid(self, obj_type):
+    def get_vid(self, obj_type, value):
+        if obj_type.name not in self.cache:
+            self.cache[obj_type.name] = {}
+        elif value in self.cache[obj_type.name]:
+            return self.cache[obj_type.name][value]
+
         vid = self.r.incr("VICOUNTER")
-        return hex((obj_type.value << 48) | vid)
-        
+        oid = hex((obj_type.value << 48) | vid)
+        self.cache[obj_type.name][value] = oid
+        return oid
+
+    def pop_vid(self, obj_type, value):
+        if obj_type.name in self.cache:
+            return self.cache[obj_type.name].pop(value, "")
+        return ""
+
     def operate(self, obj, attrs, op):
         self.r.delete("GETRESPONSE_KEY_VALUE_OP_QUEUE")
 
