@@ -54,16 +54,25 @@ class Sai:
         return status
 
     def create(self, obj, attrs):
-        return self.operate(obj, attrs, "Screate")
+        status = self.operate(obj, attrs, "Screate")
+        assert status[2].decode("utf-8") == 'SAI_STATUS_SUCCESS'
+        return status
 
     def remove(self, obj):
-        return self.operate(obj, "{}", "Dremove")
+        status = self.operate(obj, "{}", "Dremove")
+        assert status[2].decode("utf-8") == 'SAI_STATUS_SUCCESS'
+        return status
 
     def set(self, obj, attr):
         return self.operate(obj, attr, "Sset")
 
     def get(self, obj, attrs):
-        return self.operate(obj, attrs, "Sget")
+        status = self.operate(obj, attrs, "Sget")
+        status[0] = status[0].decode("utf-8")
+        status[1] = status[1].decode("utf-8")
+        status[2] = status[2].decode("utf-8")
+        assert status[2] == 'SAI_STATUS_SUCCESS'
+        return status
 
 class SaiObjType(Enum):
     PORT                     =  1
