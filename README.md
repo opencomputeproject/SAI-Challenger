@@ -1,6 +1,12 @@
 # sai-challenger
 SAI testing infrastructure that is based on SONiC sairedis project
 
+```sh
+git clone https://github.com/andriy-kokhan/sai-challenger.git
+cd sai-challenger/
+git submodule update --init --recursive
+```
+
 ## To build sai-challenger
 ```sh
 docker build -t sai-challenger .
@@ -8,7 +14,12 @@ docker build -t sai-challenger .
 
 ## To run sai-challenger
 ```sh
-docker run --name sai-challenger-run -v $(pwd)/tests:/tests --cap-add=NET_ADMIN --device /dev/net/tun:/dev/net/tun -d sai-challenger
+docker run --name sai-challenger-run \
+	-v $(pwd):/sai-challenger \
+	--cap-add=NET_ADMIN \
+	--device /dev/net/tun:/dev/net/tun \
+	-d sai-challenger
+
 docker exec -ti sai-challenger-run bash
 ```
 

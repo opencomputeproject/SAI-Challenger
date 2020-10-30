@@ -48,6 +48,7 @@ RUN apt-get install -y \
 
 RUN git clone --recursive https://github.com/Azure/sonic-swss-common \
         && cd sonic-swss-common \
+        && git checkout 3ec30ef \
         && ./autogen.sh && ./configure && dpkg-buildpackage -us -uc -b
 
 RUN dpkg -i libswsscommon_1.0.0_amd64.deb \
@@ -58,6 +59,7 @@ RUN dpkg -i libswsscommon_1.0.0_amd64.deb \
 
 RUN git clone https://github.com/Azure/sonic-sairedis.git \
         && cd sonic-sairedis \
+        && git checkout 0bf336a \
         && git submodule update --init --recursive \
         && ./autogen.sh && ./configure --with-sai=vs && make -j4 \
         && make install && ldconfig
@@ -80,6 +82,8 @@ COPY scripts/sai.profile /etc/sai.d/sai.profile
 COPY scripts/lanemap.ini /usr/share/sonic/hwsku/lanemap.ini
 COPY scripts/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY scripts/veth-create.sh /usr/bin/veth-create.sh
+
+WORKDIR /sai-challenger/tests
 
 CMD ["/usr/bin/supervisord"]
 
