@@ -45,9 +45,32 @@ def test_vlan_create(sai):
                    '  "SAI_VLAN_MEMBER_ATTR_VLAN_TAGGING_MODE", "SAI_VLAN_TAGGING_MODE_TAGGED"' +
                    ']')
 
+    # Create FDB entry
+    sai.create('SAI_OBJECT_TYPE_FDB_ENTRY:' +
+                   '{' +
+                       '"bvid"      : "oid:{}",'.format(sai.get_vid(SaiObjType.VLAN, "100")) +
+                       '"mac"       : "FE:54:00:40:F4:E1",' +
+                       '"switch_id" : "oid:0x21000000000000"' +
+                   '}',
+               '[' +
+               '  "SAI_FDB_ENTRY_ATTR_TYPE",           "SAI_FDB_ENTRY_TYPE_STATIC",' +
+               '  "SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID", "{}"'.format(bport_oid[1]) +
+               ']')
+
+
 def test_vlan_remove(sai):
-    # Delete VLAN members
+    # Delete FDB entry
     oid = sai.get_vid(SaiObjType.VLAN, "100")
+
+    sai.remove('SAI_OBJECT_TYPE_FDB_ENTRY:' +
+                   '{' +
+                       '"bvid"      : "oid:{}",'.format(oid) +
+                       '"mac"       : "FE:54:00:40:F4:E1",' +
+                       '"switch_id" : "oid:0x21000000000000"' +
+                   '}'
+               )
+
+    # Delete VLAN members
     vlan_mbr_str = "oid:0x0," * 33
     vlan_mbr_str = vlan_mbr_str[:-1]
     status = sai.get("SAI_OBJECT_TYPE_VLAN:oid:" + oid, '["SAI_VLAN_ATTR_MEMBER_LIST", "33:{}"]'.format(vlan_mbr_str))
@@ -68,3 +91,4 @@ def test_vlan_remove(sai):
     for vlan in ["100", "200", "300"]:
         oid = sai.pop_vid(SaiObjType.VLAN, vlan)
         sai.remove("SAI_OBJECT_TYPE_VLAN:oid:" + oid)
+
