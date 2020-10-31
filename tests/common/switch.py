@@ -1,11 +1,42 @@
 from enum import Enum
 import redis
 import time
+import json
+
+
+class SaiData:
+    def __init__(self, data):
+        self.data = data
+
+    def raw(self):
+        return self.data
+
+    def to_json(self):
+        return json.loads(self.data)
+
+    def oid(self):
+        value = self.to_json()[1]
+        if "oid:" in value:
+            return value
+        return "oid:0x0"
+
+    def to_list(self):
+        value = self.to_json()[1]
+        idx = value.index(":") + 1
+        return value[idx:].split(",")
+
+    def oids(self):
+        value = self.to_list()
+        if len(value) > 0:
+            if "oid:" in value[0]:
+                return value
+        return []
 
 
 class Sai:
 
     attempts = 40
+    sw_oid = "oid:0x21000000000000"
 
     def __init__(self):
         self.r = redis.Redis(db=1)
@@ -18,7 +49,7 @@ class Sai:
             return self.cache[obj_type.name][value]
 
         vid = self.r.incr("VIDCOUNTER")
-        oid = hex((obj_type.value << 48) | vid)
+        oid = "oid:" + hex((obj_type.value << 48) | vid)
         self.cache[obj_type.name][value] = oid
         return oid
 
@@ -54,25 +85,31 @@ class Sai:
         return status
 
     def create(self, obj, attrs):
+        if type(attrs) != str:
+            attrs = json.dumps(attrs)
         status = self.operate(obj, attrs, "Screate")
         assert status[2].decode("utf-8") == 'SAI_STATUS_SUCCESS'
-        return status
 
     def remove(self, obj):
         status = self.operate(obj, "{}", "Dremove")
         assert status[2].decode("utf-8") == 'SAI_STATUS_SUCCESS'
-        return status
 
     def set(self, obj, attr):
         return self.operate(obj, attr, "Sset")
 
-    def get(self, obj, attrs):
+    def get(self, obj, attrs, do_assert = True):
+        if type(attrs) != str:
+            attrs = json.dumps(attrs)
         status = self.operate(obj, attrs, "Sget")
-        status[0] = status[0].decode("utf-8")
-        status[1] = status[1].decode("utf-8")
         status[2] = status[2].decode("utf-8")
-        assert status[2] == 'SAI_STATUS_SUCCESS'
-        return status
+        if do_assert:
+            assert status[2] == 'SAI_STATUS_SUCCESS'
+
+        data = SaiData(status[1].decode("utf-8"))
+        return status[2], data
+
+    def make_list(self, length, elem):
+        return "{}:".format(length) + (elem + ",") * (length - 1) + elem
 
 class SaiObjType(Enum):
     PORT                     =  1
