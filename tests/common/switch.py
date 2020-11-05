@@ -42,10 +42,14 @@ class Sai:
         self.r = redis.Redis(db=1)
         self.cache = {}
 
-    def get_vid(self, obj_type, value):
+    def get_vid(self, obj_type, value=None):
         if obj_type.name not in self.cache:
             self.cache[obj_type.name] = {}
-        elif value in self.cache[obj_type.name]:
+
+        if value is None:
+            return self.cache[obj_type.name]
+
+        if value in self.cache[obj_type.name]:
             return self.cache[obj_type.name][value]
 
         vid = self.r.incr("VIDCOUNTER")
@@ -88,10 +92,12 @@ class Sai:
         if type(attrs) != str:
             attrs = json.dumps(attrs)
         status = self.operate(obj, attrs, "Screate")
+        print(status)
         assert status[2].decode("utf-8") == 'SAI_STATUS_SUCCESS'
 
     def remove(self, obj):
         status = self.operate(obj, "{}", "Dremove")
+        print(status)
         assert status[2].decode("utf-8") == 'SAI_STATUS_SUCCESS'
 
     def set(self, obj, attr):
@@ -102,6 +108,7 @@ class Sai:
             attrs = json.dumps(attrs)
         status = self.operate(obj, attrs, "Sget")
         status[2] = status[2].decode("utf-8")
+        print(status)
         if do_assert:
             assert status[2] == 'SAI_STATUS_SUCCESS'
 
