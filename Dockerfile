@@ -83,6 +83,9 @@ COPY scripts/lanemap.ini /usr/share/sonic/hwsku/lanemap.ini
 COPY scripts/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY scripts/veth-create.sh /usr/bin/veth-create.sh
 
+# Install PTF dependencies
+RUN pip3 install scapy
+
 WORKDIR /sai-challenger/tests
 
 CMD ["/usr/bin/supervisord"]

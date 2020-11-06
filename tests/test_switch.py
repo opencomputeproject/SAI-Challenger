@@ -2,24 +2,16 @@ import pytest
 from common.switch import Sai, SaiObjType
 import json
 
-@pytest.fixture(scope="module")
-def sai():
-    return Sai()
+from ptf.testutils import simple_tcp_packet, send_packet, verify_packets, verify_no_packet_any
 
-def test_switch_create(sai):
-    sai.create("SAI_OBJECT_TYPE_SWITCH:" + sai.sw_oid,
-               [
-                   "SAI_SWITCH_ATTR_INIT_SWITCH",     "true",
-                   "SAI_SWITCH_ATTR_SRC_MAC_ADDRESS", "52:54:00:EE:BB:70"
-               ])
 
-def test_get_default_vrf(sai):
+def test_get_default_vrf(sai, dataplane):
     _, data = sai.get("SAI_OBJECT_TYPE_SWITCH:" + sai.sw_oid,
                       ["SAI_SWITCH_ATTR_DEFAULT_VIRTUAL_ROUTER_ID", "oid:0x0"])
     assert data.to_json()[0] == 'SAI_SWITCH_ATTR_DEFAULT_VIRTUAL_ROUTER_ID'
 
 
-def test_vlan_create(sai):
+def test_vlan_create(sai, dataplane):
     # Create VLANs
     for vlan in ["100", "200", "300"]:
         oid = sai.get_vid(SaiObjType.VLAN, vlan)
@@ -108,6 +100,29 @@ def test_vlan_create(sai):
                    "SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID", sai.get_vid(SaiObjType.BRIDGE_PORT, lag_oid)
                ])
 
+    # TODO: The following logic was added just to test PTF datapath.
+    #       It should be fixed as per applied configuration.
+    pkt = simple_tcp_packet(eth_dst='00:11:11:11:11:11',
+                            eth_src='00:22:22:22:22:22',
+                            ip_dst='10.0.0.1',
+                            ip_id=101,
+                            ip_ttl=64)
+
+    exp_pkt = simple_tcp_packet(eth_dst='00:11:11:11:11:11',
+                            eth_src='00:22:22:22:22:22',
+                            ip_dst='10.0.0.1',
+                            dl_vlan_enable=True,
+                            vlan_vid=10,
+                            ip_id=102,
+                            ip_ttl=64,
+                            pktlen=104)
+
+    try:
+        send_packet(dataplane, 2, pkt)
+        #verify_packets(dataplane, exp_pkt, [1])
+        verify_no_packet_any(dataplane, exp_pkt, [1])
+    finally:
+        pass
 
 def test_vlan_remove(sai):
 
