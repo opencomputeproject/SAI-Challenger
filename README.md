@@ -9,7 +9,8 @@ git submodule update --init --recursive
 
 ## To build sai-challenger
 ```sh
-docker build -t sai-challenger .
+docker build -f Dockerfile.sai -t sai-challenger .
+docker build -f Dockerfile.saivs -t saivs-challenger .
 ```
 
 ## To run sai-challenger

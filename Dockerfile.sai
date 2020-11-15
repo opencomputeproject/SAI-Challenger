@@ -57,12 +57,8 @@ RUN dpkg -i libswsscommon_1.0.0_amd64.deb \
         && dpkg -i python-swsscommon_1.0.0_amd64.deb \
         && dpkg -i python3-swsscommon_1.0.0_amd64.deb
 
-RUN git clone https://github.com/Azure/sonic-sairedis.git \
-        && cd sonic-sairedis \
-        && git checkout 0bf336a \
-        && git submodule update --init --recursive \
-        && ./autogen.sh && ./configure --with-sai=vs && make -j4 \
-        && make install && ldconfig
+# Install PTF dependencies
+RUN pip3 install scapy
 
 # Update Redis configuration
 RUN sed -ri 's/^# unixsocket/unixsocket/' /etc/redis/redis.conf
@@ -83,8 +79,19 @@ COPY scripts/lanemap.ini /usr/share/sonic/hwsku/lanemap.ini
 COPY scripts/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY scripts/veth-create.sh /usr/bin/veth-create.sh
 
-# Install PTF dependencies
-RUN pip3 install scapy
+WORKDIR /sai
+
+RUN git clone https://github.com/Azure/sonic-sairedis.git \
+        && cd sonic-sairedis \
+        && git checkout 0bf336a \
+        && git submodule update --init --recursive
+
+COPY *.deb .
+RUN dpkg -i *.deb
+
+RUN cd sonic-sairedis \
+        && ./autogen.sh && ./configure && make -j4 \
+        && make install && ldconfig
 
 WORKDIR /sai-challenger/tests
 
