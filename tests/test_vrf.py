@@ -47,12 +47,21 @@ def test_rif_create(sai, dataplane):
     sai.create("SAI_OBJECT_TYPE_LAG:" + lag_oid, [])
 
     # Create LAG1 members
+    lag_members_id = []
     for oid in port_oid[1:]:
         sai.create("SAI_OBJECT_TYPE_LAG_MEMBER:" + sai.get_vid(SaiObjType.LAG_MEMBER, lag_oid + ',' + oid),
                    [
                        "SAI_LAG_MEMBER_ATTR_LAG_ID", lag_oid,
                        "SAI_LAG_MEMBER_ATTR_PORT_ID", oid
                    ])
+        lag_members_id.append(oid)
+
+    # LAG members validation
+    lag_mbr = sai.get_vid(SaiObjType.LAG_MEMBER)
+    mbr_len = len(lag_mbr)
+    assert mbr_len == 2
+    for x in range(mbr_len):
+        assert lag_members_id[x] == list(lag_mbr.keys())[x].split(',')[1]
 
     # Create RIF2
 
