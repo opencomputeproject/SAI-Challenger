@@ -32,6 +32,15 @@ class SaiData:
                 return value
         return []
 
+    def counters(self):
+        i = 0
+        cntrs_dict = {}
+        value = self.to_json()
+        while i < len(value):
+            cntrs_dict[value[i]] = int(value[i + 1])
+            i = i + 2        
+        return cntrs_dict
+
 
 class Sai:
 
@@ -101,7 +110,9 @@ class Sai:
         assert status[2].decode("utf-8") == 'SAI_STATUS_SUCCESS'
 
     def set(self, obj, attr):
-        return self.operate(obj, attr, "Sset")
+        status = self.operate(obj, attr, "Sset")
+        print(status)
+        assert status[2].decode("utf-8") == 'SAI_STATUS_SUCCESS'
 
     def get(self, obj, attrs, do_assert = True):
         if type(attrs) != str:
@@ -114,6 +125,23 @@ class Sai:
 
         data = SaiData(status[1].decode("utf-8"))
         return status[2], data
+
+    def clear_stats(self, obj, attrs):
+        if type(attrs) != str:
+            attrs = json.dumps(attrs)
+        status = self.operate(obj, attrs, "Sclear_stats")    
+        assert status[2].decode("utf-8") == 'SAI_STATUS_SUCCESS'
+
+    def get_stats(self, obj, attrs, do_assert = True):
+        if type(attrs) != str:
+            attrs = json.dumps(attrs)
+        status = self.operate(obj, attrs, "Sget_stats")
+        status[2] = status[2].decode("utf-8")
+        if do_assert:
+            assert status[2] == 'SAI_STATUS_SUCCESS'
+
+        data = SaiData(status[1].decode("utf-8"))
+        return status[2], data 
 
     def make_list(self, length, elem):
         return "{}:".format(length) + (elem + ",") * (length - 1) + elem
