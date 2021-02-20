@@ -2,7 +2,7 @@
 SAI testing and integration framework that is based on SONiC sairedis project.
 
 ```sh
-git clone https://github.com/andriy-kokhan/sai-challenger.git
+git clone https://github.com/PLVision/sai-challenger.git
 cd sai-challenger/
 git submodule update --init --recursive
 ```
