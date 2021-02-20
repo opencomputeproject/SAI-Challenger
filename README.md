@@ -1,5 +1,5 @@
 # sai-challenger
-SAI testing infrastructure that is based on SONiC sairedis project
+SAI testing and integration framework that is based on SONiC sairedis project.
 
 ```sh
 git clone https://github.com/andriy-kokhan/sai-challenger.git
@@ -7,13 +7,36 @@ cd sai-challenger/
 git submodule update --init --recursive
 ```
 
-## To build sai-challenger
+## To run sai-challenger tests on top of vslib SAI implementation
+
+The vslib SAI implementation is used as a virtual data-plane interface in SONiC Virtual Switch (SONiC VS). Though it does not configure the forwarding path but still process SAI CRUD calls in proper manner. This allows to use vslib for SAI testcases development without running traffic.
+
+Build sai-challenger Docker image with vslib SAI implementation:
 ```sh
-docker build -f Dockerfile.sai -t sai-challenger .
 docker build -f Dockerfile.saivs -t saivs-challenger .
 ```
 
-## To run sai-challenger
+Run sai-challenger testcases:
+```sh
+docker run --name sai-challenger-run \
+	-v $(pwd):/sai-challenger \
+	--cap-add=NET_ADMIN \
+	--device /dev/net/tun:/dev/net/tun \
+	-d saivs-challenger
+
+docker exec -ti sai-challenger-run pytest -v
+```
+
+## To run sai-challenger tests on top of vendor-specific SAI implementation
+
+Copy Debian package with SAI library into sai-challenger/ folder.
+
+Build sai-challenger Docker image with vendor-specific SAI implementation:
+```sh
+docker build -f Dockerfile.sai -t sai-challenger .
+```
+
+Run sai-challenger testcases:
 ```sh
 docker run --name sai-challenger-run \
 	-v $(pwd):/sai-challenger \
@@ -21,7 +44,7 @@ docker run --name sai-challenger-run \
 	--device /dev/net/tun:/dev/net/tun \
 	-d sai-challenger
 
-docker exec -ti sai-challenger-run bash
+docker exec -ti sai-challenger-run pytest -v
 ```
 
 ## SAI operation
