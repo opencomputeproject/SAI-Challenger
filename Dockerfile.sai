@@ -2,6 +2,14 @@ FROM debian:buster
 
 MAINTAINER andriy.kokhan@gmail.com
 
+# The sonic-swss-common and sonic-sairedis commits taken from
+# sonic-buildimage master 30b6668 commited on Feb 27, 2021
+#
+# https://github.com/Azure/sonic-buildimage/tree/30b6668
+
+ARG SWSS_COMMON_VER=b75aab7
+ARG SAIREDIS_VER=13474d1
+
 #COPY ["no-check-valid-until", "/etc/apt/apt.conf.d/"]
 
 RUN echo "deb [arch=amd64] http://debian-archive.trafficmanager.net/debian/ buster main contrib non-free" >> /etc/apt/sources.list && \
@@ -41,14 +49,14 @@ RUN apt-get install -y redis-server libhiredis0.14
 RUN apt-get install -y \
         make libtool m4 autoconf dh-exec debhelper automake cmake pkg-config \
         libhiredis-dev libnl-3-dev libnl-genl-3-dev libnl-route-3-dev swig3.0 \
-        libpython2.7-dev libgtest-dev
+        libpython2.7-dev libgtest-dev libboost-dev
 
 RUN apt-get install -y \
         libnl-3-dev libnl-genl-3-dev libnl-route-3-dev libnl-nf-3-dev libzmq3-dev
 
 RUN git clone --recursive https://github.com/Azure/sonic-swss-common \
         && cd sonic-swss-common \
-        && git checkout 3ec30ef \
+        && git checkout ${SWSS_COMMON_VER} \
         && ./autogen.sh && ./configure && dpkg-buildpackage -us -uc -b
 
 RUN dpkg -i libswsscommon_1.0.0_amd64.deb \
@@ -83,7 +91,7 @@ WORKDIR /sai
 
 RUN git clone https://github.com/Azure/sonic-sairedis.git \
         && cd sonic-sairedis \
-        && git checkout 0bf336a \
+        && git checkout ${SAIREDIS_VER} \
         && git submodule update --init --recursive
 
 COPY *.deb .
