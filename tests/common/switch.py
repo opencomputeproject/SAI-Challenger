@@ -2,6 +2,7 @@ from enum import Enum
 import redis
 import time
 import json
+import os
 
 
 class SaiData:
@@ -49,6 +50,9 @@ class Sai:
 
     def __init__(self):
         self.r = redis.Redis(db=1)
+        self.r.flushall()
+        # TODO: syncd should be restarted over SSH/Telnet when run on DUT
+        os.system("supervisorctl restart syncd")
         self.cache = {}
 
     def get_vid(self, obj_type, value=None):
