@@ -140,12 +140,6 @@ def pcap_setup(config):
 @pytest.fixture(scope="session")
 def sai():
     sai = Sai()
-
-    sai.create("SAI_OBJECT_TYPE_SWITCH:" + sai.sw_oid,
-               [
-                   "SAI_SWITCH_ATTR_INIT_SWITCH",     "true",
-                   "SAI_SWITCH_ATTR_SRC_MAC_ADDRESS", "52:54:00:EE:BB:70"
-               ])
     return sai
 
 

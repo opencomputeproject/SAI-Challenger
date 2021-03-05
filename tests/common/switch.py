@@ -4,152 +4,6 @@ import time
 import json
 import os
 
-
-class SaiData:
-    def __init__(self, data):
-        self.data = data
-
-    def raw(self):
-        return self.data
-
-    def to_json(self):
-        return json.loads(self.data)
-
-    def oid(self):
-        value = self.to_json()[1]
-        if "oid:" in value:
-            return value
-        return "oid:0x0"
-
-    def to_list(self):
-        value = self.to_json()[1]
-        idx = value.index(":") + 1
-        return value[idx:].split(",")
-
-    def oids(self):
-        value = self.to_list()
-        if len(value) > 0:
-            if "oid:" in value[0]:
-                return value
-        return []
-
-    def counters(self):
-        i = 0
-        cntrs_dict = {}
-        value = self.to_json()
-        while i < len(value):
-            cntrs_dict[value[i]] = int(value[i + 1])
-            i = i + 2        
-        return cntrs_dict
-
-
-class Sai:
-
-    attempts = 40
-    sw_oid = "oid:0x21000000000000"
-
-    def __init__(self):
-        self.r = redis.Redis(db=1)
-        self.r.flushall()
-        # TODO: syncd should be restarted over SSH/Telnet when run on DUT
-        os.system("supervisorctl restart syncd")
-        self.cache = {}
-
-    def get_vid(self, obj_type, value=None):
-        if obj_type.name not in self.cache:
-            self.cache[obj_type.name] = {}
-
-        if value is None:
-            return self.cache[obj_type.name]
-
-        if value in self.cache[obj_type.name]:
-            return self.cache[obj_type.name][value]
-
-        vid = self.r.incr("VIDCOUNTER")
-        oid = "oid:" + hex((obj_type.value << 48) | vid)
-        self.cache[obj_type.name][value] = oid
-        return oid
-
-    def pop_vid(self, obj_type, value):
-        if obj_type.name in self.cache:
-            return self.cache[obj_type.name].pop(value, "")
-        return ""
-
-    def operate(self, obj, attrs, op):
-        self.r.delete("GETRESPONSE_KEY_VALUE_OP_QUEUE")
-
-        status1 = []
-        attempt = 0
-        while len(self.r.lrange("GETRESPONSE_KEY_VALUE_OP_QUEUE", 0, -1)) > 0 and attempt < self.attempts:
-            time.sleep(0.05)
-            attempt += 1
-
-        if attempt == self.attempts:
-            return []
-
-        self.r.lpush("ASIC_STATE_KEY_VALUE_OP_QUEUE", obj, attrs, op)
-        self.r.publish("ASIC_STATE_CHANNEL", "G")
-
-        status = []
-        attempt = 0
-        while len(status) < 3 and attempt < self.attempts:
-            time.sleep(0.05)
-            attempt += 1
-            status = self.r.lrange("GETRESPONSE_KEY_VALUE_OP_QUEUE", 0, -1)
-
-        self.r.delete("GETRESPONSE_KEY_VALUE_OP_QUEUE")
-
-        return status
-
-    def create(self, obj, attrs):
-        if type(attrs) != str:
-            attrs = json.dumps(attrs)
-        status = self.operate(obj, attrs, "Screate")
-        print(status)
-        assert status[2].decode("utf-8") == 'SAI_STATUS_SUCCESS'
-
-    def remove(self, obj):
-        status = self.operate(obj, "{}", "Dremove")
-        print(status)
-        assert status[2].decode("utf-8") == 'SAI_STATUS_SUCCESS'
-
-    def set(self, obj, attr):
-        status = self.operate(obj, attr, "Sset")
-        print(status)
-        assert status[2].decode("utf-8") == 'SAI_STATUS_SUCCESS'
-
-    def get(self, obj, attrs, do_assert = True):
-        if type(attrs) != str:
-            attrs = json.dumps(attrs)
-        status = self.operate(obj, attrs, "Sget")
-        status[2] = status[2].decode("utf-8")
-        print(status)
-        if do_assert:
-            assert status[2] == 'SAI_STATUS_SUCCESS'
-
-        data = SaiData(status[1].decode("utf-8"))
-        return status[2], data
-
-    def clear_stats(self, obj, attrs):
-        if type(attrs) != str:
-            attrs = json.dumps(attrs)
-        status = self.operate(obj, attrs, "Sclear_stats")    
-        assert status[2].decode("utf-8") == 'SAI_STATUS_SUCCESS'
-
-    def get_stats(self, obj, attrs, do_assert = True):
-        if type(attrs) != str:
-            attrs = json.dumps(attrs)
-        status = self.operate(obj, attrs, "Sget_stats")
-        status[2] = status[2].decode("utf-8")
-        if do_assert:
-            assert status[2] == 'SAI_STATUS_SUCCESS'
-
-        data = SaiData(status[1].decode("utf-8"))
-        return status[2], data 
-
-    def make_list(self, length, elem):
-        return "{}:".format(length) + (elem + ",") * (length - 1) + elem
-
 class SaiObjType(Enum):
     PORT                     =  1
     LAG                      =  2
@@ -245,3 +99,278 @@ class SaiObjType(Enum):
     MACSEC_SA                = 92
     SYSTEM_PORT              = 93
     FINE_GRAINED_HASH_FIELD  = 94
+
+class SaiRecParser:
+    rec = {}
+    def __init__(self, fname):
+        cnt = 0
+        self.rec = {}
+        fp = open(fname, 'r')
+        for line in fp:
+            cnt += 1
+            self.rec[cnt] = line.strip().split("|")[1:]
+
+class SaiData:
+    def __init__(self, data):
+        self.data = data
+
+    def raw(self):
+        return self.data
+
+    def to_json(self):
+        return json.loads(self.data)
+
+    def oid(self, idx = 1):
+        value = self.to_json()[idx]
+        if "oid:" in value:
+            return value
+        return "oid:0x0"
+
+    def to_list(self, idx = 1):
+        value = self.to_json()[idx]
+        idx = value.index(":") + 1
+        return value[idx:].split(",")
+
+    def oids(self, idx = 1):
+        value = self.to_list(idx)
+        if len(value) > 0:
+            if "oid:" in value[0]:
+                return value
+        return []
+
+    def counters(self):
+        i = 0
+        cntrs_dict = {}
+        value = self.to_json()
+        while i < len(value):
+            cntrs_dict[value[i]] = int(value[i + 1])
+            i = i + 2        
+        return cntrs_dict
+
+
+class Sai:
+
+    attempts = 40
+    sw_oid = "oid:0x21000000000000"
+
+    def __init__(self):
+        self.r = redis.Redis(db=1)
+        self.cleanup()
+        self.cache = {}
+        self.rec2vid = {}
+        self.rec2vid[self.sw_oid] = self.sw_oid
+
+    def cleanup(self):
+        self.r.flushall()
+        # TODO: syncd should be restarted over SSH/Telnet when run on DUT
+        os.system("supervisorctl restart syncd")
+        self.create("SAI_OBJECT_TYPE_SWITCH:" + self.sw_oid,
+                   [
+                       "SAI_SWITCH_ATTR_INIT_SWITCH",     "true",
+                       "SAI_SWITCH_ATTR_SRC_MAC_ADDRESS", "52:54:00:EE:BB:70"
+                   ])
+
+
+    def get_vid(self, obj_type, value=None):
+        if obj_type.name not in self.cache:
+            self.cache[obj_type.name] = {}
+
+        if value is None:
+            return self.cache[obj_type.name]
+
+        if value in self.cache[obj_type.name]:
+            return self.cache[obj_type.name][value]
+
+        vid = self.r.incr("VIDCOUNTER")
+        oid = "oid:" + hex((obj_type.value << 48) | vid)
+        self.cache[obj_type.name][value] = oid
+        return oid
+
+    def pop_vid(self, obj_type, value):
+        if obj_type.name in self.cache:
+            return self.cache[obj_type.name].pop(value, "")
+        return ""
+
+    def operate(self, obj, attrs, op):
+        self.r.delete("GETRESPONSE_KEY_VALUE_OP_QUEUE")
+
+        status1 = []
+        attempt = 0
+        while len(self.r.lrange("GETRESPONSE_KEY_VALUE_OP_QUEUE", 0, -1)) > 0 and attempt < self.attempts:
+            time.sleep(0.05)
+            attempt += 1
+
+        if attempt == self.attempts:
+            return []
+
+        self.r.lpush("ASIC_STATE_KEY_VALUE_OP_QUEUE", obj, attrs, op)
+        self.r.publish("ASIC_STATE_CHANNEL", "G")
+
+        status = []
+        attempt = 0
+        while len(status) < 3 and attempt < self.attempts:
+            time.sleep(0.05)
+            attempt += 1
+            status = self.r.lrange("GETRESPONSE_KEY_VALUE_OP_QUEUE", 0, -1)
+
+        self.r.delete("GETRESPONSE_KEY_VALUE_OP_QUEUE")
+
+        return status
+
+    def create(self, obj, attrs):
+        if type(attrs) != str:
+            attrs = json.dumps(attrs)
+        status = self.operate(obj, attrs, "Screate")
+        print(status)
+        assert status[2].decode("utf-8") == 'SAI_STATUS_SUCCESS'
+
+    def remove(self, obj):
+        status = self.operate(obj, "{}", "Dremove")
+        print(status)
+        assert status[2].decode("utf-8") == 'SAI_STATUS_SUCCESS'
+
+    def set(self, obj, attr):
+        print(obj)
+        if type(attr) != str:
+            attr = json.dumps(attr)
+        print(attr)
+        status = self.operate(obj, attr, "Sset")
+        print(status)
+        assert status[2].decode("utf-8") == 'SAI_STATUS_SUCCESS'
+
+    def get(self, obj, attrs, do_assert = True):
+        if type(attrs) != str:
+            attrs = json.dumps(attrs)
+        status = self.operate(obj, attrs, "Sget")
+        status[2] = status[2].decode("utf-8")
+        print(status)
+        if do_assert:
+            assert status[2] == 'SAI_STATUS_SUCCESS'
+
+        data = SaiData(status[1].decode("utf-8"))
+        return status[2], data
+
+    def clear_stats(self, obj, attrs):
+        if type(attrs) != str:
+            attrs = json.dumps(attrs)
+        status = self.operate(obj, attrs, "Sclear_stats")    
+        assert status[2].decode("utf-8") == 'SAI_STATUS_SUCCESS'
+
+    def get_stats(self, obj, attrs, do_assert = True):
+        if type(attrs) != str:
+            attrs = json.dumps(attrs)
+        status = self.operate(obj, attrs, "Sget_stats")
+        status[2] = status[2].decode("utf-8")
+        if do_assert:
+            assert status[2] == 'SAI_STATUS_SUCCESS'
+
+        data = SaiData(status[1].decode("utf-8"))
+        return status[2], data 
+
+    def make_list(self, length, elem):
+        return "{}:".format(length) + (elem + ",") * (length - 1) + elem
+
+    def update_oid_key(self, action, key):
+        key_list = key.split(":", 1)
+        vid = key_list[1]
+
+        if action == "c":
+            # Convert object type from string to enum format
+            obj_type = SaiObjType[key_list[0][len("SAI_OBJECT_TYPE_"):]]
+            # Allocate new VID and add it to the map
+            vid = self.get_vid(obj_type, key_list[1])
+            self.rec2vid[key_list[1]] = vid
+        elif action == "g" or action == "s":
+            vid = self.rec2vid[key_list[1]]
+        elif action == "r":
+            vid = self.rec2vid.pop(key_list[1])
+
+        return key_list[0] + ":" + vid
+
+    def update_entry_key_oids(self, key):
+        oids = []
+        new_key = key
+        key_list = key.split("\"")
+        for k in key_list:
+            if "oid:" in k:
+                oids.append(k)
+        for oid in oids:
+            new_oid = self.rec2vid[oid]
+            new_key = new_key.replace(oid, new_oid)
+        return new_key
+
+    def update_key(self, action, key):
+        if ":oid:" in key:
+            return self.update_oid_key(action, key)
+        else:
+            return self.update_entry_key_oids(key)
+
+    def apply_rec(self, fname):
+        oids = []
+        parser = SaiRecParser(fname)
+        for cnt, rec in parser.rec.items():
+            print("#{}: {}".format(cnt, rec))
+            if rec[0] == 'c':
+                if "SAI_OBJECT_TYPE_SWITCH" in rec[1]:
+                    print("Object \"{}\" already exists!". format(rec[1]))
+                    continue
+
+                attrs = []
+                if len(rec) > 2:
+                    for attr in rec[2:]:
+                        attrs += attr.split('=')
+
+                # Update OIDs in the attributes
+                for idx in range(1, len(attrs), 2):
+                    if "oid:" in attrs[idx]:
+                        attrs[idx] = self.rec2vid[attrs[idx]]
+
+                self.create(self.update_key(rec[0], rec[1]), attrs)
+
+            elif rec[0] == 's':
+                data = rec[2].split('=')
+                if "oid:" in data[1]:
+                    data[1] = self.rec2vid[data[1]]
+
+                self.set(self.update_key(rec[0], rec[1]), data)
+            elif rec[0] == 'r':
+                self.remove(self.update_key(rec[0], rec[1]))
+            elif rec[0] == 'g':
+                attrs = []
+                if len(rec) > 2:
+                    for attr in rec[2:]:
+                        attrs += attr.split('=')
+
+                _, data = self.get(self.update_key(rec[0], rec[1]), attrs)
+
+                jdata = data.to_json()
+                for idx in range(1, len(jdata), 2):
+                    if ":oid:" in jdata[idx]:
+                        oids += data.oids(idx)
+                    elif "oid:" in jdata[idx]:
+                        oids.append(data.oid(idx))
+            elif rec[0] == 'G':
+                attrs = []
+                for attr in rec[2:]:
+                    attrs += attr.split('=')
+
+                G_oids = []
+
+                for idx in range(1, len(attrs), 2):
+                    G_output = attrs[idx]
+
+                    if ":oid:" in G_output:
+                        start_idx = G_output.find(":") + 1
+                        G_oids += G_output[start_idx:].split(",")
+                    elif "oid:" in G_output:
+                        G_oids.append(G_output)
+                assert len(oids) == len(G_oids)
+
+                for idx, oid in enumerate(G_oids):
+                    self.rec2vid[oid] = oids[idx]
+                oids = []
+            else:
+                print("Iggnored line {}: {}".format(cnt, rec))
+
+        print("Current SAI objects: {}".format(self.rec2vid))
+
