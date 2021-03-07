@@ -14,7 +14,7 @@ from ptf.testutils import simple_tcp_packet, send_packet, verify_packets, verify
         "BCM56850/acl_tables.rec",
         "BCM56850/bulk_fdb.rec",
         "BCM56850/bulk_route.rec",
-        "BCM56850//tunnel_map.rec",
+        #"BCM56850/tunnel_map.rec",
         "BCM56850/remove_create_port.rec"
     ],
 )
@@ -23,26 +23,22 @@ def test_apply_sairec(sai, dataplane, fname):
     sai.cleanup()
 
 
-def test_get_default_vrf(sai, dataplane):
-    _, data = sai.get("SAI_OBJECT_TYPE_SWITCH:" + sai.sw_oid,
-                      ["SAI_SWITCH_ATTR_DEFAULT_VIRTUAL_ROUTER_ID", "oid:0x0"])
-    assert data.to_json()[0] == 'SAI_SWITCH_ATTR_DEFAULT_VIRTUAL_ROUTER_ID'
-
-
 def test_vlan_create(sai, dataplane):
     # Create VLANs
     for vlan in ["100", "200", "300"]:
         oid = sai.get_vid(SaiObjType.VLAN, vlan)
         sai.create("SAI_OBJECT_TYPE_VLAN:" + oid, ["SAI_VLAN_ATTR_VLAN_ID", vlan])
 
-    # Get .1Q bridge OID
-    _, dot1q_br = sai.get("SAI_OBJECT_TYPE_SWITCH:" + sai.sw_oid,
-                          ["SAI_SWITCH_ATTR_DEFAULT_1Q_BRIDGE_ID", "oid:0x0"])
-
     # Retrieve the list of .1Q bridge ports
-    _, bport = sai.get("SAI_OBJECT_TYPE_BRIDGE:" + dot1q_br.oid(),
-                       ["SAI_BRIDGE_ATTR_PORT_LIST", sai.make_list(33, "oid:0x0")])
-    bport_oid = bport.oids()
+    status, data = sai.get("SAI_OBJECT_TYPE_BRIDGE:" + sai.sw.dot1q_br_oid,
+                           ["SAI_BRIDGE_ATTR_PORT_LIST", "1:oid:0x0"], False)
+    assert (status == "SAI_STATUS_BUFFER_OVERFLOW")
+
+    bport_num = int(data.to_json()[1])
+    assert (bport_num > 0)
+
+    bport_oid = sai.get("SAI_OBJECT_TYPE_BRIDGE:" + sai.sw.dot1q_br_oid,
+                        ["SAI_BRIDGE_ATTR_PORT_LIST", sai.make_list(bport_num, "oid:0x0")]).oids()
 
     # Create VLAN members
     for mbr in range(3):
@@ -70,8 +66,8 @@ def test_vlan_create(sai, dataplane):
     # Remove bridge ports
     port_oid = []
     for oid in bport_oid[20:24]:
-        _, port = sai.get("SAI_OBJECT_TYPE_BRIDGE_PORT:" + oid,
-                          ["SAI_BRIDGE_PORT_ATTR_PORT_ID", "oid:0x0"])
+        port = sai.get("SAI_OBJECT_TYPE_BRIDGE_PORT:" + oid,
+                       ["SAI_BRIDGE_PORT_ATTR_PORT_ID", "oid:0x0"])
         port_oid.append(port.oid())
         sai.remove("SAI_OBJECT_TYPE_BRIDGE_PORT:" + oid)
 
@@ -92,7 +88,7 @@ def test_vlan_create(sai, dataplane):
                [
                    "SAI_BRIDGE_PORT_ATTR_TYPE", "SAI_BRIDGE_PORT_TYPE_PORT",
                    "SAI_BRIDGE_PORT_ATTR_PORT_ID", lag_oid,
-                   #"SAI_BRIDGE_PORT_ATTR_BRIDGE_ID", dot1q_br.oid(),
+                   #"SAI_BRIDGE_PORT_ATTR_BRIDGE_ID", sai.dot1q_br_oid,
                    "SAI_BRIDGE_PORT_ATTR_ADMIN_STATE", "true"
                ])
 
@@ -118,29 +114,30 @@ def test_vlan_create(sai, dataplane):
                    "SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID", sai.get_vid(SaiObjType.BRIDGE_PORT, lag_oid)
                ])
 
-    # TODO: The following logic was added just to test PTF datapath.
-    #       It should be fixed as per applied configuration.
-    pkt = simple_tcp_packet(eth_dst='00:11:11:11:11:11',
-                            eth_src='00:22:22:22:22:22',
-                            ip_dst='10.0.0.1',
-                            ip_id=101,
-                            ip_ttl=64)
+    if not sai.libsaivs:
+        # TODO: The following logic was added just to test PTF datapath.
+        #       It should be fixed as per applied configuration.
+        pkt = simple_tcp_packet(eth_dst='00:11:11:11:11:11',
+                                eth_src='00:22:22:22:22:22',
+                                ip_dst='10.0.0.1',
+                                ip_id=101,
+                                ip_ttl=64)
 
-    exp_pkt = simple_tcp_packet(eth_dst='00:11:11:11:11:11',
-                            eth_src='00:22:22:22:22:22',
-                            ip_dst='10.0.0.1',
-                            dl_vlan_enable=True,
-                            vlan_vid=10,
-                            ip_id=102,
-                            ip_ttl=64,
-                            pktlen=104)
+        exp_pkt = simple_tcp_packet(eth_dst='00:11:11:11:11:11',
+                                eth_src='00:22:22:22:22:22',
+                                ip_dst='10.0.0.1',
+                                dl_vlan_enable=True,
+                                vlan_vid=10,
+                                ip_id=102,
+                                ip_ttl=64,
+                                pktlen=104)
 
-    try:
-        send_packet(dataplane, 2, pkt)
-        #verify_packets(dataplane, exp_pkt, [1])
-        verify_no_packet_any(dataplane, exp_pkt, [1])
-    finally:
-        pass
+        try:
+            send_packet(dataplane, 2, pkt)
+            verify_packets(dataplane, exp_pkt, [1])
+            #verify_no_packet_any(dataplane, exp_pkt, [1])
+        finally:
+            pass
 
 def test_vlan_remove(sai):
 
@@ -158,13 +155,13 @@ def test_vlan_remove(sai):
                    )
 
     # Delete VLAN members
-    _, vlan_mbr = sai.get("SAI_OBJECT_TYPE_VLAN:" + vlan_oid,
-                          ["SAI_VLAN_ATTR_MEMBER_LIST", sai.make_list(33, "oid:0x0")])
+    vlan_mbr = sai.get("SAI_OBJECT_TYPE_VLAN:" + vlan_oid,
+                       ["SAI_VLAN_ATTR_MEMBER_LIST", sai.make_list(33, "oid:0x0")])
     vlan_mbr_oid = vlan_mbr.oids()
 
     for oid in vlan_mbr_oid:
-        _, bport = sai.get("SAI_OBJECT_TYPE_VLAN_MEMBER:" + oid,
-                           ["SAI_VLAN_MEMBER_ATTR_BRIDGE_PORT_ID", "oid:0x0"])
+        bport = sai.get("SAI_OBJECT_TYPE_VLAN_MEMBER:" + oid,
+                        ["SAI_VLAN_MEMBER_ATTR_BRIDGE_PORT_ID", "oid:0x0"])
 
         sai.pop_vid(SaiObjType.VLAN_MEMBER, "100:" + bport.oid())
         sai.remove("SAI_OBJECT_TYPE_VLAN_MEMBER:" + oid)
@@ -192,18 +189,18 @@ def test_vlan_remove(sai):
         sai.remove("SAI_OBJECT_TYPE_LAG_MEMBER:" + oid)
         port_oid.append(key.split(',')[1])
 
-    # NOTE: attr SAI_STATUS_NOT_IMPLEMENTED
-    #
-    #_, lag_mbr = sai.get("SAI_OBJECT_TYPE_LAG:" + lag_oid,
-    #                      ["SAI_LAG_ATTR_PORT_LIST", sai.make_list(4, "oid:0x0")])
-    #lag_mbr_oid = lag_mbr.oids()
+    if not sai.libsaivs:
+        # TODO: attr SAI_STATUS_NOT_IMPLEMENTED
 
-    #port_oid = []
-    #for oid in lag_mbr_oid:
-    #    _, port = sai.get("SAI_OBJECT_TYPE_LAG_MEMBER:" + oid,
-    #                      ["SAI_LAG_MEMBER_ATTR_PORT_ID", "oid:0x0"])
-    #    port_oid.append(port.oid())
-    #    sai.remove("SAI_OBJECT_TYPE_LAG_MEMBER:" + oid)
+        lag_mbr_oid = sai.get("SAI_OBJECT_TYPE_LAG:" + lag_oid,
+                              ["SAI_LAG_ATTR_PORT_LIST", sai.make_list(4, "oid:0x0")]).oids()
+
+        port_oid = []
+        for oid in lag_mbr_oid:
+            port = sai.get("SAI_OBJECT_TYPE_LAG_MEMBER:" + oid,
+                           ["SAI_LAG_MEMBER_ATTR_PORT_ID", "oid:0x0"])
+            port_oid.append(port.oid())
+            sai.remove("SAI_OBJECT_TYPE_LAG_MEMBER:" + oid)
 
     # Delete LAG
     sai.remove("SAI_OBJECT_TYPE_LAG:" + lag_oid)
@@ -214,6 +211,6 @@ def test_vlan_remove(sai):
                    [
                        "SAI_BRIDGE_PORT_ATTR_TYPE", "SAI_BRIDGE_PORT_TYPE_PORT",
                        "SAI_BRIDGE_PORT_ATTR_PORT_ID", oid,
-                       # "SAI_BRIDGE_PORT_ATTR_BRIDGE_ID", dot1q_br.oid(),
+                       # "SAI_BRIDGE_PORT_ATTR_BRIDGE_ID", sai.dot1q_br_oid,
                        "SAI_BRIDGE_PORT_ATTR_ADMIN_STATE", "true"
                    ])

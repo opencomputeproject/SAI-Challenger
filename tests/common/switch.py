@@ -100,6 +100,7 @@ class SaiObjType(Enum):
     SYSTEM_PORT              = 93
     FINE_GRAINED_HASH_FIELD  = 94
 
+
 class SaiRecParser:
     rec = {}
     def __init__(self, fname):
@@ -109,6 +110,7 @@ class SaiRecParser:
         for line in fp:
             cnt += 1
             self.rec[cnt] = line.strip().split("|")[1:]
+
 
 class SaiData:
     def __init__(self, data):
@@ -148,6 +150,42 @@ class SaiData:
         return cntrs_dict
 
 
+class SaiSwitch:
+    def __init__(self, sai, switch_type="SAI_SWITCH_TYPE_NPU", src_mac_addr="52:54:00:EE:BB:70"):
+        self.dot1q_br_oid = "oid:0x0"
+        self.default_vlan_oid = "oid:0x0"
+        self.default_vlan_id = "0"
+        self.default_vrf_oid = "oid:0x0"
+
+        sai.create("SAI_OBJECT_TYPE_SWITCH:" + sai.sw_oid,
+                   [
+                       "SAI_SWITCH_ATTR_INIT_SWITCH",        "true",
+                       "SAI_SWITCH_ATTR_TYPE",               switch_type,
+                       "SAI_SWITCH_ATTR_SRC_MAC_ADDRESS",    src_mac_addr,
+                       "SAI_SWITCH_ATTR_FDB_AGING_TIME",     "600",
+                       "SAI_SWITCH_ATTR_TPID_INNER_VLAN",    "33024",  # 0x8100
+                       "SAI_SWITCH_ATTR_TPID_OUTER_VLAN",    "34984",  # 0x88A8
+                       "SAI_SWITCH_ATTR_VXLAN_DEFAULT_PORT", "4789",
+                       "SAI_SWITCH_ATTR_NAT_ENABLE",         "true"
+                   ])
+
+        self.dot1q_br_oid = sai.get("SAI_OBJECT_TYPE_SWITCH:" + sai.sw_oid,
+                                     ["SAI_SWITCH_ATTR_DEFAULT_1Q_BRIDGE_ID", "oid:0x0"]).oid()
+        assert (self.dot1q_br_oid != "oid:0x0")
+
+        self.default_vlan_oid = sai.get("SAI_OBJECT_TYPE_SWITCH:" + sai.sw_oid,
+                                         ["SAI_SWITCH_ATTR_DEFAULT_VLAN_ID", "oid:0x0"]).oid()
+        assert (self.default_vlan_oid != "oid:0x0")
+
+        self.default_vlan_id = sai.get("SAI_OBJECT_TYPE_VLAN:" + self.default_vlan_oid,
+                                        ["SAI_VLAN_ATTR_VLAN_ID", ""])
+        assert (self.default_vlan_id != "0")
+
+        self.default_vrf_oid = sai.get("SAI_OBJECT_TYPE_SWITCH:" + sai.sw_oid,
+                                        ["SAI_SWITCH_ATTR_DEFAULT_VIRTUAL_ROUTER_ID", "oid:0x0"]).oid()
+        assert (self.default_vrf_oid != "oid:0x0")
+
+
 class Sai:
 
     attempts = 40
@@ -155,21 +193,17 @@ class Sai:
 
     def __init__(self):
         self.r = redis.Redis(db=1)
-        self.cleanup()
         self.cache = {}
         self.rec2vid = {}
         self.rec2vid[self.sw_oid] = self.sw_oid
+        self.libsaivs = not os.path.isfile("/usr/local/lib/libsai.so")
+        self.cleanup()
 
     def cleanup(self):
         self.r.flushall()
         # TODO: syncd should be restarted over SSH/Telnet when run on DUT
         os.system("supervisorctl restart syncd")
-        self.create("SAI_OBJECT_TYPE_SWITCH:" + self.sw_oid,
-                   [
-                       "SAI_SWITCH_ATTR_INIT_SWITCH",     "true",
-                       "SAI_SWITCH_ATTR_SRC_MAC_ADDRESS", "52:54:00:EE:BB:70"
-                   ])
-
+        self.sw = SaiSwitch(self)
 
     def get_vid(self, obj_type, value=None):
         if obj_type.name not in self.cache:
@@ -224,10 +258,13 @@ class Sai:
         print(status)
         assert status[2].decode("utf-8") == 'SAI_STATUS_SUCCESS'
 
-    def remove(self, obj):
+    def remove(self, obj, do_assert = True):
         status = self.operate(obj, "{}", "Dremove")
         print(status)
-        assert status[2].decode("utf-8") == 'SAI_STATUS_SUCCESS'
+        status[2] = status[2].decode("utf-8")
+        if do_assert:
+            assert status[2] == 'SAI_STATUS_SUCCESS'
+        return status[2]
 
     def set(self, obj, attr):
         print(obj)
@@ -244,10 +281,14 @@ class Sai:
         status = self.operate(obj, attrs, "Sget")
         status[2] = status[2].decode("utf-8")
         print(status)
+
         if do_assert:
             assert status[2] == 'SAI_STATUS_SUCCESS'
 
         data = SaiData(status[1].decode("utf-8"))
+        if do_assert:
+            return data
+
         return status[2], data
 
     def clear_stats(self, obj, attrs):
@@ -265,6 +306,9 @@ class Sai:
             assert status[2] == 'SAI_STATUS_SUCCESS'
 
         data = SaiData(status[1].decode("utf-8"))
+        if do_assert:
+            return data
+
         return status[2], data 
 
     def make_list(self, length, elem):
@@ -341,7 +385,7 @@ class Sai:
                     for attr in rec[2:]:
                         attrs += attr.split('=')
 
-                _, data = self.get(self.update_key(rec[0], rec[1]), attrs)
+                data = self.get(self.update_key(rec[0], rec[1]), attrs)
 
                 jdata = data.to_json()
                 for idx in range(1, len(jdata), 2):
