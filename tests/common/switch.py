@@ -178,12 +178,24 @@ class SaiSwitch:
         assert (self.default_vlan_oid != "oid:0x0")
 
         self.default_vlan_id = sai.get("SAI_OBJECT_TYPE_VLAN:" + self.default_vlan_oid,
-                                        ["SAI_VLAN_ATTR_VLAN_ID", ""])
+                                        ["SAI_VLAN_ATTR_VLAN_ID", ""]).to_json()[1]
         assert (self.default_vlan_id != "0")
 
         self.default_vrf_oid = sai.get("SAI_OBJECT_TYPE_SWITCH:" + sai.sw_oid,
                                         ["SAI_SWITCH_ATTR_DEFAULT_VIRTUAL_ROUTER_ID", "oid:0x0"]).oid()
         assert (self.default_vrf_oid != "oid:0x0")
+
+        # Retrieve the list of .1Q bridge ports
+        status, data = sai.get("SAI_OBJECT_TYPE_BRIDGE:" + self.dot1q_br_oid,
+                               ["SAI_BRIDGE_ATTR_PORT_LIST", "1:oid:0x0"], False)
+        assert (status == "SAI_STATUS_BUFFER_OVERFLOW")
+
+        bport_num = int(data.to_json()[1])
+        assert (bport_num > 0)
+
+        self.dot1q_bp_oids = sai.get("SAI_OBJECT_TYPE_BRIDGE:" + self.dot1q_br_oid,
+                                     ["SAI_BRIDGE_ATTR_PORT_LIST", sai.make_list(bport_num, "oid:0x0")]).oids()
+        assert (bport_num == len(self.dot1q_bp_oids))
 
 
 class Sai:
@@ -418,3 +430,44 @@ class Sai:
 
         print("Current SAI objects: {}".format(self.rec2vid))
 
+    def create_fdb(self, vlan_oid, mac, bp_oid, action = "SAI_PACKET_ACTION_FORWARD"):
+        self.create('SAI_OBJECT_TYPE_FDB_ENTRY:' + json.dumps(
+                       {
+                           "bvid"      : vlan_oid,
+                           "mac"       : mac,
+                           "switch_id" : self.sw_oid
+                       }
+                   ),
+                   [
+                       "SAI_FDB_ENTRY_ATTR_TYPE",           "SAI_FDB_ENTRY_TYPE_STATIC",
+                       "SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID", bp_oid,
+                       "SAI_FDB_ENTRY_ATTR_PACKET_ACTION",  action
+                   ])
+
+    def remove_fdb(self, vlan_oid, mac):
+        self.remove('SAI_OBJECT_TYPE_FDB_ENTRY:' + json.dumps(
+                       {
+                           "bvid"      : vlan_oid,
+                           "mac"       : mac,
+                           "switch_id" : self.sw_oid
+                       })
+                   )
+
+    def create_vlan_member(self, vlan_id, bp_oid, tagging_mode):
+        if vlan_id == self.sw.default_vlan_id:
+            vlan_oid = self.sw.default_vlan_oid
+        else:
+            vlan_oid = self.get_vid(SaiObjType.VLAN, vlan_id)
+        oid = self.get_vid(SaiObjType.VLAN_MEMBER, vlan_id + ":" + bp_oid)
+        self.create("SAI_OBJECT_TYPE_VLAN_MEMBER:" + oid,
+                    [
+                        "SAI_VLAN_MEMBER_ATTR_VLAN_ID",           vlan_oid,
+                        "SAI_VLAN_MEMBER_ATTR_BRIDGE_PORT_ID",    bp_oid,
+                        "SAI_VLAN_MEMBER_ATTR_VLAN_TAGGING_MODE", tagging_mode
+                    ])
+        return oid
+
+    def remove_vlan_member(self, vlan_id, bp_oid):
+        oid = self.pop_vid(SaiObjType.VLAN_MEMBER, vlan_id + ":" + bp_oid)
+        if oid != "":
+            self.remove("SAI_OBJECT_TYPE_VLAN_MEMBER:" + oid)

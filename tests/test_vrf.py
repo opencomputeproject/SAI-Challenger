@@ -60,7 +60,9 @@ def test_rif_create(sai, dataplane):
 
     # Remove ports
     port_oid = []
+
     for oid in bport_oid[0:3]:
+        sai.remove_vlan_member(sai.sw.default_vlan_id, oid)
         port = sai.get("SAI_OBJECT_TYPE_BRIDGE_PORT:" + oid,
                        ["SAI_BRIDGE_PORT_ATTR_PORT_ID", "oid:0x0"])
         port_oid.append(port.oid())
@@ -123,11 +125,11 @@ def test_rif_remove(sai):
         if lag_oid in item[0]:
             lag_mbr_key.append(item[0])
 
-    port_oid = []
+    port_oids = []
     for key in lag_mbr_key:
         oid = sai.pop_vid(SaiObjType.LAG_MEMBER, key)
         sai.remove("SAI_OBJECT_TYPE_LAG_MEMBER:" + oid)
-        port_oid.append(key.split(',')[1])
+        port_oids.append(key.split(',')[1])
 
     # Delete LAG1
     sai.remove("SAI_OBJECT_TYPE_LAG:" + lag_oid)
@@ -141,11 +143,18 @@ def test_rif_remove(sai):
     sai.remove("SAI_OBJECT_TYPE_VIRTUAL_ROUTER:" + vrf_oid2)
 
     # Create bridge port for ports removed from LAG
-    for oid in port_oid:
-        sai.create("SAI_OBJECT_TYPE_BRIDGE_PORT:" + sai.get_vid(SaiObjType.BRIDGE_PORT, oid),
+    for idx, oid in enumerate(port_oids):
+        bp_oid = sai.get_vid(SaiObjType.BRIDGE_PORT, oid)
+        sai.create("SAI_OBJECT_TYPE_BRIDGE_PORT:" + bp_oid,
                    [
                        "SAI_BRIDGE_PORT_ATTR_TYPE", "SAI_BRIDGE_PORT_TYPE_PORT",
                        "SAI_BRIDGE_PORT_ATTR_PORT_ID", oid,
                        # "SAI_BRIDGE_PORT_ATTR_BRIDGE_ID", dot1q_br.oid(),
                        "SAI_BRIDGE_PORT_ATTR_ADMIN_STATE", "true"
                    ])
+        sai.sw.dot1q_bp_oids[idx] = bp_oid
+
+    # Add ports to default VLAN and set PVID
+    for idx in range(len(port_oids)):
+        sai.create_vlan_member(sai.sw.default_vlan_id, sai.sw.dot1q_bp_oids[idx], "SAI_VLAN_TAGGING_MODE_UNTAGGED")
+        sai.set("SAI_OBJECT_TYPE_PORT:" + port_oids[idx], ["SAI_PORT_ATTR_PORT_VLAN_ID", sai.sw.default_vlan_id])
