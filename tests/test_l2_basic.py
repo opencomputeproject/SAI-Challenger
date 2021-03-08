@@ -1,26 +1,6 @@
 import pytest
-from common.switch import Sai, SaiObjType
-import json
-
+from common.switch import SaiObjType
 from ptf.testutils import simple_tcp_packet, send_packet, verify_packets, verify_no_packet_any
-
-@pytest.mark.parametrize(
-    "fname",
-    [
-        #"BCM56850/full.rec",
-        "BCM56850/empty_sw.rec",
-        "BCM56850/bridge_create_1.rec",
-        "BCM56850/hostif.rec",
-        "BCM56850/acl_tables.rec",
-        "BCM56850/bulk_fdb.rec",
-        "BCM56850/bulk_route.rec",
-        #"BCM56850/tunnel_map.rec",
-        "BCM56850/remove_create_port.rec"
-    ],
-)
-def test_apply_sairec(sai, dataplane, fname):
-    sai.apply_rec("/sai/sonic-sairedis/tests/" + fname)
-    sai.cleanup()
 
 
 def test_l2_access_to_access_vlan(sai, dataplane):

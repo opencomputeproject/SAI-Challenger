@@ -1,6 +1,4 @@
 import pytest
-from common.switch import Sai, SaiObjType
-import json
 
 
 def test_stats(sai, dataplane):
