@@ -176,39 +176,36 @@ class SaiSwitch:
                        "SAI_SWITCH_ATTR_NAT_ENABLE",         "true"
                    ])
 
-        self.dot1q_br_oid = sai.get("SAI_OBJECT_TYPE_SWITCH:" + sai.sw_oid,
-                                     ["SAI_SWITCH_ATTR_DEFAULT_1Q_BRIDGE_ID", "oid:0x0"]).oid()
+        # Ports
+        port_num = sai.get(sai.sw_oid, ["SAI_SWITCH_ATTR_NUMBER_OF_ACTIVE_PORTS", ""]).uint32()
+        if port_num > 0:
+            self.port_oids = sai.get(sai.sw_oid,
+                                     ["SAI_SWITCH_ATTR_PORT_LIST", sai.make_list(port_num, "oid:0x0")]).oids()
+
+        # Default .1Q bridge
+        self.dot1q_br_oid = sai.get(sai.sw_oid, ["SAI_SWITCH_ATTR_DEFAULT_1Q_BRIDGE_ID", "oid:0x0"]).oid()
         assert (self.dot1q_br_oid != "oid:0x0")
 
-        self.default_vlan_oid = sai.get("SAI_OBJECT_TYPE_SWITCH:" + sai.sw_oid,
-                                         ["SAI_SWITCH_ATTR_DEFAULT_VLAN_ID", "oid:0x0"]).oid()
-        assert (self.default_vlan_oid != "oid:0x0")
-
-        self.default_vlan_id = sai.get("SAI_OBJECT_TYPE_VLAN:" + self.default_vlan_oid,
-                                        ["SAI_VLAN_ATTR_VLAN_ID", ""]).to_json()[1]
-        assert (self.default_vlan_id != "0")
-
-        self.default_vrf_oid = sai.get("SAI_OBJECT_TYPE_SWITCH:" + sai.sw_oid,
-                                        ["SAI_SWITCH_ATTR_DEFAULT_VIRTUAL_ROUTER_ID", "oid:0x0"]).oid()
-        assert (self.default_vrf_oid != "oid:0x0")
-
-        # Retrieve the list of .1Q bridge ports
-        status, data = sai.get("SAI_OBJECT_TYPE_BRIDGE:" + self.dot1q_br_oid,
-                               ["SAI_BRIDGE_ATTR_PORT_LIST", "1:oid:0x0"], False)
-        assert (status == "SAI_STATUS_BUFFER_OVERFLOW")
-
+        # .1Q bridge ports
+        status, data = sai.get(self.dot1q_br_oid, ["SAI_BRIDGE_ATTR_PORT_LIST", "1:oid:0x0"], False)
         bport_num = data.uint32()
+        assert (status == "SAI_STATUS_BUFFER_OVERFLOW")
         assert (bport_num > 0)
 
-        self.dot1q_bp_oids = sai.get("SAI_OBJECT_TYPE_BRIDGE:" + self.dot1q_br_oid,
+        self.dot1q_bp_oids = sai.get(self.dot1q_br_oid,
                                      ["SAI_BRIDGE_ATTR_PORT_LIST", sai.make_list(bport_num, "oid:0x0")]).oids()
         assert (bport_num == len(self.dot1q_bp_oids))
 
-        port_num = sai.get("SAI_OBJECT_TYPE_SWITCH:" + sai.sw_oid,
-                           ["SAI_SWITCH_ATTR_NUMBER_OF_ACTIVE_PORTS", ""]).uint32()
-        if port_num > 0:
-            self.port_oids = sai.get("SAI_OBJECT_TYPE_SWITCH:" + sai.sw_oid,
-                                     ["SAI_SWITCH_ATTR_PORT_LIST", sai.make_list(port_num, "oid:0x0")]).oids()
+        # Default VLAN
+        self.default_vlan_oid = sai.get(sai.sw_oid, ["SAI_SWITCH_ATTR_DEFAULT_VLAN_ID", "oid:0x0"]).oid()
+        assert (self.default_vlan_oid != "oid:0x0")
+
+        self.default_vlan_id = sai.get(self.default_vlan_oid, ["SAI_VLAN_ATTR_VLAN_ID", ""]).to_json()[1]
+        assert (self.default_vlan_id != "0")
+
+        # Default VRF
+        self.default_vrf_oid = sai.get(sai.sw_oid, ["SAI_SWITCH_ATTR_DEFAULT_VIRTUAL_ROUTER_ID", "oid:0x0"]).oid()
+        assert (self.default_vrf_oid != "oid:0x0")
 
 
 class Sai:
@@ -230,6 +227,14 @@ class Sai:
         os.system("supervisorctl restart syncd")
         self.sw = SaiSwitch(self)
 
+    def alloc_vid(self, obj_type):
+        vid = self.r.incr("VIDCOUNTER")
+        return "oid:" + hex((obj_type.value << 48) | vid)
+
+    def vid_to_type(self, vid):
+        obj_type = int(vid[4:], 16) >> 48
+        return "SAI_OBJECT_TYPE_" + SaiObjType(obj_type).name
+
     def get_vid(self, obj_type, value=None):
         if obj_type.name not in self.cache:
             self.cache[obj_type.name] = {}
@@ -240,8 +245,7 @@ class Sai:
         if value in self.cache[obj_type.name]:
             return self.cache[obj_type.name][value]
 
-        vid = self.r.incr("VIDCOUNTER")
-        oid = "oid:" + hex((obj_type.value << 48) | vid)
+        oid = self.alloc_vid(obj_type)
         self.cache[obj_type.name][value] = oid
         return oid
 
@@ -256,7 +260,7 @@ class Sai:
         status1 = []
         attempt = 0
         while len(self.r.lrange("GETRESPONSE_KEY_VALUE_OP_QUEUE", 0, -1)) > 0 and attempt < self.attempts:
-            time.sleep(0.05)
+            time.sleep(0.01)
             attempt += 1
 
         if attempt == self.attempts:
@@ -268,7 +272,7 @@ class Sai:
         status = []
         attempt = 0
         while len(status) < 3 and attempt < self.attempts:
-            time.sleep(0.05)
+            time.sleep(0.01)
             attempt += 1
             status = self.r.lrange("GETRESPONSE_KEY_VALUE_OP_QUEUE", 0, -1)
 
@@ -277,13 +281,22 @@ class Sai:
         return status
 
     def create(self, obj, attrs):
+        vid = None
+        print(obj)
+        if type(obj) == SaiObjType:
+            vid = self.alloc_vid(obj)
+            obj = "SAI_OBJECT_TYPE_" + obj.name + ":" + vid
         if type(attrs) != str:
             attrs = json.dumps(attrs)
         status = self.operate(obj, attrs, "Screate")
         print(status)
         assert status[2].decode("utf-8") == 'SAI_STATUS_SUCCESS'
+        return vid
 
     def remove(self, obj, do_assert = True):
+        print(obj)
+        if obj.startswith("oid:"):
+            obj = self.vid_to_type(obj) + ":" + obj
         status = self.operate(obj, "{}", "Dremove")
         print(status)
         status[2] = status[2].decode("utf-8")
@@ -293,6 +306,8 @@ class Sai:
 
     def set(self, obj, attr):
         print(obj)
+        if obj.startswith("oid:"):
+            obj = self.vid_to_type(obj) + ":" + obj
         if type(attr) != str:
             attr = json.dumps(attr)
         print(attr)
@@ -301,6 +316,9 @@ class Sai:
         assert status[2].decode("utf-8") == 'SAI_STATUS_SUCCESS'
 
     def get(self, obj, attrs, do_assert = True):
+        print(obj)
+        if obj.startswith("oid:"):
+            obj = self.vid_to_type(obj) + ":" + obj
         if type(attrs) != str:
             attrs = json.dumps(attrs)
         status = self.operate(obj, attrs, "Sget")
@@ -466,13 +484,8 @@ class Sai:
                        })
                    )
 
-    def create_vlan_member(self, vlan_id, bp_oid, tagging_mode):
-        if vlan_id == self.sw.default_vlan_id:
-            vlan_oid = self.sw.default_vlan_oid
-        else:
-            vlan_oid = self.get_vid(SaiObjType.VLAN, vlan_id)
-        oid = self.get_vid(SaiObjType.VLAN_MEMBER, vlan_id + ":" + bp_oid)
-        self.create("SAI_OBJECT_TYPE_VLAN_MEMBER:" + oid,
+    def create_vlan_member(self, vlan_oid, bp_oid, tagging_mode):
+        oid = self.create(SaiObjType.VLAN_MEMBER,
                     [
                         "SAI_VLAN_MEMBER_ATTR_VLAN_ID",           vlan_oid,
                         "SAI_VLAN_MEMBER_ATTR_BRIDGE_PORT_ID",    bp_oid,
@@ -480,7 +493,23 @@ class Sai:
                     ])
         return oid
 
-    def remove_vlan_member(self, vlan_id, bp_oid):
-        oid = self.pop_vid(SaiObjType.VLAN_MEMBER, vlan_id + ":" + bp_oid)
-        if oid != "":
-            self.remove("SAI_OBJECT_TYPE_VLAN_MEMBER:" + oid)
+    def remove_vlan_member(self, vlan_oid, bp_oid):
+        assert vlan_oid.startswith("oid:")
+
+        vlan_mbr_oids = []
+        status, data = self.get(vlan_oid, ["SAI_VLAN_ATTR_MEMBER_LIST", "1:oid:0x0"], False)
+        if status == "SAI_STATUS_SUCCESS":
+            vlan_mbr_oids = data.oids()
+        elif status == "SAI_STATUS_BUFFER_OVERFLOW":
+            oids = self.make_list(data.uint32(), "oid:0x0")
+            vlan_mbr_oids = self.get(vlan_oid, ["SAI_VLAN_ATTR_MEMBER_LIST", oids]).oids()
+        else:
+            assert status == "SAI_STATUS_SUCCESS"
+
+        for vlan_mbr_oid in vlan_mbr_oids:
+            oid = self.get(vlan_mbr_oid, ["SAI_VLAN_MEMBER_ATTR_BRIDGE_PORT_ID", "oid:0x0"]).oid()
+            if oid == bp_oid:
+                self.remove(vlan_mbr_oid)
+                return
+
+        assert False
