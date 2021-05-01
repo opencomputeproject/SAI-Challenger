@@ -149,6 +149,12 @@ class SaiData:
             i = i + 2        
         return cntrs_dict
 
+    def value(self):
+        return self.to_json()[1]
+
+    def uint32(self):
+        return int(self.value())
+
 
 class SaiSwitch:
     def __init__(self, sai, switch_type="SAI_SWITCH_TYPE_NPU", src_mac_addr="52:54:00:EE:BB:70"):
@@ -156,6 +162,7 @@ class SaiSwitch:
         self.default_vlan_oid = "oid:0x0"
         self.default_vlan_id = "0"
         self.default_vrf_oid = "oid:0x0"
+        self.port_oids = []
 
         sai.create("SAI_OBJECT_TYPE_SWITCH:" + sai.sw_oid,
                    [
@@ -190,12 +197,18 @@ class SaiSwitch:
                                ["SAI_BRIDGE_ATTR_PORT_LIST", "1:oid:0x0"], False)
         assert (status == "SAI_STATUS_BUFFER_OVERFLOW")
 
-        bport_num = int(data.to_json()[1])
+        bport_num = data.uint32()
         assert (bport_num > 0)
 
         self.dot1q_bp_oids = sai.get("SAI_OBJECT_TYPE_BRIDGE:" + self.dot1q_br_oid,
                                      ["SAI_BRIDGE_ATTR_PORT_LIST", sai.make_list(bport_num, "oid:0x0")]).oids()
         assert (bport_num == len(self.dot1q_bp_oids))
+
+        port_num = sai.get("SAI_OBJECT_TYPE_SWITCH:" + sai.sw_oid,
+                           ["SAI_SWITCH_ATTR_NUMBER_OF_ACTIVE_PORTS", ""]).uint32()
+        if port_num > 0:
+            self.port_oids = sai.get("SAI_OBJECT_TYPE_SWITCH:" + sai.sw_oid,
+                                     ["SAI_SWITCH_ATTR_PORT_LIST", sai.make_list(port_num, "oid:0x0")]).oids()
 
 
 class Sai:

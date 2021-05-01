@@ -1,6 +1,6 @@
 import pytest
 from common.switch import SaiObjType
-from ptf.testutils import simple_tcp_packet, send_packet, verify_packets, verify_no_packet_any
+from ptf.testutils import simple_tcp_packet, send_packet, verify_packets, verify_packet, verify_no_packet_any, verify_no_packet, verify_any_packet_any_port
 
 
 def test_l2_access_to_access_vlan(sai, dataplane):
@@ -29,8 +29,8 @@ def test_l2_access_to_access_vlan(sai, dataplane):
                                     ip_id=101,
                                     ip_ttl=64)
 
-            send_packet(self, 0, str(pkt))
-            verify_packets(self, pkt, [1])
+            send_packet(dataplane, 0, str(pkt))
+            verify_packets(dataplane, pkt, [1])
     finally:
         for idx in range(2):
             sai.remove_fdb(vlan_oid, macs[idx])
@@ -61,8 +61,8 @@ def test_l2_trunk_to_trunk_vlan(sai, dataplane):
                                     ip_id=101,
                                     ip_ttl=64)
 
-            send_packet(self, 0, str(pkt))
-            verify_packets(self, pkt, [1])
+            send_packet(dataplane, 0, str(pkt))
+            verify_packets(dataplane, pkt, [1])
     finally:
         for idx in range(2):
             sai.remove_fdb(vlan_oid, macs[idx])
@@ -104,8 +104,8 @@ def test_l2_access_to_trunk_vlan(sai, dataplane):
                                     ip_id=102,
                                     ip_ttl=64,
                                     pktlen=104)
-            send_packet(self, 0, str(pkt))
-            verify_packets(self, exp_pkt, [1])
+            send_packet(dataplane, 0, str(pkt))
+            verify_packets(dataplane, exp_pkt, [1])
     finally:
         # Set PVID to default VLAN ID
         sai.set("SAI_OBJECT_TYPE_PORT:" + port_oid, ["SAI_PORT_ATTR_PORT_VLAN_ID", sai.sw.default_vlan_id])
@@ -150,8 +150,8 @@ def test_l2_trunk_to_access_vlan(sai, dataplane):
                                     ip_dst='10.0.0.1',
                                     ip_id=102,
                                     ip_ttl=64)
-            send_packet(self, 0, str(pkt))
-            verify_packets(self, exp_pkt, [1])
+            send_packet(dataplane, 0, str(pkt))
+            verify_packets(dataplane, exp_pkt, [1])
     finally:
         # Set PVID to default VLAN ID
         sai.set("SAI_OBJECT_TYPE_PORT:" + port_oid, ["SAI_PORT_ATTR_PORT_VLAN_ID", sai.sw.default_vlan_id])
@@ -188,12 +188,12 @@ def test_l2_flood(sai, dataplane):
                                     ip_id=107,
                                     ip_ttl=64)
 
-            send_packet(self, 0, str(pkt))
-            verify_packets(self, pkt, [1, 2])
-            send_packet(self, 1, str(pkt))
-            verify_packets(self, pkt, [0, 2])
-            send_packet(self, 2, str(pkt))
-            verify_packets(self, pkt, [0, 1])
+            send_packet(dataplane, 0, str(pkt))
+            verify_packets(dataplane, pkt, [1, 2])
+            send_packet(dataplane, 1, str(pkt))
+            verify_packets(dataplane, pkt, [0, 2])
+            send_packet(dataplane, 2, str(pkt))
+            verify_packets(dataplane, pkt, [0, 1])
     finally:
         for idx in range(3):
             # Set PVID to default VLAN ID
@@ -272,15 +272,13 @@ def test_l2_lag(sai, dataplane):
                                         ip_id=109,
                                         ip_ttl=64)
 
-                send_packet(self, 3, str(pkt))
-                rcv_idx = verify_any_packet_any_port(self, [pkt], [0, 1, 2])
+                send_packet(dataplane, 3, str(pkt))
+                rcv_idx = verify_any_packet_any_port(dataplane, [pkt], [0, 1, 2])
                 count[rcv_idx] += 1
                 dst_ip += 1
 
-            print(count)
             for i in range(0, 3):
-                self.assertTrue((count[i] >= ((max_itrs / 3) * 0.8)),
-                        "Not all paths are equally balanced")
+                assert(count[i] >= ((max_itrs / 3) * 0.8))
 
             pkt = simple_tcp_packet(eth_src=macs[0],
                                     eth_dst=macs[1],
@@ -289,14 +287,14 @@ def test_l2_lag(sai, dataplane):
                                     ip_ttl=64)
 
             print("Sending packet port 1 (lag member) -> port 4")
-            send_packet(self, 0, str(pkt))
-            verify_packets(self, pkt, [3])
+            send_packet(dataplane, 0, str(pkt))
+            verify_packets(dataplane, pkt, [3])
             print("Sending packet port 2 (lag member) -> port 4")
-            send_packet(self, 1, str(pkt))
-            verify_packets(self, pkt, [3])
+            send_packet(dataplane, 1, str(pkt))
+            verify_packets(dataplane, pkt, [3])
             print("Sending packet port 3 (lag member) -> port 4")
-            send_packet(self, 2, str(pkt))
-            verify_packets(self, pkt, [3])
+            send_packet(dataplane, 2, str(pkt))
+            verify_packets(dataplane, pkt, [3])
     finally:
         for idx in range(2):
             sai.remove_fdb(vlan_oid, macs[idx])
@@ -336,3 +334,132 @@ def test_l2_lag(sai, dataplane):
         port_oids.append(port3_oid)
         for oid in port_oids:
             sai.set("SAI_OBJECT_TYPE_PORT:" + oid, ["SAI_PORT_ATTR_PORT_VLAN_ID", sai.sw.default_vlan_id])
+
+
+def test_l2_vlan_bcast_ucast(sai, dataplane):
+    vlan_id = "10"
+    macs = []
+
+    # Create VLAN
+    vlan_oid = sai.get_vid(SaiObjType.VLAN, vlan_id)
+    sai.create("SAI_OBJECT_TYPE_VLAN:" + vlan_oid, ["SAI_VLAN_ATTR_VLAN_ID", vlan_id])
+
+    for idx, bp_oid in enumerate(sai.sw.dot1q_bp_oids):
+        sai.remove_vlan_member(sai.sw.default_vlan_id, bp_oid)
+        sai.create_vlan_member(vlan_id, bp_oid, "SAI_VLAN_TAGGING_MODE_UNTAGGED")
+        sai.set("SAI_OBJECT_TYPE_PORT:" + sai.sw.port_oids[idx], ["SAI_PORT_ATTR_PORT_VLAN_ID", vlan_id])
+
+        macs.append("00:00:00:00:00:%02x" %(idx+1))
+        sai.create_fdb(vlan_oid, macs[idx], bp_oid)
+
+    try:
+        if not sai.libsaivs:
+            bcast_pkt = simple_tcp_packet(eth_dst='ff:ff:ff:ff:ff:ff',
+                                          eth_src='00:00:00:00:00:01',
+                                          ip_dst='10.0.0.1',
+                                          ip_id=101,
+                                          ip_ttl=64)
+
+            expected_ports = []
+            for idx in range(len(sai.sw.dot1q_bp_oids)):
+                expected_ports.append(idx)
+
+            send_packet(dataplane, 0, str(bcast_pkt))
+            verify_packets(dataplane, bcast_pkt, expected_ports)
+
+            for idx, mac in enumerate(macs):
+                ucast_pkt = simple_tcp_packet(eth_dst=mac,
+                                              eth_src='00:00:00:00:00:01',
+                                              ip_dst='10.0.0.1',
+                                              ip_id=101,
+                                              ip_ttl=64)
+
+                send_packet(dataplane, 0, str(ucast_pkt))
+                verify_packets(dataplane, ucast_pkt, [idx])
+
+    finally:
+        for idx, bp_oid in enumerate(sai.sw.dot1q_bp_oids):
+            sai.remove_fdb(vlan_oid, macs[idx])
+            sai.remove_vlan_member(vlan_id, bp_oid)
+            sai.create_vlan_member(sai.sw.default_vlan_id, bp_oid, "SAI_VLAN_TAGGING_MODE_UNTAGGED")
+            sai.set("SAI_OBJECT_TYPE_PORT:" + sai.sw.port_oids[idx], ["SAI_PORT_ATTR_PORT_VLAN_ID", sai.sw.default_vlan_id])
+
+        oid = sai.pop_vid(SaiObjType.VLAN, vlan_id)
+        sai.remove("SAI_OBJECT_TYPE_VLAN:" + oid)
+
+
+def test_l2_mtu(sai, dataplane):
+    vlan_id = "10"
+    port_mtu = "1500"
+    port_default_mtu = []
+    max_port = 3
+
+    for oid in sai.sw.port_oids[0:max_port]:
+        mtu = sai.get("SAI_OBJECT_TYPE_PORT:" + oid, ["SAI_PORT_ATTR_MTU", ""]).value()
+        port_default_mtu.append(mtu)
+
+    for oid in sai.sw.dot1q_bp_oids[0:max_port]:
+        sai.remove_vlan_member(sai.sw.default_vlan_id, oid)
+
+    vlan_oid = sai.get_vid(SaiObjType.VLAN, vlan_id)
+    sai.create("SAI_OBJECT_TYPE_VLAN:" + vlan_oid, ["SAI_VLAN_ATTR_VLAN_ID", vlan_id])
+
+    sai.create_vlan_member(vlan_id, sai.sw.dot1q_bp_oids[0], "SAI_VLAN_TAGGING_MODE_UNTAGGED")
+    sai.create_vlan_member(vlan_id, sai.sw.dot1q_bp_oids[1], "SAI_VLAN_TAGGING_MODE_UNTAGGED")
+    sai.create_vlan_member(vlan_id, sai.sw.dot1q_bp_oids[2], "SAI_VLAN_TAGGING_MODE_TAGGED")
+
+    for oid in sai.sw.port_oids[0:max_port]:
+        sai.set("SAI_OBJECT_TYPE_PORT:" + oid, ["SAI_PORT_ATTR_MTU", port_mtu])
+        sai.set("SAI_OBJECT_TYPE_PORT:" + oid, ["SAI_PORT_ATTR_PORT_VLAN_ID", vlan_id])
+
+    try:
+        if not sai.libsaivs:
+            pkt = simple_tcp_packet(pktlen=1400,
+                                    eth_dst='00:22:22:22:22:22',
+                                    eth_src='00:11:11:11:11:11',
+                                    ip_dst='10.0.0.1',
+                                    ip_id=101,
+                                    ip_ttl=64)
+
+            tag_pkt = simple_tcp_packet(pktlen=1404,
+                                        eth_dst='00:22:22:22:22:22',
+                                        eth_src='00:11:11:11:11:11',
+                                        dl_vlan_enable=True,
+                                        vlan_vid=vlan_id,
+                                        ip_dst='10.0.0.1',
+                                        ip_id=101,
+                                        ip_ttl=64)
+
+            pkt1 = simple_tcp_packet(pktlen=1500,
+                                     eth_dst='00:22:22:22:22:22',
+                                     eth_src='00:11:11:11:11:11',
+                                     ip_dst='10.0.0.1',
+                                     ip_id=101,
+                                     ip_ttl=64)
+
+            tag_pkt1 = simple_tcp_packet(pktlen=1504,
+                                         eth_dst='00:22:22:22:22:22',
+                                         eth_src='00:11:11:11:11:11',
+                                         dl_vlan_enable=True,
+                                         vlan_vid=vlan_id,
+                                         ip_dst='10.0.0.1',
+                                         ip_id=101,
+                                         ip_ttl=64)
+
+            send_packet(dataplane, 0, str(pkt))
+            verify_packet(dataplane, pkt, 1)
+            verify_packet(dataplane, tag_pkt, 2)
+
+            send_packet(dataplane, 0, str(pkt1))
+            verify_packet(dataplane, pkt1, 1)
+            verify_no_packet(dataplane, tag_pkt1, 2)
+
+    finally:
+        for idx, oid in enumerate(sai.sw.port_oids[0:max_port]):
+            sai.remove_vlan_member(vlan_id, sai.sw.dot1q_bp_oids[idx])
+            sai.create_vlan_member(sai.sw.default_vlan_id, sai.sw.dot1q_bp_oids[idx], "SAI_VLAN_TAGGING_MODE_UNTAGGED")
+            sai.set("SAI_OBJECT_TYPE_PORT:" + oid, ["SAI_PORT_ATTR_PORT_VLAN_ID", sai.sw.default_vlan_id])
+            sai.set("SAI_OBJECT_TYPE_PORT:" + oid, ["SAI_PORT_ATTR_MTU", port_default_mtu[idx]])
+
+        oid = sai.pop_vid(SaiObjType.VLAN, vlan_id)
+        sai.remove("SAI_OBJECT_TYPE_VLAN:" + oid)
