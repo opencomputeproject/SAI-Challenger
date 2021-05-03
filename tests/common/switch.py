@@ -304,7 +304,7 @@ class Sai:
             assert status[2] == 'SAI_STATUS_SUCCESS'
         return status[2]
 
-    def set(self, obj, attr):
+    def set(self, obj, attr, do_assert = True):
         print(obj)
         if obj.startswith("oid:"):
             obj = self.vid_to_type(obj) + ":" + obj
@@ -312,8 +312,11 @@ class Sai:
             attr = json.dumps(attr)
         print(attr)
         status = self.operate(obj, attr, "Sset")
+        status[2] = status[2].decode("utf-8")
         print(status)
-        assert status[2].decode("utf-8") == 'SAI_STATUS_SUCCESS'
+        if do_assert:
+            assert status[2] == 'SAI_STATUS_SUCCESS'
+        return status[2]
 
     def get(self, obj, attrs, do_assert = True):
         print(obj)
