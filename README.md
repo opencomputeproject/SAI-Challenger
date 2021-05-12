@@ -1,5 +1,9 @@
-# sai-challenger
+# SAI Challenger
 SAI testing and integration framework that is based on SONiC sairedis project.
+
+![](img/sai-challenger.png)
+
+## To get SAI Challenger sources
 
 ```sh
 git clone https://github.com/PLVision/sai-challenger.git
@@ -7,16 +11,16 @@ cd sai-challenger/
 git submodule update --init --recursive
 ```
 
-## To run sai-challenger tests on top of vslib SAI implementation
+## To run SAI Challenger tests on top of vslib SAI implementation
 
 The vslib SAI implementation is used as a virtual data-plane interface in SONiC Virtual Switch (SONiC VS). Though it does not configure the forwarding path but still process SAI CRUD calls in proper manner. This allows to use vslib for SAI testcases development without running traffic.
 
-Build sai-challenger Docker image with vslib SAI implementation:
+Build SAI Challenger Docker image with vslib SAI implementation:
 ```sh
 docker build -f Dockerfile.saivs -t saivs-challenger .
 ```
 
-Run sai-challenger testcases:
+Run SAI Challenger testcases:
 ```sh
 docker run --name sai-challenger-run \
 	-v $(pwd):/sai-challenger \
@@ -27,16 +31,16 @@ docker run --name sai-challenger-run \
 docker exec -ti sai-challenger-run pytest -v
 ```
 
-## To run sai-challenger tests on top of vendor-specific SAI implementation
+## To run SAI Challenger tests on top of vendor-specific SAI implementation
 
 Copy Debian package with SAI library into sai-challenger/ folder.
 
-Build sai-challenger Docker image with vendor-specific SAI implementation:
+Build SAI Challenger Docker image with vendor-specific SAI implementation:
 ```sh
 docker build -f Dockerfile.sai -t sai-challenger .
 ```
 
-Run sai-challenger testcases:
+Run SAI Challenger testcases:
 ```sh
 docker run --name sai-challenger-run \
 	-v $(pwd):/sai-challenger \
