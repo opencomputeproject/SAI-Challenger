@@ -73,14 +73,4 @@ def test_set_attr(sai, dataplane, sai_vlan_obj, attr, attr_value):
     ],
 )
 def test_get_attr(sai, dataplane, sai_vlan_obj, attr, attr_type):
-    if attr_type == "sai_object_list_t":
-        status, data = sai.get(sai_vlan_obj, [attr, "1:oid:0x0"], False)
-        if status == "SAI_STATUS_BUFFER_OVERFLOW":
-            status, data = sai.get(sai_vlan_obj, [attr, sai.make_list(data.uint32(), "oid:0x0")], False)
-    elif attr_type == "sai_object_id_t":
-        status, data = sai.get(sai_vlan_obj, [attr, "oid:0x0"], False)
-    elif attr_type == "bool":
-        status, data = sai.get(sai_vlan_obj, [attr, "true"], False)
-    else:
-        status, data = sai.get(sai_vlan_obj, [attr, ""], False)
-    assert status == "SAI_STATUS_SUCCESS"
+    status, data = sai.get_by_type(sai_vlan_obj, attr, attr_type, do_assert = False)

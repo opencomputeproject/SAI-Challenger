@@ -337,6 +337,19 @@ class Sai:
 
         return status[2], data
 
+    def get_by_type(self, obj, attr, attr_type, do_assert = True):
+        if attr_type == "sai_object_list_t":
+            status, data = self.get(obj, [attr, "1:oid:0x0"], do_assert)
+            if status == "SAI_STATUS_BUFFER_OVERFLOW":
+                status, data = self.get(obj, [attr, self.make_list(data.uint32(), "oid:0x0")], do_assert)
+        elif attr_type == "sai_object_id_t":
+            status, data = self.get(obj, [attr, "oid:0x0"], do_assert)
+        elif attr_type == "bool":
+            status, data = self.get(obj, [attr, "true"], do_assert)
+        else:
+            status, data = self.get(obj, [attr, ""], do_assert)
+        return status, data
+
     def clear_stats(self, obj, attrs):
         if type(attrs) != str:
             attrs = json.dumps(attrs)
