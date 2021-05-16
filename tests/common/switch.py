@@ -280,7 +280,7 @@ class Sai:
 
         return status
 
-    def create(self, obj, attrs):
+    def create(self, obj, attrs, do_assert = True):
         vid = None
         print(obj)
         if type(obj) == SaiObjType:
@@ -290,8 +290,12 @@ class Sai:
             attrs = json.dumps(attrs)
         status = self.operate(obj, attrs, "Screate")
         print(status)
-        assert status[2].decode("utf-8") == 'SAI_STATUS_SUCCESS'
-        return vid
+        status[2] = status[2].decode("utf-8")
+        if do_assert:
+            assert status[2] == 'SAI_STATUS_SUCCESS'
+            return vid
+
+        return status[2], vid
 
     def remove(self, obj, do_assert = True):
         print(obj)
