@@ -346,6 +346,10 @@ class Sai:
             status, data = self.get(obj, [attr, "1:oid:0x0"], do_assert)
             if status == "SAI_STATUS_BUFFER_OVERFLOW":
                 status, data = self.get(obj, [attr, self.make_list(data.uint32(), "oid:0x0")], do_assert)
+        elif attr_type == "sai_s32_list_t" or attr_type == "sai_u32_list_t":
+            status, data = self.get(obj, [attr, "0:null"], do_assert)
+            if status == "SAI_STATUS_BUFFER_OVERFLOW":
+                status, data = self.get(obj, [attr, self.make_list(data.uint32(), "0")], do_assert)
         elif attr_type == "sai_object_id_t":
             status, data = self.get(obj, [attr, "oid:0x0"], do_assert)
         elif attr_type == "bool":
