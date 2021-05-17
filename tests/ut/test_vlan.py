@@ -10,6 +10,17 @@ def sai_vlan_obj(sai):
     sai.remove(vlan_oid)
 
 
+@pytest.fixture(scope="module")
+def sai_vlan_member(sai, sai_vlan_obj):
+    sai.remove_vlan_member(sai.sw.default_vlan_oid, sai.sw.dot1q_bp_oids[0])
+    vlan_mbr_oid = sai.create_vlan_member(sai_vlan_obj, sai.sw.dot1q_bp_oids[0], "SAI_VLAN_TAGGING_MODE_UNTAGGED")
+    sai.set(sai.sw.port_oids[0], ["SAI_PORT_ATTR_PORT_VLAN_ID", TEST_VLAN_ID])
+    yield vlan_mbr_oid, sai_vlan_obj
+    sai.remove(vlan_mbr_oid)
+    sai.create_vlan_member(sai.sw.default_vlan_oid, sai.sw.dot1q_bp_oids[0], "SAI_VLAN_TAGGING_MODE_UNTAGGED")
+    sai.set(sai.sw.port_oids[0], ["SAI_PORT_ATTR_PORT_VLAN_ID", sai.sw.default_vlan_id])
+
+
 vlan_attrs = [
     ("SAI_VLAN_ATTR_VLAN_ID",                                   "sai_uint16_t",                     "100"),
     ("SAI_VLAN_ATTR_MEMBER_LIST",                               "sai_object_list_t",                "0:null"),
@@ -35,6 +46,12 @@ vlan_attrs = [
     ("SAI_VLAN_ATTR_TAM_OBJECT",                                "sai_object_list_t",                "0:null"),
 ]
 
+vlan_member_attrs= [
+    ("SAI_VLAN_MEMBER_ATTR_VLAN_ID",           "sai_object_id_t"),
+    ("SAI_VLAN_MEMBER_ATTR_BRIDGE_PORT_ID",    "sai_object_id_t"),
+    ("SAI_VLAN_MEMBER_ATTR_VLAN_TAGGING_MODE", "sai_vlan_tagging_mode_t")
+]
+
 vlan_attrs_updated = {}
 
 
@@ -43,7 +60,7 @@ vlan_attrs_updated = {}
     vlan_attrs
 )
 def test_get_before_set_attr(sai, dataplane, sai_vlan_obj, attr, attr_type, attr_val):
-    status, data = sai.get_by_type(sai_vlan_obj, attr, attr_type, do_assert = False)
+    status, data = sai.get_by_type(sai_vlan_obj, attr, attr_type, do_assert=False)
 
     if status == "SAI_STATUS_NOT_SUPPORTED" or status == "SAI_STATUS_ATTR_NOT_SUPPORTED_0":
         pytest.skip("not supported")
@@ -54,7 +71,7 @@ def test_get_before_set_attr(sai, dataplane, sai_vlan_obj, attr, attr_type, attr
     assert status == "SAI_STATUS_SUCCESS"
 
     if attr == "SAI_VLAN_ATTR_STP_INSTANCE":
-        status, data = sai.get(sai.sw_oid, ["SAI_SWITCH_ATTR_DEFAULT_STP_INST_ID", attr_value], False)
+        status, data = sai.get(sai.sw_oid, ["SAI_SWITCH_ATTR_DEFAULT_STP_INST_ID", attr_val], False)
         assert status == "SAI_STATUS_SUCCESS"
         attr_val = data.oid()
 
@@ -112,7 +129,7 @@ def test_set_attr(sai, dataplane, sai_vlan_obj, attr, attr_value):
     vlan_attrs
 )
 def test_get_after_set_attr(sai, dataplane, sai_vlan_obj, attr, attr_type, attr_value):
-    status, data = sai.get_by_type(sai_vlan_obj, attr, attr_type, do_assert = False)
+    status, data = sai.get_by_type(sai_vlan_obj, attr, attr_type, do_assert=False)
 
     if status == "SAI_STATUS_NOT_SUPPORTED" or status == "SAI_STATUS_ATTR_NOT_SUPPORTED_0":
         pytest.skip("not supported")
@@ -195,3 +212,78 @@ def test_vlan_create_negative(sai, dataplane, vlan_id, expected_status):
         assert status != expected_status[1:]
     else:
         assert status == expected_status
+
+
+@pytest.mark.parametrize(
+    "attr,attr_type",
+    vlan_member_attrs
+)
+def test_vlan_mbr_get_before_set_attr(sai, dataplane, sai_vlan_member, attr, attr_type):
+    status, data = sai.get_by_type(sai_vlan_member[0], attr, attr_type, do_assert=False)
+
+    if status == "SAI_STATUS_NOT_SUPPORTED" or status == "SAI_STATUS_ATTR_NOT_SUPPORTED_0":
+        pytest.skip("not supported")
+
+    if status == "SAI_STATUS_NOT_IMPLEMENTED" or status == "SAI_STATUS_ATTR_NOT_IMPLEMENTED_0":
+        pytest.skip("not implemented")
+
+    assert status == "SAI_STATUS_SUCCESS"
+
+    if attr == "SAI_VLAN_MEMBER_ATTR_BRIDGE_PORT_ID":
+        assert data.value() == sai.sw.dot1q_bp_oids[0]
+    elif attr == "SAI_VLAN_MEMBER_ATTR_VLAN_TAGGING_MODE":
+        assert data.value() == "SAI_VLAN_TAGGING_MODE_UNTAGGED"
+    elif attr == "SAI_VLAN_MEMBER_ATTR_VLAN_ID":
+        assert data.value() == sai_vlan_member[1]
+
+
+@pytest.mark.parametrize(
+    "attr,attr_value",
+    [
+        ("SAI_VLAN_MEMBER_ATTR_VLAN_TAGGING_MODE",   "SAI_VLAN_TAGGING_MODE_UNTAGGED"),
+        ("SAI_VLAN_MEMBER_ATTR_VLAN_TAGGING_MODE",   "SAI_VLAN_TAGGING_MODE_TAGGED"),
+        ("SAI_VLAN_MEMBER_ATTR_VLAN_TAGGING_MODE",   "SAI_VLAN_TAGGING_MODE_PRIORITY_TAGGED")
+    ]
+)
+def test_vlan_member_set(sai, dataplane, sai_vlan_member, attr, attr_value):
+    status = sai.set(sai_vlan_member[0], [attr, attr_value], False)
+
+    if status == "SAI_STATUS_NOT_SUPPORTED" or status == "SAI_STATUS_ATTR_NOT_SUPPORTED_0":
+        pytest.skip("not supported")
+
+    if status == "SAI_STATUS_NOT_IMPLEMENTED" or status == "SAI_STATUS_ATTR_NOT_IMPLEMENTED_0":
+        pytest.skip("not implemented")
+
+    assert status == "SAI_STATUS_SUCCESS"
+
+
+@pytest.mark.parametrize(
+    "attr,attr_type",
+    vlan_member_attrs
+)
+def test_vlan_mbr_get_after_set_attr(sai, dataplane, sai_vlan_member, attr, attr_type):
+    status, data = sai.get_by_type(sai_vlan_member[0], attr, attr_type, do_assert=False)
+
+    if status == "SAI_STATUS_NOT_SUPPORTED" or status == "SAI_STATUS_ATTR_NOT_SUPPORTED_0":
+        pytest.skip("not supported")
+
+    if status == "SAI_STATUS_NOT_IMPLEMENTED" or status == "SAI_STATUS_ATTR_NOT_IMPLEMENTED_0":
+        pytest.skip("not implemented")
+
+    assert status == "SAI_STATUS_SUCCESS"
+
+
+@pytest.mark.parametrize(
+    "attr",
+    [
+        ("SAI_VLAN_MEMBER_ATTR_VLAN_ID"),
+        ("SAI_VLAN_MEMBER_ATTR_BRIDGE_PORT_ID")
+    ]
+)
+def test_vlan_mbr_set_negative(sai, dataplane, sai_vlan_member, attr):
+    status = ""
+    if attr == "SAI_VLAN_MEMBER_ATTR_VLAN_ID":
+        status = sai.set(sai_vlan_member[0], [attr, sai.sw.default_vlan_oid], False)
+    elif attr == "SAI_VLAN_MEMBER_ATTR_BRIDGE_PORT_ID":
+        status = sai.set(sai_vlan_member[0], [attr, sai.sw.dot1q_bp_oids[0]], False)
+    assert status != "SAI_STATUS_SUCCESS"
