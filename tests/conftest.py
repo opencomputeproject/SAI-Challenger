@@ -104,6 +104,14 @@ config_default = {
     "port_map"           : None,
 }
 
+def pytest_addoption(parser):
+    parser.addoption("--sai-server", action="store", default='localhost')
+
+
+@pytest.fixture(scope="session")
+def sai_server(request):
+    return request.config.getoption("--sai-server")
+
 
 def logging_setup(config):
     """
@@ -138,8 +146,8 @@ def pcap_setup(config):
 
 
 @pytest.fixture(scope="session")
-def sai():
-    sai = Sai()
+def sai(sai_server):
+    sai = Sai(sai_server)
     return sai
 
 

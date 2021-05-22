@@ -31,6 +31,48 @@ docker run --name sai-challenger-run \
 docker exec -ti sai-challenger-run pytest -v
 ```
 
+## To run SAI Challenger tests on top of vslib in client-server mode
+
+In client-server mode, SAI server - syncd linked with vslib - runs in one Docker container.
+Whereas the client - SAI Challenger - runs in the separate Docker container. These two Docker containers can also be running on the separate physical hosts.    
+
+Build Docker image with vslib SAI implementation:
+```sh
+docker build -f Dockerfile.saivs.server -t saivs-server .
+```
+
+Build SAI Challenger Docker image with SAI tests:
+```sh
+docker build -f Dockerfile.saivs.client -t saivs-client .
+```
+
+Run SAI server:
+```sh
+docker run --name saivs -v $(pwd):/sai-challenger -d saivs-server
+```
+
+Run SAI Challenger testcases:
+```sh
+docker run --name sai-challenger \
+	-v $(pwd):/sai-challenger \
+	--cap-add=NET_ADMIN \
+	--device /dev/net/tun:/dev/net/tun \
+	-d saivs-client
+
+docker exec -ti sai-challenger pytest --sai-server=<saivs-server-ip> -v test_l2_basic.py
+```
+
+TODO: Sai.cleanup() methods should be fixed to be able to run SAI Challenger TCs
+      multiple times without restarting SAI server (syncd).
+```sh
+    def cleanup(self):
+        self.r.flushall()
+        # TODO: syncd should be restarted over SSH/Telnet when run on DUT
+        os.system("supervisorctl restart syncd")
+        self.sw = SaiSwitch(self)
+```
+
+
 ## To run SAI Challenger tests on top of vendor-specific SAI implementation
 
 Copy Debian package with SAI library into sai-challenger/ folder.

@@ -213,8 +213,8 @@ class Sai:
     attempts = 40
     sw_oid = "oid:0x21000000000000"
 
-    def __init__(self):
-        self.r = redis.Redis(db=1)
+    def __init__(self, sai_server):
+        self.r = redis.Redis(host=sai_server, port=6379, db=1)
         self.cache = {}
         self.rec2vid = {}
         self.rec2vid[self.sw_oid] = self.sw_oid
