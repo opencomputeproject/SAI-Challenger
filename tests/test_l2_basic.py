@@ -19,7 +19,7 @@ def test_l2_access_to_access_vlan(sai, dataplane):
         sai.create_fdb(vlan_oid, macs[idx], sai.sw.dot1q_bp_oids[idx])
 
     try:
-        if not sai.libsaivs:
+        if sai.run_traffic:
             pkt = simple_tcp_packet(eth_dst=macs[1],
                                     eth_src=macs[0],
                                     ip_dst='10.0.0.1',
@@ -49,7 +49,7 @@ def test_l2_trunk_to_trunk_vlan(sai, dataplane):
     sai.create_fdb(vlan_oid, macs[1], sai.sw.dot1q_bp_oids[1])
 
     try:
-        if not sai.libsaivs:
+        if sai.run_traffic:
             pkt = simple_tcp_packet(eth_dst=macs[1],
                                     eth_src=macs[0],
                                     dl_vlan_enable=True,
@@ -83,7 +83,7 @@ def test_l2_access_to_trunk_vlan(sai, dataplane):
         sai.create_fdb(vlan_oid, macs[idx], sai.sw.dot1q_bp_oids[idx])
 
     try:
-        if not sai.libsaivs:
+        if sai.run_traffic:
             pkt = simple_tcp_packet(eth_dst=macs[1],
                                     eth_src=macs[0],
                                     ip_dst='10.0.0.1',
@@ -122,7 +122,7 @@ def test_l2_trunk_to_access_vlan(sai, dataplane):
         sai.create_fdb(vlan_oid, macs[idx], sai.sw.dot1q_bp_oids[idx])
 
     try:
-        if not sai.libsaivs:
+        if sai.run_traffic:
             pkt = simple_tcp_packet(eth_dst=macs[1],
                                     eth_src=macs[0],
                                     ip_dst='10.0.0.1',
@@ -161,7 +161,7 @@ def test_l2_flood(sai, dataplane):
         sai.set(sai.sw.port_oids[idx], ["SAI_PORT_ATTR_PORT_VLAN_ID", vlan_id])
 
     try:
-        if not sai.libsaivs:
+        if sai.run_traffic:
             pkt = simple_tcp_packet(eth_dst=macs[1],
                                     eth_src=macs[0],
                                     ip_dst='10.0.0.1',
@@ -232,7 +232,7 @@ def test_l2_lag(sai, dataplane):
     sai.create_fdb(vlan_oid, macs[1], sai.sw.dot1q_bp_oids[3])
 
     try:
-        if not sai.libsaivs:
+        if sai.run_traffic:
             count = [0, 0, 0]
             dst_ip = int(socket.inet_aton('10.10.10.1').encode('hex'),16)
             max_itrs = 200
@@ -318,7 +318,7 @@ def test_l2_vlan_bcast_ucast(sai, dataplane):
         sai.create_fdb(vlan_oid, macs[idx], bp_oid)
 
     try:
-        if not sai.libsaivs:
+        if sai.run_traffic:
             bcast_pkt = simple_tcp_packet(eth_dst='ff:ff:ff:ff:ff:ff',
                                           eth_src='00:00:00:00:00:01',
                                           ip_dst='10.0.0.1',
@@ -375,7 +375,7 @@ def test_l2_mtu(sai, dataplane):
         sai.set(oid, ["SAI_PORT_ATTR_PORT_VLAN_ID", vlan_id])
 
     try:
-        if not sai.libsaivs:
+        if sai.run_traffic:
             pkt = simple_tcp_packet(pktlen=1400,
                                     eth_dst='00:22:22:22:22:22',
                                     eth_src='00:11:11:11:11:11',

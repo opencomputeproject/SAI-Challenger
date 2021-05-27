@@ -43,7 +43,7 @@ docker build -f Dockerfile.saivs.server -t saivs-server .
 
 Build SAI Challenger Docker image with SAI tests:
 ```sh
-docker build -f Dockerfile.saivs.client -t saivs-client .
+docker build -f Dockerfile.client -t sai-challenger-client .
 ```
 
 Run SAI server:
@@ -57,19 +57,9 @@ docker run --name sai-challenger \
 	-v $(pwd):/sai-challenger \
 	--cap-add=NET_ADMIN \
 	--device /dev/net/tun:/dev/net/tun \
-	-d saivs-client
+	-d sai-challenger-client
 
 docker exec -ti sai-challenger pytest --sai-server=<saivs-server-ip> -v test_l2_basic.py
-```
-
-TODO: Sai.cleanup() methods should be fixed to be able to run SAI Challenger TCs
-      multiple times without restarting SAI server (syncd).
-```sh
-    def cleanup(self):
-        self.r.flushall()
-        # TODO: syncd should be restarted over SSH/Telnet when run on DUT
-        os.system("supervisorctl restart syncd")
-        self.sw = SaiSwitch(self)
 ```
 
 

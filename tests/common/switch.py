@@ -213,12 +213,17 @@ class Sai:
     attempts = 40
     sw_oid = "oid:0x21000000000000"
 
-    def __init__(self, sai_server):
-        self.r = redis.Redis(host=sai_server, port=6379, db=1)
+    def __init__(self, exec_params):
+        self.r = redis.Redis(host=exec_params["server"], port=6379, db=1)
         self.cache = {}
         self.rec2vid = {}
         self.rec2vid[self.sw_oid] = self.sw_oid
-        self.libsaivs = not os.path.isfile("/usr/local/lib/libsai.so")
+
+        self.client_mode = not os.path.isfile("/usr/bin/redis-server")
+        self.libsaivs = (exec_params["saivs"] or
+                         (not self.client_mode and not os.path.isfile("/usr/local/lib/libsai.so")))
+        self.run_traffic = exec_params["traffic"] and not self.libsaivs
+
         self.cleanup()
 
     def cleanup(self):

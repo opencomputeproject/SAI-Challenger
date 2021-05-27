@@ -105,12 +105,18 @@ config_default = {
 }
 
 def pytest_addoption(parser):
-    parser.addoption("--sai-server", action="store", default='localhost')
+    parser.addoption("--sai-server", action="store", default='localhost', help="SAI server IP")
+    parser.addoption("--traffic", action="store_true", default=False, help="run tests with traffic")
+    parser.addoption("--saivs", action="store_true", default=False, help="running tests on top of libsaivs")
 
 
 @pytest.fixture(scope="session")
-def sai_server(request):
-    return request.config.getoption("--sai-server")
+def exec_params(request):
+    config_param = {}
+    config_param["server"] = request.config.getoption("--sai-server")
+    config_param["traffic"] = request.config.getoption("--traffic")
+    config_param["saivs"] = request.config.getoption("--saivs")
+    return config_param
 
 
 def logging_setup(config):
@@ -146,8 +152,8 @@ def pcap_setup(config):
 
 
 @pytest.fixture(scope="session")
-def sai(sai_server):
-    sai = Sai(sai_server)
+def sai(exec_params):
+    sai = Sai(exec_params)
     return sai
 
 
