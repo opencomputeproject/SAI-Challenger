@@ -222,9 +222,29 @@ class Sai:
         self.cleanup()
 
     def cleanup(self):
+        '''
+        Flushes Redis DB and restarts syncd application.
+
+        Each time SAI Challenger starts TCs execution, it's expected that
+        the system (DUT) is in the initial state with no extra SAI objects
+        created. To ensure this, the framework should flush Redis DB content
+        and restart syncd application linked with SAI library.
+
+        The execution flow:
+          1. On Docker start, the supervisord starts Redis server and syncd.
+             For more details, please see `supervisord.conf` file.
+          2. This function flushes Redis DB content by FLUSHALL command
+             and then stops Redis server by SHUTDOWN command.
+          3. The supervisord restarts Redis program as per `autorestart`
+             option in `supervisord.conf` file.
+          4. As a part of Redis program `command` option, supervisord
+             restarts syncd through `killall syncd` command.
+          5. The supervisord restarts syncd program as per `autorestart`
+             option in `supervisord.conf` file.
+        '''
         self.r.flushall()
-        # TODO: syncd should be restarted over SSH/Telnet when run on DUT
-        os.system("supervisorctl restart syncd")
+        self.r.shutdown()
+        time.sleep(5)
         self.sw = SaiSwitch(self)
 
     def alloc_vid(self, obj_type):
