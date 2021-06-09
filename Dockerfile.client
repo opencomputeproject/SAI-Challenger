@@ -7,9 +7,6 @@ MAINTAINER andriy.kokhan@gmail.com
 #
 # https://github.com/Azure/sonic-buildimage/tree/30b6668
 
-ARG SWSS_COMMON_VER=b75aab7
-ARG SAIREDIS_VER=13474d1
-
 #COPY ["no-check-valid-until", "/etc/apt/apt.conf.d/"]
 
 RUN echo "deb [arch=amd64] http://debian-archive.trafficmanager.net/debian/ buster main contrib non-free" >> /etc/apt/sources.list && \
