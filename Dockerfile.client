@@ -37,7 +37,7 @@ RUN apt-get update && apt-get install -y \
         rsyslog \
         supervisor
 
-RUN python3 -m pip install redis pytest
+RUN python3 -m pip install redis pytest pytest_dependency
 
 # Install PTF dependencies
 RUN pip3 install scapy
