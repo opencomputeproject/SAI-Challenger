@@ -282,23 +282,29 @@ class Sai:
     def operate(self, obj, attrs, op):
         self.r.delete("GETRESPONSE_KEY_VALUE_OP_QUEUE")
 
-        status1 = []
-        attempt = 0
-        while len(self.r.lrange("GETRESPONSE_KEY_VALUE_OP_QUEUE", 0, -1)) > 0 and attempt < self.attempts:
+        tout = 0.01
+        attempts = self.attempts
+        while len(self.r.lrange("GETRESPONSE_KEY_VALUE_OP_QUEUE", 0, -1)) > 0 and attempts > 0:
             time.sleep(0.01)
-            attempt += 1
+            attempts -= 1
 
-        if attempt == self.attempts:
+        if attempts == 0:
             return []
 
         self.r.lpush("ASIC_STATE_KEY_VALUE_OP_QUEUE", obj, attrs, op)
         self.r.publish("ASIC_STATE_CHANNEL", "G")
 
         status = []
-        attempt = 0
-        while len(status) < 3 and attempt < self.attempts:
-            time.sleep(0.01)
-            attempt += 1
+        attempts = self.attempts
+
+        # Wait upto 3 mins for switch init on HW
+        if not self.libsaivs and obj == "SAI_OBJECT_TYPE_SWITCH" and op == "Screate":
+            tout = 0.5
+            attempts = 240
+
+        while len(status) < 3 and attempts > 0:
+            time.sleep(tout)
+            attempts -= 1
             status = self.r.lrange("GETRESPONSE_KEY_VALUE_OP_QUEUE", 0, -1)
 
         self.r.delete("GETRESPONSE_KEY_VALUE_OP_QUEUE")
