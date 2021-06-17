@@ -214,7 +214,9 @@ class Sai:
     sw_oid = "oid:0x21000000000000"
 
     def __init__(self, exec_params):
+        self.loglevel = exec_params["loglevel"]
         self.r = redis.Redis(host=exec_params["server"], port=6379, db=1)
+        self.loglevel_db = redis.Redis(host=exec_params["server"], port=6379, db=3)
         self.cache = {}
         self.rec2vid = {}
         self.rec2vid[self.sw_oid] = self.sw_oid
@@ -248,6 +250,7 @@ class Sai:
              option in `supervisord.conf` file.
         '''
         self.r.flushall()
+        self.loglevel_db.hmset('syncd:syncd', {'LOGLEVEL':self.loglevel, 'LOGOUTPUT':'SYSLOG'})
         self.r.shutdown()
         time.sleep(5)
         self.sw = SaiSwitch(self)

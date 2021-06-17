@@ -108,6 +108,7 @@ def pytest_addoption(parser):
     parser.addoption("--sai-server", action="store", default='localhost', help="SAI server IP")
     parser.addoption("--traffic", action="store_true", default=False, help="run tests with traffic")
     parser.addoption("--saivs", action="store_true", default=False, help="running tests on top of libsaivs")
+    parser.addoption("--loglevel", action="store", default='NOTICE', help="syncd logging level")
 
 
 @pytest.fixture(scope="session")
@@ -116,6 +117,7 @@ def exec_params(request):
     config_param["server"] = request.config.getoption("--sai-server")
     config_param["traffic"] = request.config.getoption("--traffic")
     config_param["saivs"] = request.config.getoption("--saivs")
+    config_param["loglevel"] = request.config.getoption("--loglevel")
     return config_param
 
 
