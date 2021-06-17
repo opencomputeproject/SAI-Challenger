@@ -1,7 +1,8 @@
 # SAI Challenger
 SAI testing and integration framework that is based on SONiC sairedis project.
 
-![](img/sai-challenger.png)
+<a href="url"><img src="img/sai-challenger.png" align="center" width="350" ></a>
+
 
 SAI Challenger can be executed in two modes:
 1. [standalone mode](docs/standalone_mode.md) - both syncd and pytest are running in the same Docker container;
