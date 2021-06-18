@@ -163,6 +163,7 @@ class SaiSwitch:
         self.default_vlan_id = "0"
         self.default_vrf_oid = "oid:0x0"
         self.port_oids = []
+        self.dot1q_bp_oids = []
 
         sai.create("SAI_OBJECT_TYPE_SWITCH:" + sai.sw_oid,
                    [
@@ -176,25 +177,9 @@ class SaiSwitch:
                        "SAI_SWITCH_ATTR_NAT_ENABLE",         "true"
                    ])
 
-        # Ports
-        port_num = sai.get(sai.sw_oid, ["SAI_SWITCH_ATTR_NUMBER_OF_ACTIVE_PORTS", ""]).uint32()
-        if port_num > 0:
-            self.port_oids = sai.get(sai.sw_oid,
-                                     ["SAI_SWITCH_ATTR_PORT_LIST", sai.make_list(port_num, "oid:0x0")]).oids()
-
         # Default .1Q bridge
         self.dot1q_br_oid = sai.get(sai.sw_oid, ["SAI_SWITCH_ATTR_DEFAULT_1Q_BRIDGE_ID", "oid:0x0"]).oid()
         assert (self.dot1q_br_oid != "oid:0x0")
-
-        # .1Q bridge ports
-        status, data = sai.get(self.dot1q_br_oid, ["SAI_BRIDGE_ATTR_PORT_LIST", "1:oid:0x0"], False)
-        bport_num = data.uint32()
-        assert (status == "SAI_STATUS_BUFFER_OVERFLOW")
-        assert (bport_num > 0)
-
-        self.dot1q_bp_oids = sai.get(self.dot1q_br_oid,
-                                     ["SAI_BRIDGE_ATTR_PORT_LIST", sai.make_list(bport_num, "oid:0x0")]).oids()
-        assert (bport_num == len(self.dot1q_bp_oids))
 
         # Default VLAN
         self.default_vlan_oid = sai.get(sai.sw_oid, ["SAI_SWITCH_ATTR_DEFAULT_VLAN_ID", "oid:0x0"]).oid()
@@ -206,6 +191,24 @@ class SaiSwitch:
         # Default VRF
         self.default_vrf_oid = sai.get(sai.sw_oid, ["SAI_SWITCH_ATTR_DEFAULT_VIRTUAL_ROUTER_ID", "oid:0x0"]).oid()
         assert (self.default_vrf_oid != "oid:0x0")
+
+        # Ports
+        port_num = sai.get(sai.sw_oid, ["SAI_SWITCH_ATTR_NUMBER_OF_ACTIVE_PORTS", ""]).uint32()
+        if port_num > 0:
+            self.port_oids = sai.get(sai.sw_oid,
+                                     ["SAI_SWITCH_ATTR_PORT_LIST", sai.make_list(port_num, "oid:0x0")]).oids()
+
+            # .1Q bridge ports
+            status, data = sai.get(self.dot1q_br_oid, ["SAI_BRIDGE_ATTR_PORT_LIST", "1:oid:0x0"], False)
+            bport_num = data.uint32()
+            assert (status == "SAI_STATUS_BUFFER_OVERFLOW")
+            assert (bport_num > 0)
+
+            self.dot1q_bp_oids = sai.get(self.dot1q_br_oid,
+                                         ["SAI_BRIDGE_ATTR_PORT_LIST", sai.make_list(bport_num, "oid:0x0")]).oids()
+            assert (bport_num == len(self.dot1q_bp_oids))
+        else:
+            assert False, "TODO: Create ports on SAI switch initialization"
 
 
 class Sai:
