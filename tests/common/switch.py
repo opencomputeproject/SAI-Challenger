@@ -4,6 +4,19 @@ import time
 import json
 import os
 
+'''
+SAI version:
+  Branch v1.7
+  Tag v1.7.1-1
+  Commit c0bdac2
+  Jan 24, 2021
+
+This SAI version is used by sonic-buildimage:
+  Branch 202012
+  Commit 346b916
+  Jun 18, 2021
+'''
+
 class SaiObjType(Enum):
     PORT                     =  1
     LAG                      =  2
