@@ -301,7 +301,7 @@ class Sai:
         attempts = self.attempts
 
         # Wait upto 3 mins for switch init on HW
-        if not self.libsaivs and obj == "SAI_OBJECT_TYPE_SWITCH" and op == "Screate":
+        if not self.libsaivs and obj.startswith("SAI_OBJECT_TYPE_SWITCH") and op == "Screate":
             tout = 0.5
             attempts = 240
 
