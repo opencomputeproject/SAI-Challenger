@@ -1,0 +1,178 @@
+diff --git a/lib/src/sai_redis_hash.cpp b/lib/src/sai_redis_hash.cpp
+index 0dec9b3..69db8c2 100644
+--- a/lib/src/sai_redis_hash.cpp
++++ b/lib/src/sai_redis_hash.cpp
+@@ -1,9 +1,7 @@
+ #include "sai_redis.h"
+ 
+ REDIS_GENERIC_QUAD(HASH,hash);
+-REDIS_GENERIC_QUAD(FINE_GRAINED_HASH_FIELD,fine_grained_hash_field);
+ 
+ const sai_hash_api_t redis_hash_api = {
+     REDIS_GENERIC_QUAD_API(hash)
+-    REDIS_GENERIC_QUAD_API(fine_grained_hash_field)
+ };
+diff --git a/lib/src/sai_redis_hostintf.cpp b/lib/src/sai_redis_hostintf.cpp
+index fab7a9c..a8ac3ad 100644
+--- a/lib/src/sai_redis_hostintf.cpp
++++ b/lib/src/sai_redis_hostintf.cpp
+@@ -24,27 +24,6 @@ static sai_status_t redis_send_hostif_packet(
+     return SAI_STATUS_NOT_IMPLEMENTED;
+ }
+ 
+-static sai_status_t redis_allocate_hostif_packet(
+-        _In_ sai_object_id_t hostif_id,
+-        _In_ sai_size_t buffer_size,
+-        _Out_ void **buffer,
+-        _In_ uint32_t attr_count,
+-        _In_ const sai_attribute_t *attr_list)
+-{
+-    SWSS_LOG_ENTER();
+-
+-    return SAI_STATUS_NOT_IMPLEMENTED;
+-}
+-
+-static sai_status_t redis_free_hostif_packet(
+-        _In_ sai_object_id_t hostif_id,
+-        _Inout_ void *buffer)
+-{
+-    SWSS_LOG_ENTER();
+-
+-    return SAI_STATUS_NOT_IMPLEMENTED;
+-}
+-
+ REDIS_GENERIC_QUAD(HOSTIF,hostif);
+ REDIS_GENERIC_QUAD(HOSTIF_TABLE_ENTRY,hostif_table_entry);
+ REDIS_GENERIC_QUAD(HOSTIF_TRAP_GROUP,hostif_trap_group);
+@@ -61,6 +40,4 @@ const sai_hostif_api_t redis_hostif_api = {
+ 
+     redis_recv_hostif_packet,
+     redis_send_hostif_packet,
+-    redis_allocate_hostif_packet,
+-    redis_free_hostif_packet,
+ };
+diff --git a/syncd/BestCandidateFinder.cpp b/syncd/BestCandidateFinder.cpp
+index d82ae8b..a9ec0a2 100644
+--- a/syncd/BestCandidateFinder.cpp
++++ b/syncd/BestCandidateFinder.cpp
+@@ -1392,6 +1392,7 @@ std::shared_ptr<SaiObj> BestCandidateFinder::findCurrentBestMatchForGenericObjec
+     return nullptr;
+ }
+ 
++/*
+ std::shared_ptr<SaiObj> BestCandidateFinder::findCurrentBestMatchForGenericObjectUsingLabel(
+         _In_ const std::shared_ptr<const SaiObj> &temporaryObj,
+         _In_ const std::vector<sai_object_compare_info_t> &candidateObjects)
+@@ -1463,7 +1464,7 @@ std::shared_ptr<SaiObj> BestCandidateFinder::findCurrentBestMatchForGenericObjec
+ 
+     return sameLabel.at(0).obj;
+ }
+-
++*/
+ std::shared_ptr<SaiObj> BestCandidateFinder::findCurrentBestMatchForGenericObjectUsingGraph(
+         _In_ const std::shared_ptr<const SaiObj> &temporaryObj,
+         _In_ const std::vector<sai_object_compare_info_t> &candidateObjects)
+@@ -1887,12 +1888,14 @@ std::shared_ptr<SaiObj> BestCandidateFinder::findCurrentBestMatchForGenericObjec
+         return candidateObjects.begin()->obj;
+     }
+ 
++/*
+     auto labelCandidate = findCurrentBestMatchForGenericObjectUsingLabel(
+             temporaryObj,
+             candidateObjects);
+ 
+     if (labelCandidate != nullptr)
+         return labelCandidate;
++*/
+ 
+     /*
+      * If we have more than 1 object matched actually more preferred
+diff --git a/vslib/src/SwitchStateBaseMACsec.cpp b/vslib/src/SwitchStateBaseMACsec.cpp
+index ae5b889..b961a9e 100644
+--- a/vslib/src/SwitchStateBaseMACsec.cpp
++++ b/vslib/src/SwitchStateBaseMACsec.cpp
+@@ -453,9 +453,9 @@ sai_status_t SwitchStateBase::loadMACsecAttrFromMACsecSC(
+ 
+     macsecAttr.m_sendSci = attr->value.booldata;
+ 
+-    SAI_METADATA_GET_ATTR_BY_ID(attr, SAI_MACSEC_SC_ATTR_ENCRYPTION_ENABLE, attrCount, attrList);
++    //SAI_METADATA_GET_ATTR_BY_ID(attr, SAI_MACSEC_SC_ATTR_ENCRYPTION_ENABLE, attrCount, attrList);
+ 
+-    macsecAttr.m_encryptionEnable = attr->value.booldata;
++    //macsecAttr.m_encryptionEnable = attr->value.booldata;
+ 
+ 
+     SAI_METADATA_GET_ATTR_BY_ID(attr, SAI_MACSEC_SC_ATTR_FLOW_ID, attrCount, attrList);
+@@ -497,8 +497,8 @@ sai_status_t SwitchStateBase::loadMACsecAttrFromMACsecSA(
+     std::vector<sai_attribute_t> attrs(4);
+     attrs[0].id = SAI_MACSEC_SC_ATTR_FLOW_ID;
+     attrs[1].id = SAI_MACSEC_SC_ATTR_MACSEC_SCI;
+-    attrs[2].id = SAI_MACSEC_SC_ATTR_ENCRYPTION_ENABLE;
+-    attrs[3].id = SAI_MACSEC_SC_ATTR_MACSEC_CIPHER_SUITE;
++    //attrs[2].id = SAI_MACSEC_SC_ATTR_ENCRYPTION_ENABLE;
++    //attrs[3].id = SAI_MACSEC_SC_ATTR_MACSEC_CIPHER_SUITE;
+ 
+     CHECK_STATUS(get(SAI_OBJECT_TYPE_MACSEC_SC, attr->value.oid, static_cast<uint32_t>(attrs.size()), attrs.data()));
+ 
+@@ -506,7 +506,7 @@ sai_status_t SwitchStateBase::loadMACsecAttrFromMACsecSA(
+     auto sci = attrs[1].value.u64;
+     std::stringstream sciHexStr;
+     macsecAttr.m_encryptionEnable = attrs[2].value.booldata;
+-    bool is_sak_128_bit = (attrs[3].value.s32 == SAI_MACSEC_CIPHER_SUITE_GCM_AES_128 || attrs[3].value.s32 == SAI_MACSEC_CIPHER_SUITE_GCM_AES_XPN_128);
++    bool is_sak_128_bit = false;//(attrs[3].value.s32 == SAI_MACSEC_CIPHER_SUITE_GCM_AES_128 || attrs[3].value.s32 == SAI_MACSEC_CIPHER_SUITE_GCM_AES_XPN_128);
+ 
+     sciHexStr << std::setw(MACSEC_SCI_LENGTH) << std::setfill('0');
+ 
+diff --git a/vslib/src/sai_vs_hash.cpp b/vslib/src/sai_vs_hash.cpp
+index d7f6e1c..7bf3f2d 100644
+--- a/vslib/src/sai_vs_hash.cpp
++++ b/vslib/src/sai_vs_hash.cpp
+@@ -1,9 +1,7 @@
+ #include "sai_vs.h"
+ 
+ VS_GENERIC_QUAD(HASH,hash);
+-VS_GENERIC_QUAD(FINE_GRAINED_HASH_FIELD,fine_grained_hash_field);
+ 
+ const sai_hash_api_t vs_hash_api = {
+     VS_GENERIC_QUAD_API(hash)
+-    VS_GENERIC_QUAD_API(fine_grained_hash_field)
+ };
+diff --git a/vslib/src/sai_vs_hostintf.cpp b/vslib/src/sai_vs_hostintf.cpp
+index 2a35c2b..679162a 100644
+--- a/vslib/src/sai_vs_hostintf.cpp
++++ b/vslib/src/sai_vs_hostintf.cpp
+@@ -24,27 +24,6 @@ static sai_status_t vs_send_hostif_packet(
+     return SAI_STATUS_NOT_IMPLEMENTED;
+ }
+ 
+-static sai_status_t vs_allocate_hostif_packet(
+-        _In_ sai_object_id_t hostif_id,
+-        _In_ sai_size_t buffer_size,
+-        _Out_ void **buffer,
+-        _In_ uint32_t attr_count,
+-        _In_ const sai_attribute_t *attr_list)
+-{
+-    SWSS_LOG_ENTER();
+-
+-    return SAI_STATUS_NOT_IMPLEMENTED;
+-}
+-
+-static sai_status_t vs_free_hostif_packet(
+-        _In_ sai_object_id_t hostif_id,
+-        _Inout_ void *buffer)
+-{
+-    SWSS_LOG_ENTER();
+-
+-    return SAI_STATUS_NOT_IMPLEMENTED;
+-}
+-
+ VS_GENERIC_QUAD(HOSTIF,hostif);
+ VS_GENERIC_QUAD(HOSTIF_TABLE_ENTRY,hostif_table_entry);
+ VS_GENERIC_QUAD(HOSTIF_TRAP_GROUP,hostif_trap_group);
+@@ -61,6 +40,4 @@ const sai_hostif_api_t vs_hostif_api = {
+ 
+     vs_recv_hostif_packet,
+     vs_send_hostif_packet,
+-    vs_allocate_hostif_packet,
+-    vs_free_hostif_packet,
+ };

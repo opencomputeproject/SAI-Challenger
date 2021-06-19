@@ -2,13 +2,18 @@ FROM debian:buster
 
 MAINTAINER andriy.kokhan@gmail.com
 
-# The sonic-swss-common and sonic-sairedis commits taken from
-# sonic-buildimage master 30b6668 commited on Feb 27, 2021
+# The sonic-swss-common and sonic-sairedis commits were taken from
+# sonic-buildimage 202012 346b916 commited on Jun 18, 2021
 #
-# https://github.com/Azure/sonic-buildimage/tree/30b6668
+# https://github.com/Azure/sonic-buildimage/tree/346b916
+#
+# NOTE: The sonic-swss-common and sonic-sairedis sources used by
+#       sonic-buildimage 202006 do not properly handle the case
+#       when SAI call returns an error status in synchronous mode.
 
-ARG SWSS_COMMON_VER=b75aab7
-ARG SAIREDIS_VER=13474d1
+ARG SWSS_COMMON_VER=fb08c1f
+ARG SAIREDIS_VER=bb13d59
+ARG SAI_VER=ecced0c
 
 #COPY ["no-check-valid-until", "/etc/apt/apt.conf.d/"]
 
@@ -92,9 +97,14 @@ WORKDIR /sai
 RUN git clone https://github.com/Azure/sonic-sairedis.git \
         && cd sonic-sairedis \
         && git checkout ${SAIREDIS_VER} \
+        && git submodule update --init --recursive \
+        && cd SAI && git fetch origin \
+        && git checkout ${SAI_VER} \
         && git submodule update --init --recursive
 
+COPY patches/sai_v1.6.3.patch /sai/sonic-sairedis/
 RUN cd sonic-sairedis \
+        && git apply -p1 sai_v1.6.3.patch \
         && ./autogen.sh && ./configure --with-sai=vs && make -j4 \
         && make install && ldconfig
 

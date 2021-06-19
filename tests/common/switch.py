@@ -4,6 +4,19 @@ import time
 import json
 import os
 
+'''
+SAI version:
+  Branch v1.6
+  Tag v1.6.3
+  Commit ecced0c
+  Jun 18, 2020
+
+This SAI version is used by sonic-buildimage:
+  Branch 202006
+  Commit 88cfe6a
+  Dec 9, 2020
+'''
+
 class SaiObjType(Enum):
     PORT                     =  1
     LAG                      =  2
@@ -98,7 +111,6 @@ class SaiObjType(Enum):
     MACSEC_SC                = 91
     MACSEC_SA                = 92
     SYSTEM_PORT              = 93
-    FINE_GRAINED_HASH_FIELD  = 94
 
 
 class SaiRecParser:
@@ -353,8 +365,8 @@ class Sai:
             attr = json.dumps(attr)
         print(attr)
         status = self.operate(obj, attr, "Sset")
-        status[2] = status[2].decode("utf-8")
         print(status)
+        status[2] = status[2].decode("utf-8")
         if do_assert:
             assert status[2] == 'SAI_STATUS_SUCCESS'
         return status[2]
