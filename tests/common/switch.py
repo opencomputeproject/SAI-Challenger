@@ -10,6 +10,7 @@ SAI version:
   Tag N/A (v1.8.1+)
   Commit bf36303
   May 17, 2021
+
 This SAI version is used by sonic-buildimage:
   Branch master
   Commit 4c4799e
@@ -328,6 +329,7 @@ class Sai:
 
         self.r.delete("GETRESPONSE_KEY_VALUE_OP_QUEUE")
 
+        assert len(status) == 3, "SAI \"{}\" operation failure!".format(op)
         return status
 
     def create(self, obj, attrs, do_assert = True):
@@ -407,6 +409,13 @@ class Sai:
         else:
             status, data = self.get(obj, [attr, ""], do_assert)
         return status, data
+
+    def flush_fdb_entries(self, attrs):
+        if type(attrs) != str:
+            attrs = json.dumps(attrs)
+        status = self.operate("SAI_OBJECT_TYPE_SWITCH:" + self.sw_oid, attrs, "Sflush")
+        assert status[0].decode("utf-8") == 'Sflushresponse'
+        assert status[2].decode("utf-8") == 'SAI_STATUS_SUCCESS'
 
     def clear_stats(self, obj, attrs):
         if type(attrs) != str:
