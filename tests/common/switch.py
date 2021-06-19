@@ -4,6 +4,18 @@ import time
 import json
 import os
 
+'''
+SAI version:
+  Branch v1.8
+  Tag N/A (v1.8.1+)
+  Commit bf36303
+  May 17, 2021
+This SAI version is used by sonic-buildimage:
+  Branch master
+  Commit 4c4799e
+  Jun 18, 2021
+'''
+
 class SaiObjType(Enum):
     PORT                     =  1
     LAG                      =  2
@@ -99,6 +111,7 @@ class SaiObjType(Enum):
     MACSEC_SA                = 92
     SYSTEM_PORT              = 93
     FINE_GRAINED_HASH_FIELD  = 94
+    SWITCH_TUNNEL            = 95
 
 
 class SaiRecParser:
