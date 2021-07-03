@@ -61,8 +61,7 @@ def test_l2_trunk_to_trunk_vlan(sai, dataplane):
             send_packet(dataplane, 0, str(pkt))
             verify_packets(dataplane, pkt, [1])
     finally:
-        sai.remove_fdb(vlan_oid, macs[0])
-        sai.remove_fdb(vlan_oid, macs[1])
+        sai.flush_fdb_entries(["SAI_FDB_FLUSH_ATTR_BV_ID", vlan_oid])
         sai.remove(vlan_member1)
         sai.remove(vlan_member2)
         sai.remove(vlan_oid)
