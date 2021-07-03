@@ -298,7 +298,7 @@ class Sai:
             return self.cache[obj_type.name].pop(value, "")
         return ""
 
-    def operate(self, obj, attrs, op):
+    def __operate(self, obj, attrs, op):
         self.r.delete("GETRESPONSE_KEY_VALUE_OP_QUEUE")
 
         tout = 0.01
@@ -339,7 +339,7 @@ class Sai:
             obj = "SAI_OBJECT_TYPE_" + obj.name + ":" + vid
         if type(attrs) != str:
             attrs = json.dumps(attrs)
-        status = self.operate(obj, attrs, "Screate")
+        status = self.__operate(obj, attrs, "Screate")
         print(status)
         status[2] = status[2].decode("utf-8")
         if do_assert:
@@ -352,7 +352,7 @@ class Sai:
         print(obj)
         if obj.startswith("oid:"):
             obj = self.vid_to_type(obj) + ":" + obj
-        status = self.operate(obj, "{}", "Dremove")
+        status = self.__operate(obj, "{}", "Dremove")
         print(status)
         status[2] = status[2].decode("utf-8")
         if do_assert:
@@ -366,7 +366,7 @@ class Sai:
         if type(attr) != str:
             attr = json.dumps(attr)
         print(attr)
-        status = self.operate(obj, attr, "Sset")
+        status = self.__operate(obj, attr, "Sset")
         status[2] = status[2].decode("utf-8")
         print(status)
         if do_assert:
@@ -379,7 +379,7 @@ class Sai:
             obj = self.vid_to_type(obj) + ":" + obj
         if type(attrs) != str:
             attrs = json.dumps(attrs)
-        status = self.operate(obj, attrs, "Sget")
+        status = self.__operate(obj, attrs, "Sget")
         status[2] = status[2].decode("utf-8")
         print(status)
 
@@ -412,20 +412,20 @@ class Sai:
     def flush_fdb_entries(self, attrs):
         if type(attrs) != str:
             attrs = json.dumps(attrs)
-        status = self.operate("SAI_OBJECT_TYPE_SWITCH:" + self.sw_oid, attrs, "Sflush")
+        status = self.__operate("SAI_OBJECT_TYPE_SWITCH:" + self.sw_oid, attrs, "Sflush")
         assert status[0].decode("utf-8") == 'Sflushresponse'
         assert status[2].decode("utf-8") == 'SAI_STATUS_SUCCESS'
 
     def clear_stats(self, obj, attrs):
         if type(attrs) != str:
             attrs = json.dumps(attrs)
-        status = self.operate(obj, attrs, "Sclear_stats")    
+        status = self.__operate(obj, attrs, "Sclear_stats")    
         assert status[2].decode("utf-8") == 'SAI_STATUS_SUCCESS'
 
     def get_stats(self, obj, attrs, do_assert = True):
         if type(attrs) != str:
             attrs = json.dumps(attrs)
-        status = self.operate(obj, attrs, "Sget_stats")
+        status = self.__operate(obj, attrs, "Sget_stats")
         status[2] = status[2].decode("utf-8")
         if do_assert:
             assert status[2] == 'SAI_STATUS_SUCCESS'
@@ -439,7 +439,154 @@ class Sai:
     def make_list(self, length, elem):
         return "{}:".format(length) + (elem + ",") * (length - 1) + elem
 
-    def update_oid_key(self, action, key):
+    def __bulk_attr_serialize(self, attr):
+        data = ""
+        # Input attributes: [a, v, a, v, ...]
+        # Serialized attributes format: "a=v|a=v|..."
+        for i, v in enumerate(attr):
+            if i % 2 == 0:
+                if len(data) > 0:
+                    data += "|"
+                data += v + "="
+            else:
+                data += v
+        return data
+
+    def bulk_create(self, obj, keys, attrs, do_assert = True):
+        '''
+        Bulk create FDB/route objects
+
+        Parameters:
+            obj (SaiObjType): The type of objects to be created
+            keys (list): The list of objects to be created.
+                    E.g.:
+                    [
+                        {
+                            "bvid"      : vlan_oid,
+                            "mac"       : "00:00:00:00:00:01",
+                            "switch_id" : sai.sw_oid
+                        },
+                        {...}
+                    ]
+            attrs (list): The list of the lists of objects' attributes.
+                    In case just one set of the attributes provided, all objects
+                    will be created with this set of the attributes.
+                    E.g.:
+                    [
+                        [
+                            "SAI_FDB_ENTRY_ATTR_TYPE",           "SAI_FDB_ENTRY_TYPE_STATIC",
+                            "SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID", sai.sw.dot1q_bp_oids[0]
+                        ],
+                        [...]
+                    ]
+            do_assert (bool): Assert that the bulk create operation succeeded.
+
+        Usage example:
+            bulk_create(SaiObjType.FDB_ENTRY, [key1, key2, ...], [attrs1, attrs2, ...])
+            bulk_create(SaiObjType.FDB_ENTRY, [key1, key2, ...], [attrs])
+
+            where, attrsN = [attr1, val1, attr2, val2, ...]
+
+        Returns:
+            The tuple with two elements.
+            The first element contains bulk create operation status:
+                * "SAI_STATUS_SUCCESS" on success when all objects were created;
+                * "SAI_STATUS_FAILURE" when any of the objects fails to create;
+            The second element contains the list of statuses of each individual object
+            creation result.
+        '''
+        assert type(obj) == SaiObjType
+        assert obj == SaiObjType.FDB_ENTRY or obj == SaiObjType.ROUTE_ENTRY
+        assert len(keys) == len(attrs) or len(attrs) == 1
+
+        str_attr = ""
+        if (len(attrs) == 1):
+            str_attr = self.__bulk_attr_serialize(attrs[0])
+
+        key = "SAI_OBJECT_TYPE_" + obj.name + ":" + str(len(keys))
+        values = []
+        for i, _ in enumerate(keys):
+            values.append(json.dumps(keys[i]))
+            if (len(attrs) > 1):
+                str_attr = self.__bulk_attr_serialize(attrs[i])
+            values.append(str_attr)
+
+        status = self.__operate(key, json.dumps(values), "Sbulkcreate")
+
+        status[1] = status[1].decode("utf-8")
+        status[1] = json.loads(status[1])
+        entry_status = []
+        for i, v in enumerate(status[1]):
+            if i % 2 == 0:
+                entry_status.append(v)
+
+        status[2] = status[2].decode("utf-8")
+
+        if do_assert:
+            print(entry_status)
+            assert status[2] == 'SAI_STATUS_SUCCESS'
+            return status[2], entry_status
+
+        return status[2], entry_status
+
+    def bulk_remove(self, obj, keys, do_assert = True):
+        '''
+        Bulk remove FDB/route objects
+
+        Parameters:
+            obj (SaiObjType): The type of objects to be removed
+            keys (list): The list of objects to be removed.
+                    E.g.:
+                    [
+                        {
+                            "bvid"      : vlan_oid,
+                            "mac"       : "00:00:00:00:00:01",
+                            "switch_id" : sai.sw_oid
+                        },
+                        {...}
+                    ]
+            do_assert (bool): Assert that the bulk remove operation succeeded.
+
+        Usage example:
+            bulk_remove(SaiObjType.FDB_ENTRY, [key1, key2, ...])
+            bulk_remove(SaiObjType.FDB_ENTRY, [key1, key2, ...], False)
+
+        Returns:
+            The tuple with two elements.
+            The first element contains bulk remove operation status:
+                * "SAI_STATUS_SUCCESS" on success when all objects were removed;
+                * "SAI_STATUS_FAILURE" when any of the objects fails to remove;
+            The second element contains the list of statuses of each individual object
+            removal result.
+        '''
+        assert type(obj) == SaiObjType
+        assert obj == SaiObjType.FDB_ENTRY or obj == SaiObjType.ROUTE_ENTRY
+
+        key = "SAI_OBJECT_TYPE_" + obj.name + ":" + str(len(keys))
+        values = []
+        for i, v in enumerate(keys):
+            values.append(json.dumps(v))
+            values.append("")
+
+        status = self.__operate(key, json.dumps(values), "Dbulkremove")
+
+        status[1] = status[1].decode("utf-8")
+        status[1] = json.loads(status[1])
+        entry_status = []
+        for i, v in enumerate(status[1]):
+            if i % 2 == 0:
+                entry_status.append(v)
+
+        status[2] = status[2].decode("utf-8")
+
+        if do_assert:
+            print(entry_status)
+            assert status[2] == 'SAI_STATUS_SUCCESS'
+            return status[2], entry_status
+
+        return status[2], entry_status
+
+    def __update_oid_key(self, action, key):
         key_list = key.split(":", 1)
         vid = key_list[1]
 
@@ -456,7 +603,7 @@ class Sai:
 
         return key_list[0] + ":" + vid
 
-    def update_entry_key_oids(self, key):
+    def __update_entry_key_oids(self, key):
         oids = []
         new_key = key
         key_list = key.split("\"")
@@ -468,11 +615,11 @@ class Sai:
             new_key = new_key.replace(oid, new_oid)
         return new_key
 
-    def update_key(self, action, key):
+    def __update_key(self, action, key):
         if ":oid:" in key:
-            return self.update_oid_key(action, key)
+            return self.__update_oid_key(action, key)
         else:
-            return self.update_entry_key_oids(key)
+            return self.__update_entry_key_oids(key)
 
     def apply_rec(self, fname):
         oids = []
@@ -494,23 +641,23 @@ class Sai:
                     if "oid:" in attrs[idx]:
                         attrs[idx] = self.rec2vid[attrs[idx]]
 
-                self.create(self.update_key(rec[0], rec[1]), attrs)
+                self.create(self.__update_key(rec[0], rec[1]), attrs)
 
             elif rec[0] == 's':
                 data = rec[2].split('=')
                 if "oid:" in data[1]:
                     data[1] = self.rec2vid[data[1]]
 
-                self.set(self.update_key(rec[0], rec[1]), data)
+                self.set(self.__update_key(rec[0], rec[1]), data)
             elif rec[0] == 'r':
-                self.remove(self.update_key(rec[0], rec[1]))
+                self.remove(self.__update_key(rec[0], rec[1]))
             elif rec[0] == 'g':
                 attrs = []
                 if len(rec) > 2:
                     for attr in rec[2:]:
                         attrs += attr.split('=')
 
-                data = self.get(self.update_key(rec[0], rec[1]), attrs)
+                data = self.get(self.__update_key(rec[0], rec[1]), attrs)
 
                 jdata = data.to_json()
                 for idx in range(1, len(jdata), 2):

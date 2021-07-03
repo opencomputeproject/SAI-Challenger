@@ -422,3 +422,86 @@ def test_l2_mtu(sai, dataplane):
             sai.set(oid, ["SAI_PORT_ATTR_PORT_VLAN_ID", sai.sw.default_vlan_id])
             sai.set(oid, ["SAI_PORT_ATTR_MTU", port_default_mtu[idx]])
         sai.remove(vlan_oid)
+
+
+def test_fdb_bulk_create(sai, dataplane):
+    macs = ['00:11:11:11:11:11', '00:22:22:22:22:22',
+            '00:33:33:33:33:33', '00:44:44:44:44:44']
+    entry = {
+        "bvid"      : sai.sw.default_vlan_oid,
+        "switch_id" : sai.sw_oid,
+    }
+
+    keys = []
+    for mac in macs:
+        entry["mac"] = mac
+        keys.append(entry.copy())
+
+    attrs = []
+    attrs.append("SAI_FDB_ENTRY_ATTR_TYPE")
+    attrs.append("SAI_FDB_ENTRY_TYPE_STATIC")
+    attrs.append("SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID")
+    attrs.append(sai.sw.dot1q_bp_oids[0])
+
+    sai.bulk_create(SaiObjType.FDB_ENTRY, keys, [attrs])
+
+    try:
+        if sai.run_traffic:
+            src_mac = '00:00:00:11:22:33'
+            dst_mac = '00:00:00:aa:bb:cc'
+
+            # Check no flooding for created FDB entries
+            for mac in macs:
+                pkt = simple_tcp_packet(eth_dst=mac, eth_src=src_mac)
+                send_packet(dataplane, 1, str(pkt))
+                verify_packets(dataplane, pkt, [0])
+
+            # Check flooding if no FDB entry
+            pkt = simple_tcp_packet(eth_dst=dst_mac, eth_src=src_mac)
+            send_packet(dataplane, 1, str(pkt))
+            egress_ports = list(range(len(sai.sw.port_oids)))
+            egress_ports.remove(1)
+            verify_packets(dataplane, pkt, egress_ports)
+    finally:
+        sai.flush_fdb_entries(["SAI_FDB_FLUSH_ATTR_BV_ID", sai.sw.default_vlan_oid])
+
+
+def test_fdb_bulk_remove(sai, dataplane):
+    src_mac = '00:00:00:11:22:33'
+    macs = ['00:11:11:11:11:11', '00:22:22:22:22:22',
+            '00:33:33:33:33:33', '00:44:44:44:44:44']
+
+    for mac in macs:
+        sai.create_fdb(sai.sw.default_vlan_oid, mac, sai.sw.dot1q_bp_oids[0])
+
+    try:
+        if sai.run_traffic:
+            # Check no flooding for created FDB entries
+            for mac in macs:
+                pkt = simple_tcp_packet(eth_dst=mac, eth_src=src_mac)
+                send_packet(dataplane, 1, str(pkt))
+                verify_packets(dataplane, pkt, [0])
+
+        # Bulk remove FDB entries
+        keys = []
+        entry = {
+            "bvid"      : sai.sw.default_vlan_oid,
+            "switch_id" : sai.sw_oid,
+        }
+        for mac in macs:
+            entry["mac"] = mac
+            keys.append(entry.copy())
+
+        sai.bulk_remove(SaiObjType.FDB_ENTRY, keys)
+
+        if sai.run_traffic:
+            # Check flooding if no FDB entry
+            egress_ports = list(range(len(sai.sw.port_oids)))
+            egress_ports.remove(1)
+            for mac in macs:
+                pkt = simple_tcp_packet(eth_dst=mac, eth_src=src_mac)
+                send_packet(dataplane, 1, str(pkt))
+                verify_packets(dataplane, pkt, egress_ports)
+
+    finally:
+        sai.flush_fdb_entries(["SAI_FDB_FLUSH_ATTR_BV_ID", sai.sw.default_vlan_oid])
