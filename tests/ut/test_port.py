@@ -1,5 +1,5 @@
 import pytest
-from common.switch import SaiObjType
+from sai import SaiObjType
 
 port_attrs = [
     ("SAI_PORT_ATTR_TYPE",                                      "sai_port_type_t"),
@@ -138,22 +138,22 @@ port_attrs_updated = {}
 
 
 @pytest.fixture(scope="module")
-def sai_port_obj(sai):
-    port_oid = sai.sw.port_oids[0]
+def sai_port_obj(npu):
+    port_oid = npu.port_oids[0]
     yield port_oid
 
     # Fall back to the defaults
     for attr in port_attrs_updated:
         if attr in port_attrs_default:
-            sai.set(port_oid, [attr, port_attrs_default[attr]])
+            npu.set(port_oid, [attr, port_attrs_default[attr]])
 
 
 @pytest.mark.parametrize(
     "attr,attr_type",
     port_attrs
 )
-def test_get_before_set_attr(sai, dataplane, sai_port_obj, attr, attr_type):#, attr_val):
-    status, data = sai.get_by_type(sai_port_obj, attr, attr_type, do_assert = False)
+def test_get_before_set_attr(npu, dataplane, sai_port_obj, attr, attr_type):#, attr_val):
+    status, data = npu.get_by_type(sai_port_obj, attr, attr_type, do_assert = False)
 
     if status == "SAI_STATUS_NOT_SUPPORTED" or status == "SAI_STATUS_ATTR_NOT_SUPPORTED_0":
         pytest.skip("not supported")
@@ -189,8 +189,8 @@ def test_get_before_set_attr(sai, dataplane, sai_port_obj, attr, attr_type):#, a
         ("SAI_PORT_ATTR_TPID",                      "37120"),   # TPID=0x9100
     ],
 )
-def test_set_attr(sai, dataplane, sai_port_obj, attr, attr_value):
-    status = sai.set(sai_port_obj, [attr, attr_value], False)
+def test_set_attr(npu, dataplane, sai_port_obj, attr, attr_value):
+    status = npu.set(sai_port_obj, [attr, attr_value], False)
 
     if status == "SAI_STATUS_NOT_SUPPORTED" or status == "SAI_STATUS_ATTR_NOT_SUPPORTED_0":
         pytest.skip("not supported")
@@ -218,8 +218,8 @@ def test_set_attr(sai, dataplane, sai_port_obj, attr, attr_value):
         ("SAI_PORT_ATTR_TPID",                      "sai_uint16_t"),
     ]
 )
-def test_get_after_set_attr(sai, dataplane, sai_port_obj, attr, attr_type):
-    status, data = sai.get_by_type(sai_port_obj, attr, attr_type, do_assert = False)
+def test_get_after_set_attr(npu, dataplane, sai_port_obj, attr, attr_type):
+    status, data = npu.get_by_type(sai_port_obj, attr, attr_type, do_assert = False)
 
     if status == "SAI_STATUS_NOT_SUPPORTED" or status == "SAI_STATUS_ATTR_NOT_SUPPORTED_0":
         pytest.skip("not supported")

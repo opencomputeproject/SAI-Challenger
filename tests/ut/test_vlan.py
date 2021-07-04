@@ -1,24 +1,24 @@
 import pytest
-from common.switch import SaiObjType
+from sai import SaiObjType
 
 TEST_VLAN_ID = "100"
 
 @pytest.fixture(scope="module")
-def sai_vlan_obj(sai):
-    vlan_oid = sai.create(SaiObjType.VLAN, ["SAI_VLAN_ATTR_VLAN_ID", TEST_VLAN_ID])
+def sai_vlan_obj(npu):
+    vlan_oid = npu.create(SaiObjType.VLAN, ["SAI_VLAN_ATTR_VLAN_ID", TEST_VLAN_ID])
     yield vlan_oid
-    sai.remove(vlan_oid)
+    npu.remove(vlan_oid)
 
 
 @pytest.fixture(scope="module")
-def sai_vlan_member(sai, sai_vlan_obj):
-    sai.remove_vlan_member(sai.sw.default_vlan_oid, sai.sw.dot1q_bp_oids[0])
-    vlan_mbr_oid = sai.create_vlan_member(sai_vlan_obj, sai.sw.dot1q_bp_oids[0], "SAI_VLAN_TAGGING_MODE_UNTAGGED")
-    sai.set(sai.sw.port_oids[0], ["SAI_PORT_ATTR_PORT_VLAN_ID", TEST_VLAN_ID])
+def sai_vlan_member(npu, sai_vlan_obj):
+    npu.remove_vlan_member(npu.default_vlan_oid, npu.dot1q_bp_oids[0])
+    vlan_mbr_oid = npu.create_vlan_member(sai_vlan_obj, npu.dot1q_bp_oids[0], "SAI_VLAN_TAGGING_MODE_UNTAGGED")
+    npu.set(npu.port_oids[0], ["SAI_PORT_ATTR_PORT_VLAN_ID", TEST_VLAN_ID])
     yield vlan_mbr_oid, sai_vlan_obj
-    sai.remove(vlan_mbr_oid)
-    sai.create_vlan_member(sai.sw.default_vlan_oid, sai.sw.dot1q_bp_oids[0], "SAI_VLAN_TAGGING_MODE_UNTAGGED")
-    sai.set(sai.sw.port_oids[0], ["SAI_PORT_ATTR_PORT_VLAN_ID", sai.sw.default_vlan_id])
+    npu.remove(vlan_mbr_oid)
+    npu.create_vlan_member(npu.default_vlan_oid, npu.dot1q_bp_oids[0], "SAI_VLAN_TAGGING_MODE_UNTAGGED")
+    npu.set(npu.port_oids[0], ["SAI_PORT_ATTR_PORT_VLAN_ID", npu.default_vlan_id])
 
 
 vlan_attrs = [
@@ -59,8 +59,8 @@ vlan_attrs_updated = {}
     "attr,attr_type,attr_val",
     vlan_attrs
 )
-def test_get_before_set_attr(sai, dataplane, sai_vlan_obj, attr, attr_type, attr_val):
-    status, data = sai.get_by_type(sai_vlan_obj, attr, attr_type, do_assert=False)
+def test_get_before_set_attr(npu, dataplane, sai_vlan_obj, attr, attr_type, attr_val):
+    status, data = npu.get_by_type(sai_vlan_obj, attr, attr_type, do_assert=False)
 
     if status == "SAI_STATUS_NOT_SUPPORTED" or status == "SAI_STATUS_ATTR_NOT_SUPPORTED_0":
         pytest.skip("not supported")
@@ -71,7 +71,7 @@ def test_get_before_set_attr(sai, dataplane, sai_vlan_obj, attr, attr_type, attr
     assert status == "SAI_STATUS_SUCCESS"
 
     if attr == "SAI_VLAN_ATTR_STP_INSTANCE":
-        status, data = sai.get(sai.sw_oid, ["SAI_SWITCH_ATTR_DEFAULT_STP_INST_ID", attr_val], False)
+        status, data = npu.get(npu.oid, ["SAI_SWITCH_ATTR_DEFAULT_STP_INST_ID", attr_val], False)
         assert status == "SAI_STATUS_SUCCESS"
         attr_val = data.oid()
 
@@ -106,13 +106,13 @@ def test_get_before_set_attr(sai, dataplane, sai_vlan_obj, attr, attr_type, attr
         ("SAI_VLAN_ATTR_TAM_OBJECT",                                "0:null")
     ]
 )
-def test_set_attr(sai, dataplane, sai_vlan_obj, attr, attr_value):
+def test_set_attr(npu, dataplane, sai_vlan_obj, attr, attr_value):
     if attr == "SAI_VLAN_ATTR_STP_INSTANCE":
-        status, data = sai.get(sai.sw_oid, ["SAI_SWITCH_ATTR_DEFAULT_STP_INST_ID", attr_value], False)
+        status, data = npu.get(npu.oid, ["SAI_SWITCH_ATTR_DEFAULT_STP_INST_ID", attr_value], False)
         assert status == "SAI_STATUS_SUCCESS"
         attr_value = data.oid()
 
-    status = sai.set(sai_vlan_obj, [attr, attr_value], False)
+    status = npu.set(sai_vlan_obj, [attr, attr_value], False)
 
     if status == "SAI_STATUS_NOT_SUPPORTED" or status == "SAI_STATUS_ATTR_NOT_SUPPORTED_0":
         pytest.skip("not supported")
@@ -128,8 +128,8 @@ def test_set_attr(sai, dataplane, sai_vlan_obj, attr, attr_value):
     "attr,attr_type,attr_value",
     vlan_attrs
 )
-def test_get_after_set_attr(sai, dataplane, sai_vlan_obj, attr, attr_type, attr_value):
-    status, data = sai.get_by_type(sai_vlan_obj, attr, attr_type, do_assert=False)
+def test_get_after_set_attr(npu, dataplane, sai_vlan_obj, attr, attr_type, attr_value):
+    status, data = npu.get_by_type(sai_vlan_obj, attr, attr_type, do_assert=False)
 
     if status == "SAI_STATUS_NOT_SUPPORTED" or status == "SAI_STATUS_ATTR_NOT_SUPPORTED_0":
         pytest.skip("not supported")
@@ -154,23 +154,23 @@ def test_get_after_set_attr(sai, dataplane, sai_vlan_obj, attr, attr_type, attr_
         #(1, 4094),
     ]
 )
-def test_vlan_scaling(sai, dataplane, vlan_min, vlan_max):
+def test_vlan_scaling(npu, dataplane, vlan_min, vlan_max):
     status = "SAI_STATUS_SUCCESS"
     vlan_oids = []
 
     # Create VLANs
     for vlan_id in range(vlan_min, vlan_max + 1):
         vlan_id = str(vlan_id)
-        if vlan_id == TEST_VLAN_ID or vlan_id == sai.sw.default_vlan_id:
+        if vlan_id == TEST_VLAN_ID or vlan_id == npu.default_vlan_id:
             continue
-        status, vlan_oid = sai.create(SaiObjType.VLAN, ["SAI_VLAN_ATTR_VLAN_ID", vlan_id], do_assert = False)
+        status, vlan_oid = npu.create(SaiObjType.VLAN, ["SAI_VLAN_ATTR_VLAN_ID", vlan_id], do_assert = False)
         if status != "SAI_STATUS_SUCCESS":
             break
         vlan_oids.append(vlan_oid)
 
     # Remove VLANs
     for vlan_oid in vlan_oids:
-        sai.remove(vlan_oid)
+        npu.remove(vlan_oid)
 
     assert status == "SAI_STATUS_SUCCESS"
 
@@ -181,8 +181,8 @@ def test_vlan_scaling(sai, dataplane, vlan_min, vlan_max):
         ("SAI_VLAN_ATTR_VLAN_ID", "101", "!SAI_STATUS_SUCCESS"),
     ]
 )
-def test_set_attr_negative(sai, dataplane, sai_vlan_obj, attr, attr_value, expected_status):
-    status = sai.set(sai_vlan_obj, [attr, attr_value], False)
+def test_set_attr_negative(npu, dataplane, sai_vlan_obj, attr, attr_value, expected_status):
+    status = npu.set(sai_vlan_obj, [attr, attr_value], False)
     if expected_status[0] == "!":
         assert status != expected_status[1:]
     else:
@@ -199,14 +199,14 @@ def test_set_attr_negative(sai, dataplane, sai_vlan_obj, attr, attr_value, expec
         ("4096",        "SAI_STATUS_INVALID_VLAN_ID"),
     ]
 )
-def test_vlan_create_negative(sai, dataplane, vlan_id, expected_status):
+def test_vlan_create_negative(npu, dataplane, vlan_id, expected_status):
     attrs = []
     if vlan_id is not None:
         attrs = ["SAI_VLAN_ATTR_VLAN_ID", vlan_id]
 
-    status, vlan_oid = sai.create(SaiObjType.VLAN, attrs, do_assert = False)
+    status, vlan_oid = npu.create(SaiObjType.VLAN, attrs, do_assert = False)
     if status == "SAI_STATUS_SUCCESS":
-        sai.remove(vlan_oid)
+        npu.remove(vlan_oid)
 
     if expected_status[0] == "!":
         assert status != expected_status[1:]
@@ -218,8 +218,8 @@ def test_vlan_create_negative(sai, dataplane, vlan_id, expected_status):
     "attr,attr_type",
     vlan_member_attrs
 )
-def test_vlan_mbr_get_before_set_attr(sai, dataplane, sai_vlan_member, attr, attr_type):
-    status, data = sai.get_by_type(sai_vlan_member[0], attr, attr_type, do_assert=False)
+def test_vlan_mbr_get_before_set_attr(npu, dataplane, sai_vlan_member, attr, attr_type):
+    status, data = npu.get_by_type(sai_vlan_member[0], attr, attr_type, do_assert=False)
 
     if status == "SAI_STATUS_NOT_SUPPORTED" or status == "SAI_STATUS_ATTR_NOT_SUPPORTED_0":
         pytest.skip("not supported")
@@ -230,7 +230,7 @@ def test_vlan_mbr_get_before_set_attr(sai, dataplane, sai_vlan_member, attr, att
     assert status == "SAI_STATUS_SUCCESS"
 
     if attr == "SAI_VLAN_MEMBER_ATTR_BRIDGE_PORT_ID":
-        assert data.value() == sai.sw.dot1q_bp_oids[0]
+        assert data.value() == npu.dot1q_bp_oids[0]
     elif attr == "SAI_VLAN_MEMBER_ATTR_VLAN_TAGGING_MODE":
         assert data.value() == "SAI_VLAN_TAGGING_MODE_UNTAGGED"
     elif attr == "SAI_VLAN_MEMBER_ATTR_VLAN_ID":
@@ -245,8 +245,8 @@ def test_vlan_mbr_get_before_set_attr(sai, dataplane, sai_vlan_member, attr, att
         ("SAI_VLAN_MEMBER_ATTR_VLAN_TAGGING_MODE",   "SAI_VLAN_TAGGING_MODE_PRIORITY_TAGGED")
     ]
 )
-def test_vlan_member_set(sai, dataplane, sai_vlan_member, attr, attr_value):
-    status = sai.set(sai_vlan_member[0], [attr, attr_value], False)
+def test_vlan_member_set(npu, dataplane, sai_vlan_member, attr, attr_value):
+    status = npu.set(sai_vlan_member[0], [attr, attr_value], False)
 
     if status == "SAI_STATUS_NOT_SUPPORTED" or status == "SAI_STATUS_ATTR_NOT_SUPPORTED_0":
         pytest.skip("not supported")
@@ -261,8 +261,8 @@ def test_vlan_member_set(sai, dataplane, sai_vlan_member, attr, attr_value):
     "attr,attr_type",
     vlan_member_attrs
 )
-def test_vlan_mbr_get_after_set_attr(sai, dataplane, sai_vlan_member, attr, attr_type):
-    status, data = sai.get_by_type(sai_vlan_member[0], attr, attr_type, do_assert=False)
+def test_vlan_mbr_get_after_set_attr(npu, dataplane, sai_vlan_member, attr, attr_type):
+    status, data = npu.get_by_type(sai_vlan_member[0], attr, attr_type, do_assert=False)
 
     if status == "SAI_STATUS_NOT_SUPPORTED" or status == "SAI_STATUS_ATTR_NOT_SUPPORTED_0":
         pytest.skip("not supported")
@@ -280,10 +280,10 @@ def test_vlan_mbr_get_after_set_attr(sai, dataplane, sai_vlan_member, attr, attr
         ("SAI_VLAN_MEMBER_ATTR_BRIDGE_PORT_ID")
     ]
 )
-def test_vlan_mbr_set_negative(sai, dataplane, sai_vlan_member, attr):
+def test_vlan_mbr_set_negative(npu, dataplane, sai_vlan_member, attr):
     status = ""
     if attr == "SAI_VLAN_MEMBER_ATTR_VLAN_ID":
-        status = sai.set(sai_vlan_member[0], [attr, sai.sw.default_vlan_oid], False)
+        status = npu.set(sai_vlan_member[0], [attr, npu.default_vlan_oid], False)
     elif attr == "SAI_VLAN_MEMBER_ATTR_BRIDGE_PORT_ID":
-        status = sai.set(sai_vlan_member[0], [attr, sai.sw.dot1q_bp_oids[0]], False)
+        status = npu.set(sai_vlan_member[0], [attr, npu.dot1q_bp_oids[0]], False)
     assert status != "SAI_STATUS_SUCCESS"
