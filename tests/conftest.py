@@ -1,7 +1,6 @@
 import logging
 import time
 import pytest
-from common.switch import Sai
 import os
 import sys
 import imp
@@ -16,6 +15,12 @@ sys.path.append(ptfdir)
 import ptf
 from ptf import config
 import ptf.ptfutils
+
+commondir = os.path.join(curdir, '../common')
+sys.path.append(commondir)
+
+from sai_npu import SaiNpu
+from sai_npu_vs import SaiNpuVs
 
 
 ##@var DEBUG_LEVELS
@@ -109,6 +114,7 @@ def pytest_addoption(parser):
     parser.addoption("--traffic", action="store_true", default=False, help="run tests with traffic")
     parser.addoption("--saivs", action="store_true", default=False, help="running tests on top of libsaivs")
     parser.addoption("--loglevel", action="store", default='NOTICE', help="syncd logging level")
+    parser.addoption("--npu", action="store", default='vs', help="NPU type")
 
 
 @pytest.fixture(scope="session")
@@ -118,6 +124,7 @@ def exec_params(request):
     config_param["traffic"] = request.config.getoption("--traffic")
     config_param["saivs"] = request.config.getoption("--saivs")
     config_param["loglevel"] = request.config.getoption("--loglevel")
+    config_param["npu"] = request.config.getoption("--npu")
     return config_param
 
 
@@ -154,9 +161,22 @@ def pcap_setup(config):
 
 
 @pytest.fixture(scope="session")
-def sai(exec_params):
-    sai = Sai(exec_params)
-    return sai
+def npu(exec_params):
+    npu = None
+    if exec_params["npu"] == "generic":
+        npu = SaiNpu(exec_params)
+    elif exec_params["npu"] == "vs":
+        npu = SaiNpuVs(exec_params)
+
+    if npu is not None:
+        npu.reset()
+    return npu
+
+
+# NOTE: Obsoleted. The `npu` fixture should be used instead.
+@pytest.fixture(scope="session")
+def sai(npu):
+    return npu
 
 
 @pytest.fixture(scope="session")

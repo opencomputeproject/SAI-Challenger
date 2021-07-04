@@ -1,5 +1,5 @@
 import pytest
-from common.switch import SaiObjType
+from sai import SaiObjType
 
 
 bport_attrs = [
@@ -20,21 +20,21 @@ bport_attrs_updated = {}
 
 
 @pytest.fixture(scope="module")
-def sai_bport_obj(sai):
-    bport_oid = sai.sw.dot1q_bp_oids[0]
+def sai_bport_obj(npu):
+    bport_oid = npu.dot1q_bp_oids[0]
     yield bport_oid
 
     # Fall back to the defaults
     for attr in bport_attrs_updated:
         if attr in bport_attrs_default:
-            sai.set(bport_oid, [attr, bport_attrs_default[attr]])
+            npu.set(bport_oid, [attr, bport_attrs_default[attr]])
 
 @pytest.mark.parametrize(
     "attr,attr_type",
     bport_attrs
 )
-def test_get_before_set_attr(sai, dataplane, sai_bport_obj, attr, attr_type):
-    status, data = sai.get_by_type(sai_bport_obj, attr, attr_type, do_assert=False)
+def test_get_before_set_attr(npu, dataplane, sai_bport_obj, attr, attr_type):
+    status, data = npu.get_by_type(sai_bport_obj, attr, attr_type, do_assert=False)
     if status == "SAI_STATUS_NOT_SUPPORTED" or status == "SAI_STATUS_ATTR_NOT_SUPPORTED_0":
         pytest.skip("not supported")
 
@@ -44,7 +44,7 @@ def test_get_before_set_attr(sai, dataplane, sai_bport_obj, attr, attr_type):
     assert status == "SAI_STATUS_SUCCESS"
 
     if attr == "SAI_BRIDGE_PORT_ATTR_PORT_ID":
-        assert data.value() == sai.sw.port_oids[0]
+        assert data.value() == npu.port_oids[0]
 
 
 @pytest.mark.parametrize(
@@ -74,8 +74,8 @@ def test_get_before_set_attr(sai, dataplane, sai_bport_obj, attr, attr_type):
         ("SAI_BRIDGE_PORT_ATTR_EGRESS_FILTERING",                           "false"),
     ],
 )
-def test_set_attr(sai, dataplane, sai_bport_obj, attr, attr_value):
-    status = sai.set(sai_bport_obj, [attr, attr_value], False)
+def test_set_attr(npu, dataplane, sai_bport_obj, attr, attr_value):
+    status = npu.set(sai_bport_obj, [attr, attr_value], False)
 
     if status == "SAI_STATUS_NOT_SUPPORTED" or status == "SAI_STATUS_ATTR_NOT_SUPPORTED_0":
         pytest.skip("not supported")
@@ -100,8 +100,8 @@ def test_set_attr(sai, dataplane, sai_bport_obj, attr, attr_value):
         ("SAI_BRIDGE_PORT_ATTR_EGRESS_FILTERING",                            "bool"),
     ],
 )
-def test_get_after_set_attr(sai, dataplane, sai_bport_obj, attr, attr_type):
-    status, data = sai.get_by_type(sai_bport_obj, attr, attr_type, do_assert=False)
+def test_get_after_set_attr(npu, dataplane, sai_bport_obj, attr, attr_type):
+    status, data = npu.get_by_type(sai_bport_obj, attr, attr_type, do_assert=False)
 
     if status == "SAI_STATUS_NOT_SUPPORTED" or status == "SAI_STATUS_ATTR_NOT_SUPPORTED_0":
         pytest.skip("not supported")

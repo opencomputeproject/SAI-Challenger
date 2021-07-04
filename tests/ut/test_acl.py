@@ -1,5 +1,5 @@
 import pytest
-from common.switch import SaiObjType
+from sai import SaiObjType
 
 
 @pytest.fixture(scope="class")
@@ -13,7 +13,7 @@ def acl_state():
 
 class TestIngressACL:
     @pytest.mark.dependency()
-    def test_create_table(self, sai, acl_state):
+    def test_create_table(self, npu, acl_state):
         attrs = [
             # ACL table generic attributes
             "SAI_ACL_TABLE_GROUP_ATTR_ACL_STAGE", "SAI_ACL_STAGE_INGRESS",
@@ -34,7 +34,7 @@ class TestIngressACL:
             "SAI_ACL_TABLE_ATTR_FIELD_ACL_RANGE_TYPE",
                     "2:SAI_ACL_RANGE_TYPE_L4_DST_PORT_RANGE,SAI_ACL_RANGE_TYPE_L4_SRC_PORT_RANGE",
         ]
-        acl_state["table_oid"] = sai.create(SaiObjType.ACL_TABLE, attrs)
+        acl_state["table_oid"] = npu.create(SaiObjType.ACL_TABLE, attrs)
         assert acl_state["table_oid"] != "oid:0x0"
 
 
@@ -75,14 +75,14 @@ class TestIngressACL:
         ]
     )
     @pytest.mark.dependency(depends=['TestIngressACL::test_create_table'])
-    def test_create_entry(self, sai, acl_state, match, action, priority):
+    def test_create_entry(self, npu, acl_state, match, action, priority):
         # Create ACL counter
         counter_attrs = [
             "SAI_ACL_COUNTER_ATTR_TABLE_ID",            acl_state["table_oid"],
             "SAI_ACL_COUNTER_ATTR_ENABLE_BYTE_COUNT",   "true",
             "SAI_ACL_COUNTER_ATTR_ENABLE_PACKET_COUNT", "true",
         ]
-        counter_oid = sai.create(SaiObjType.ACL_COUNTER, counter_attrs)
+        counter_oid = npu.create(SaiObjType.ACL_COUNTER, counter_attrs)
 
         # Create ACL entry
         entry_attrs = [
@@ -103,9 +103,9 @@ class TestIngressACL:
         entry_attrs.append("SAI_ACL_ENTRY_ATTR_ACTION_COUNTER")
         entry_attrs.append(counter_oid)
 
-        status, entry_oid = sai.create(SaiObjType.ACL_ENTRY, entry_attrs, do_assert=False)
+        status, entry_oid = npu.create(SaiObjType.ACL_ENTRY, entry_attrs, do_assert=False)
         if status != "SAI_STATUS_SUCCESS":
-            sai.remove(counter_oid)
+            npu.remove(counter_oid)
         assert status == "SAI_STATUS_SUCCESS"
 
         # Cache OIDs
@@ -114,14 +114,14 @@ class TestIngressACL:
 
 
     @pytest.mark.dependency(depends=['TestIngressACL::test_create_table'])
-    def test_remove_entries(self, sai, acl_state):
+    def test_remove_entries(self, npu, acl_state):
         if len(acl_state["entries"]) == 0:
             pytest.skip("no ACL entries to remove")
         for oid in acl_state["entries"]:
-            sai.remove(oid)
+            npu.remove(oid)
 
 
     @pytest.mark.dependency(depends=['TestIngressACL::test_create_table'])
-    def test_remove_table(self, sai, acl_state):
+    def test_remove_table(self, npu, acl_state):
         assert acl_state["table_oid"] != "oid:0x0"
-        sai.remove(acl_state["table_oid"])
+        npu.remove(acl_state["table_oid"])

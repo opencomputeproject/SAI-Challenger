@@ -114,17 +114,6 @@ class SaiObjType(Enum):
     FINE_GRAINED_HASH_FIELD  = 94
 
 
-class SaiRecParser:
-    rec = {}
-    def __init__(self, fname):
-        cnt = 0
-        self.rec = {}
-        fp = open(fname, 'r')
-        for line in fp:
-            cnt += 1
-            self.rec[cnt] = line.strip().split("|")[1:]
-
-
 class SaiData:
     def __init__(self, data):
         self.data = data
@@ -169,65 +158,9 @@ class SaiData:
         return int(self.value())
 
 
-class SaiSwitch:
-    def __init__(self, sai, switch_type="SAI_SWITCH_TYPE_NPU", src_mac_addr="52:54:00:EE:BB:70"):
-        self.dot1q_br_oid = "oid:0x0"
-        self.default_vlan_oid = "oid:0x0"
-        self.default_vlan_id = "0"
-        self.default_vrf_oid = "oid:0x0"
-        self.port_oids = []
-        self.dot1q_bp_oids = []
-
-        sai.create("SAI_OBJECT_TYPE_SWITCH:" + sai.sw_oid,
-                   [
-                       "SAI_SWITCH_ATTR_INIT_SWITCH",        "true",
-                       "SAI_SWITCH_ATTR_TYPE",               switch_type,
-                       "SAI_SWITCH_ATTR_SRC_MAC_ADDRESS",    src_mac_addr,
-                       "SAI_SWITCH_ATTR_FDB_AGING_TIME",     "600",
-                       "SAI_SWITCH_ATTR_TPID_INNER_VLAN",    "33024",  # 0x8100
-                       "SAI_SWITCH_ATTR_TPID_OUTER_VLAN",    "34984",  # 0x88A8
-                       "SAI_SWITCH_ATTR_VXLAN_DEFAULT_PORT", "4789",
-                       "SAI_SWITCH_ATTR_NAT_ENABLE",         "true"
-                   ])
-
-        # Default .1Q bridge
-        self.dot1q_br_oid = sai.get(sai.sw_oid, ["SAI_SWITCH_ATTR_DEFAULT_1Q_BRIDGE_ID", "oid:0x0"]).oid()
-        assert (self.dot1q_br_oid != "oid:0x0")
-
-        # Default VLAN
-        self.default_vlan_oid = sai.get(sai.sw_oid, ["SAI_SWITCH_ATTR_DEFAULT_VLAN_ID", "oid:0x0"]).oid()
-        assert (self.default_vlan_oid != "oid:0x0")
-
-        self.default_vlan_id = sai.get(self.default_vlan_oid, ["SAI_VLAN_ATTR_VLAN_ID", ""]).to_json()[1]
-        assert (self.default_vlan_id != "0")
-
-        # Default VRF
-        self.default_vrf_oid = sai.get(sai.sw_oid, ["SAI_SWITCH_ATTR_DEFAULT_VIRTUAL_ROUTER_ID", "oid:0x0"]).oid()
-        assert (self.default_vrf_oid != "oid:0x0")
-
-        # Ports
-        port_num = sai.get(sai.sw_oid, ["SAI_SWITCH_ATTR_NUMBER_OF_ACTIVE_PORTS", ""]).uint32()
-        if port_num > 0:
-            self.port_oids = sai.get(sai.sw_oid,
-                                     ["SAI_SWITCH_ATTR_PORT_LIST", sai.make_list(port_num, "oid:0x0")]).oids()
-
-            # .1Q bridge ports
-            status, data = sai.get(self.dot1q_br_oid, ["SAI_BRIDGE_ATTR_PORT_LIST", "1:oid:0x0"], False)
-            bport_num = data.uint32()
-            assert (status == "SAI_STATUS_BUFFER_OVERFLOW")
-            assert (bport_num > 0)
-
-            self.dot1q_bp_oids = sai.get(self.dot1q_br_oid,
-                                         ["SAI_BRIDGE_ATTR_PORT_LIST", sai.make_list(bport_num, "oid:0x0")]).oids()
-            assert (bport_num == len(self.dot1q_bp_oids))
-        else:
-            assert False, "TODO: Create ports on SAI switch initialization"
-
-
 class Sai:
 
     attempts = 40
-    sw_oid = "oid:0x21000000000000"
 
     def __init__(self, exec_params):
         self.loglevel = exec_params["loglevel"]
@@ -235,14 +168,11 @@ class Sai:
         self.loglevel_db = redis.Redis(host=exec_params["server"], port=6379, db=3)
         self.cache = {}
         self.rec2vid = {}
-        self.rec2vid[self.sw_oid] = self.sw_oid
 
         self.client_mode = not os.path.isfile("/usr/bin/redis-server")
         self.libsaivs = (exec_params["saivs"] or
                          (not self.client_mode and not os.path.isfile("/usr/local/lib/libsai.so")))
         self.run_traffic = exec_params["traffic"] and not self.libsaivs
-
-        self.cleanup()
 
     def cleanup(self):
         '''
@@ -268,8 +198,6 @@ class Sai:
         self.r.flushall()
         self.loglevel_db.hmset('syncd:syncd', {'LOGLEVEL':self.loglevel, 'LOGOUTPUT':'SYSLOG'})
         self.r.shutdown()
-        time.sleep(5)
-        self.sw = SaiSwitch(self)
 
     def alloc_vid(self, obj_type):
         vid = self.r.incr("VIDCOUNTER")
@@ -298,7 +226,10 @@ class Sai:
             return self.cache[obj_type.name].pop(value, "")
         return ""
 
-    def __operate(self, obj, attrs, op):
+    def make_list(self, length, elem):
+        return "{}:".format(length) + (elem + ",") * (length - 1) + elem
+
+    def operate(self, obj, attrs, op):
         self.r.delete("GETRESPONSE_KEY_VALUE_OP_QUEUE")
 
         tout = 0.01
@@ -339,7 +270,7 @@ class Sai:
             obj = "SAI_OBJECT_TYPE_" + obj.name + ":" + vid
         if type(attrs) != str:
             attrs = json.dumps(attrs)
-        status = self.__operate(obj, attrs, "Screate")
+        status = self.operate(obj, attrs, "Screate")
         print(status)
         status[2] = status[2].decode("utf-8")
         if do_assert:
@@ -352,7 +283,7 @@ class Sai:
         print(obj)
         if obj.startswith("oid:"):
             obj = self.vid_to_type(obj) + ":" + obj
-        status = self.__operate(obj, "{}", "Dremove")
+        status = self.operate(obj, "{}", "Dremove")
         print(status)
         status[2] = status[2].decode("utf-8")
         if do_assert:
@@ -366,7 +297,7 @@ class Sai:
         if type(attr) != str:
             attr = json.dumps(attr)
         print(attr)
-        status = self.__operate(obj, attr, "Sset")
+        status = self.operate(obj, attr, "Sset")
         status[2] = status[2].decode("utf-8")
         print(status)
         if do_assert:
@@ -379,7 +310,7 @@ class Sai:
             obj = self.vid_to_type(obj) + ":" + obj
         if type(attrs) != str:
             attrs = json.dumps(attrs)
-        status = self.__operate(obj, attrs, "Sget")
+        status = self.operate(obj, attrs, "Sget")
         status[2] = status[2].decode("utf-8")
         print(status)
 
@@ -408,183 +339,6 @@ class Sai:
         else:
             status, data = self.get(obj, [attr, ""], do_assert)
         return status, data
-
-    def flush_fdb_entries(self, attrs):
-        if type(attrs) != str:
-            attrs = json.dumps(attrs)
-        status = self.__operate("SAI_OBJECT_TYPE_SWITCH:" + self.sw_oid, attrs, "Sflush")
-        assert status[0].decode("utf-8") == 'Sflushresponse'
-        assert status[2].decode("utf-8") == 'SAI_STATUS_SUCCESS'
-
-    def clear_stats(self, obj, attrs):
-        if type(attrs) != str:
-            attrs = json.dumps(attrs)
-        status = self.__operate(obj, attrs, "Sclear_stats")    
-        assert status[2].decode("utf-8") == 'SAI_STATUS_SUCCESS'
-
-    def get_stats(self, obj, attrs, do_assert = True):
-        if type(attrs) != str:
-            attrs = json.dumps(attrs)
-        status = self.__operate(obj, attrs, "Sget_stats")
-        status[2] = status[2].decode("utf-8")
-        if do_assert:
-            assert status[2] == 'SAI_STATUS_SUCCESS'
-
-        data = SaiData(status[1].decode("utf-8"))
-        if do_assert:
-            return data
-
-        return status[2], data 
-
-    def make_list(self, length, elem):
-        return "{}:".format(length) + (elem + ",") * (length - 1) + elem
-
-    def __bulk_attr_serialize(self, attr):
-        data = ""
-        # Input attributes: [a, v, a, v, ...]
-        # Serialized attributes format: "a=v|a=v|..."
-        for i, v in enumerate(attr):
-            if i % 2 == 0:
-                if len(data) > 0:
-                    data += "|"
-                data += v + "="
-            else:
-                data += v
-        return data
-
-    def bulk_create(self, obj, keys, attrs, do_assert = True):
-        '''
-        Bulk create FDB/route objects
-
-        Parameters:
-            obj (SaiObjType): The type of objects to be created
-            keys (list): The list of objects to be created.
-                    E.g.:
-                    [
-                        {
-                            "bvid"      : vlan_oid,
-                            "mac"       : "00:00:00:00:00:01",
-                            "switch_id" : sai.sw_oid
-                        },
-                        {...}
-                    ]
-            attrs (list): The list of the lists of objects' attributes.
-                    In case just one set of the attributes provided, all objects
-                    will be created with this set of the attributes.
-                    E.g.:
-                    [
-                        [
-                            "SAI_FDB_ENTRY_ATTR_TYPE",           "SAI_FDB_ENTRY_TYPE_STATIC",
-                            "SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID", sai.sw.dot1q_bp_oids[0]
-                        ],
-                        [...]
-                    ]
-            do_assert (bool): Assert that the bulk create operation succeeded.
-
-        Usage example:
-            bulk_create(SaiObjType.FDB_ENTRY, [key1, key2, ...], [attrs1, attrs2, ...])
-            bulk_create(SaiObjType.FDB_ENTRY, [key1, key2, ...], [attrs])
-
-            where, attrsN = [attr1, val1, attr2, val2, ...]
-
-        Returns:
-            The tuple with two elements.
-            The first element contains bulk create operation status:
-                * "SAI_STATUS_SUCCESS" on success when all objects were created;
-                * "SAI_STATUS_FAILURE" when any of the objects fails to create;
-            The second element contains the list of statuses of each individual object
-            creation result.
-        '''
-        assert type(obj) == SaiObjType
-        assert obj == SaiObjType.FDB_ENTRY or obj == SaiObjType.ROUTE_ENTRY
-        assert len(keys) == len(attrs) or len(attrs) == 1
-
-        str_attr = ""
-        if (len(attrs) == 1):
-            str_attr = self.__bulk_attr_serialize(attrs[0])
-
-        key = "SAI_OBJECT_TYPE_" + obj.name + ":" + str(len(keys))
-        values = []
-        for i, _ in enumerate(keys):
-            values.append(json.dumps(keys[i]))
-            if (len(attrs) > 1):
-                str_attr = self.__bulk_attr_serialize(attrs[i])
-            values.append(str_attr)
-
-        status = self.__operate(key, json.dumps(values), "Sbulkcreate")
-
-        status[1] = status[1].decode("utf-8")
-        status[1] = json.loads(status[1])
-        entry_status = []
-        for i, v in enumerate(status[1]):
-            if i % 2 == 0:
-                entry_status.append(v)
-
-        status[2] = status[2].decode("utf-8")
-
-        if do_assert:
-            print(entry_status)
-            assert status[2] == 'SAI_STATUS_SUCCESS'
-            return status[2], entry_status
-
-        return status[2], entry_status
-
-    def bulk_remove(self, obj, keys, do_assert = True):
-        '''
-        Bulk remove FDB/route objects
-
-        Parameters:
-            obj (SaiObjType): The type of objects to be removed
-            keys (list): The list of objects to be removed.
-                    E.g.:
-                    [
-                        {
-                            "bvid"      : vlan_oid,
-                            "mac"       : "00:00:00:00:00:01",
-                            "switch_id" : sai.sw_oid
-                        },
-                        {...}
-                    ]
-            do_assert (bool): Assert that the bulk remove operation succeeded.
-
-        Usage example:
-            bulk_remove(SaiObjType.FDB_ENTRY, [key1, key2, ...])
-            bulk_remove(SaiObjType.FDB_ENTRY, [key1, key2, ...], False)
-
-        Returns:
-            The tuple with two elements.
-            The first element contains bulk remove operation status:
-                * "SAI_STATUS_SUCCESS" on success when all objects were removed;
-                * "SAI_STATUS_FAILURE" when any of the objects fails to remove;
-            The second element contains the list of statuses of each individual object
-            removal result.
-        '''
-        assert type(obj) == SaiObjType
-        assert obj == SaiObjType.FDB_ENTRY or obj == SaiObjType.ROUTE_ENTRY
-
-        key = "SAI_OBJECT_TYPE_" + obj.name + ":" + str(len(keys))
-        values = []
-        for i, v in enumerate(keys):
-            values.append(json.dumps(v))
-            values.append("")
-
-        status = self.__operate(key, json.dumps(values), "Dbulkremove")
-
-        status[1] = status[1].decode("utf-8")
-        status[1] = json.loads(status[1])
-        entry_status = []
-        for i, v in enumerate(status[1]):
-            if i % 2 == 0:
-                entry_status.append(v)
-
-        status[2] = status[2].decode("utf-8")
-
-        if do_assert:
-            print(entry_status)
-            assert status[2] == 'SAI_STATUS_SUCCESS'
-            return status[2], entry_status
-
-        return status[2], entry_status
 
     def __update_oid_key(self, action, key):
         key_list = key.split(":", 1)
@@ -621,10 +375,19 @@ class Sai:
         else:
             return self.__update_entry_key_oids(key)
 
+    def __parse_rec(self, fname):
+        cnt = 0
+        rec = {}
+        fp = open(fname, 'r')
+        for line in fp:
+            cnt += 1
+            rec[cnt] = line.strip().split("|")[1:]
+        return rec
+
     def apply_rec(self, fname):
         oids = []
-        parser = SaiRecParser(fname)
-        for cnt, rec in parser.rec.items():
+        records = self.__parse_rec(fname)
+        for cnt, rec in records.items():
             print("#{}: {}".format(cnt, rec))
             if rec[0] == 'c':
                 if "SAI_OBJECT_TYPE_SWITCH" in rec[1]:
@@ -689,56 +452,3 @@ class Sai:
                 print("Iggnored line {}: {}".format(cnt, rec))
 
         print("Current SAI objects: {}".format(self.rec2vid))
-
-    def create_fdb(self, vlan_oid, mac, bp_oid, action = "SAI_PACKET_ACTION_FORWARD"):
-        self.create('SAI_OBJECT_TYPE_FDB_ENTRY:' + json.dumps(
-                       {
-                           "bvid"      : vlan_oid,
-                           "mac"       : mac,
-                           "switch_id" : self.sw_oid
-                       }
-                   ),
-                   [
-                       "SAI_FDB_ENTRY_ATTR_TYPE",           "SAI_FDB_ENTRY_TYPE_STATIC",
-                       "SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID", bp_oid,
-                       "SAI_FDB_ENTRY_ATTR_PACKET_ACTION",  action
-                   ])
-
-    def remove_fdb(self, vlan_oid, mac):
-        self.remove('SAI_OBJECT_TYPE_FDB_ENTRY:' + json.dumps(
-                       {
-                           "bvid"      : vlan_oid,
-                           "mac"       : mac,
-                           "switch_id" : self.sw_oid
-                       })
-                   )
-
-    def create_vlan_member(self, vlan_oid, bp_oid, tagging_mode):
-        oid = self.create(SaiObjType.VLAN_MEMBER,
-                    [
-                        "SAI_VLAN_MEMBER_ATTR_VLAN_ID",           vlan_oid,
-                        "SAI_VLAN_MEMBER_ATTR_BRIDGE_PORT_ID",    bp_oid,
-                        "SAI_VLAN_MEMBER_ATTR_VLAN_TAGGING_MODE", tagging_mode
-                    ])
-        return oid
-
-    def remove_vlan_member(self, vlan_oid, bp_oid):
-        assert vlan_oid.startswith("oid:")
-
-        vlan_mbr_oids = []
-        status, data = self.get(vlan_oid, ["SAI_VLAN_ATTR_MEMBER_LIST", "1:oid:0x0"], False)
-        if status == "SAI_STATUS_SUCCESS":
-            vlan_mbr_oids = data.oids()
-        elif status == "SAI_STATUS_BUFFER_OVERFLOW":
-            oids = self.make_list(data.uint32(), "oid:0x0")
-            vlan_mbr_oids = self.get(vlan_oid, ["SAI_VLAN_ATTR_MEMBER_LIST", oids]).oids()
-        else:
-            assert status == "SAI_STATUS_SUCCESS"
-
-        for vlan_mbr_oid in vlan_mbr_oids:
-            oid = self.get(vlan_mbr_oid, ["SAI_VLAN_MEMBER_ATTR_BRIDGE_PORT_ID", "oid:0x0"]).oid()
-            if oid == bp_oid:
-                self.remove(vlan_mbr_oid)
-                return
-
-        assert False

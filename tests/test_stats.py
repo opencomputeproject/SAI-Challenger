@@ -1,15 +1,15 @@
 import pytest
 
 
-def test_stats(sai, dataplane):
+def test_stats(npu, dataplane):
     # Get ports list
-    ports = sai.get("SAI_OBJECT_TYPE_SWITCH:" + sai.sw_oid,
-                    ["SAI_SWITCH_ATTR_PORT_LIST", sai.make_list(33, "oid:0x0")])
+    ports = npu.get("SAI_OBJECT_TYPE_SWITCH:" + npu.oid,
+                    ["SAI_SWITCH_ATTR_PORT_LIST", npu.make_list(33, "oid:0x0")])
 
     port_oids = ports.oids()
 
     # Clear some port stats for port 0
-    status = sai.clear_stats("SAI_OBJECT_TYPE_PORT:" + port_oids[0],
+    status = npu.clear_stats("SAI_OBJECT_TYPE_PORT:" + port_oids[0],
                             [
                                 'SAI_PORT_STAT_IF_IN_OCTETS', '',
                                 'SAI_PORT_STAT_IF_IN_UCAST_PKTS', '',
@@ -17,7 +17,7 @@ def test_stats(sai, dataplane):
                             ])
 
     # Get some port stats for port 0
-    cntrs = sai.get_stats("SAI_OBJECT_TYPE_PORT:" + port_oids[0],
+    cntrs = npu.get_stats("SAI_OBJECT_TYPE_PORT:" + port_oids[0],
                           [
                               'SAI_PORT_STAT_IF_IN_OCTETS', '',
                               'SAI_PORT_STAT_IF_IN_UCAST_PKTS', '',
