@@ -242,6 +242,10 @@ class Sai:
         if attempts == 0:
             return []
 
+        # Remove spaces from the key string.
+        # Required by sai_serialize_route_entry() in sairedis.
+        obj = obj.replace(' ', '')
+
         self.r.lpush("ASIC_STATE_KEY_VALUE_OP_QUEUE", obj, attrs, op)
         self.r.publish("ASIC_STATE_CHANNEL", "G")
 
