@@ -310,14 +310,14 @@ class Sai:
         return status[2]
 
     def get(self, obj, attrs, do_assert = True):
-        print(obj)
+        #print(obj)
         if obj.startswith("oid:"):
             obj = self.vid_to_type(obj) + ":" + obj
         if type(attrs) != str:
             attrs = json.dumps(attrs)
         status = self.operate(obj, attrs, "Sget")
         status[2] = status[2].decode("utf-8")
-        print(status)
+        #print(status)
 
         if do_assert:
             assert status[2] == 'SAI_STATUS_SUCCESS'
