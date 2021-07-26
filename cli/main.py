@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import click
+from sai import SaiObjType
 from sai_npu import SaiNpu
 
 VERSION = '0.1'
@@ -78,10 +79,34 @@ def remove():
 
 # 'list' command
 @cli.command()
-def list():
-    """List SAI data"""
-    click.echo("\nNot implemented!\n")
-    return False
+@click.argument('obj_type', metavar='[<SAI object type>]', required=False, type=str)
+def list(obj_type):
+    """List SAI object IDs"""
+
+    click.echo()
+    if obj_type is None:
+        for obj in SaiObjType:
+            click.echo(obj.name.lower())
+        click.echo()
+        return
+
+    obj_type = obj_type.upper()
+    try:
+        obj_type = SaiObjType[obj_type]
+    except KeyError:
+        if obj_type != "ALL":
+            click.echo("Unknown SAI object type '{}'\n".format(obj_type))
+            return False
+        obj_type = None
+
+    sai = SaiNpu(exec_params)
+
+    oids = sai.get_oids(obj_type)
+    for key, oids in oids.items():
+        click.echo(key)
+        for idx, oid in enumerate(oids):
+            click.echo("{:>8})  {}".format(idx + 1, oid))
+        click.echo()
 
 
 # 'version' subcommand

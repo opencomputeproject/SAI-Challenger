@@ -345,6 +345,32 @@ class Sai:
             status, data = self.get(obj, [attr, ""], do_assert)
         return status, data
 
+    def get_oids(self, obj_type=None):
+        oids = []
+        all_oids = []
+        oids_by_type = dict()
+
+        data = self.r.hgetall("VIDTORID")
+        for key, value in data.items():
+            all_oids.append(key.decode("utf-8"))
+
+        if obj_type is None:
+            all_oids.sort()
+            for idx, oid in enumerate(all_oids):
+                obj_type = SaiObjType(int(oid[4:], 16) >> 48)
+                if obj_type.name not in oids_by_type:
+                    oids_by_type[obj_type.name] = list()
+                oids_by_type[obj_type.name].append(oid)
+
+            return oids_by_type
+
+        for oid in all_oids:
+            if obj_type == SaiObjType(int(oid[4:], 16) >> 48):
+                oids.append(oid)
+        oids.sort()
+        oids_by_type[obj_type.name] = oids
+        return oids_by_type
+
     def __update_oid_key(self, action, key):
         key_list = key.split(":", 1)
         vid = key_list[1]
