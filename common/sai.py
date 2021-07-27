@@ -268,14 +268,14 @@ class Sai:
 
     def create(self, obj, attrs, do_assert = True):
         vid = None
-        print(obj)
+        #print(obj)
         if type(obj) == SaiObjType:
             vid = self.alloc_vid(obj)
             obj = "SAI_OBJECT_TYPE_" + obj.name + ":" + vid
         if type(attrs) != str:
             attrs = json.dumps(attrs)
         status = self.operate(obj, attrs, "Screate")
-        print(status)
+        #print(status)
         status[2] = status[2].decode("utf-8")
         if do_assert:
             assert status[2] == 'SAI_STATUS_SUCCESS'
@@ -284,26 +284,26 @@ class Sai:
         return status[2], vid
 
     def remove(self, obj, do_assert = True):
-        print(obj)
+        #print(obj)
         if obj.startswith("oid:"):
             obj = self.vid_to_type(obj) + ":" + obj
         status = self.operate(obj, "{}", "Dremove")
-        print(status)
+        #print(status)
         status[2] = status[2].decode("utf-8")
         if do_assert:
             assert status[2] == 'SAI_STATUS_SUCCESS'
         return status[2]
 
     def set(self, obj, attr, do_assert = True):
-        print(obj)
+        #print(obj)
         if obj.startswith("oid:"):
             obj = self.vid_to_type(obj) + ":" + obj
         if type(attr) != str:
             attr = json.dumps(attr)
-        print(attr)
+        #print(attr)
         status = self.operate(obj, attr, "Sset")
         status[2] = status[2].decode("utf-8")
-        print(status)
+        #print(status)
         if do_assert:
             assert status[2] == 'SAI_STATUS_SUCCESS'
         return status[2]
