@@ -55,26 +55,67 @@ def get(oid, attrs):
 
 # 'set' command
 @cli.command()
-def set():
+@click.argument('oid', metavar='<oid>', required=True, type=str)
+@click.argument('attr', metavar='<attr>', required=True, type=str)
+@click.argument('value', metavar='<value>', required=True, type=str)
+def set(oid, attr, value):
     """Set SAI object's attribute value"""
-    click.echo("\nNot implemented!\n")
-    return False
+
+    click.echo()
+    if not oid.startswith("oid:"):
+        click.echo("SAI object ID must start with 'oid:' prefix\n")
+        return False
+
+    if not attr.startswith("SAI_"):
+        click.echo("Invalid SAI object's attribute {} provided\n".format(attr))
+        return False
+
+    sai = SaiNpu(exec_params)
+    status = sai.set(oid, [attr, value], False)
+    click.echo(status + '\n')
 
 
 # 'create' command
 @cli.command()
-def create():
+@click.argument('obj_type', metavar='<SAI object type>', required=True, type=str)
+@click.argument('attrs', metavar='<attr> <value>', required=True, type=str, nargs=-1)
+def create(obj_type, attrs):
     """Create SAI object"""
-    click.echo("\nNot implemented!\n")
-    return False
+
+    click.echo()
+    obj_type = obj_type.upper()
+    try:
+        obj_type = SaiObjType[obj_type]
+    except KeyError:
+        click.echo("Unknown SAI object type '{}'\n".format(obj_type))
+        return False
+
+    if len(attrs) % 2 != 0:
+        click.echo("Invalid SAI object's attributes {} provided\n".format(attrs))
+        return False
+
+    sai = SaiNpu(exec_params)
+    status, oid = sai.create(obj_type, attrs, False)
+    if status == "SAI_STATUS_SUCCESS":
+        click.echo("Created SAI object {} with {}\n".format(obj_type.name, oid))
+    else:
+        click.echo(status + '\n')
 
 
 # 'remove' command
 @cli.command()
-def remove():
+@click.argument('oid', metavar='<oid>', required=True, type=str)
+def remove(oid):
     """Remove SAI object"""
-    click.echo("\nNot implemented!\n")
-    return False
+
+    click.echo()
+    if not oid.startswith("oid:"):
+        click.echo("SAI object ID must start with 'oid:' prefix\n")
+        return False
+
+    sai = SaiNpu(exec_params)
+    status = sai.remove(oid, False)
+    click.echo(status + '\n')
 
 
 # 'list' command
