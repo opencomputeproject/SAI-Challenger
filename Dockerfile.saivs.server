@@ -47,6 +47,8 @@ RUN apt-get update && apt-get install -y \
         rsyslog \
         supervisor
 
+RUN python3 -m pip install redis
+
 # Install dependencies
 RUN apt-get install -y redis-server libhiredis0.14
 
@@ -101,6 +103,21 @@ RUN git clone https://github.com/Azure/sonic-sairedis.git \
 RUN cd sonic-sairedis \
         && ./autogen.sh && ./configure --with-sai=vs && make -j4 \
         && make install && ldconfig
+
+# Install SAI Challenger CLI dependencies
+RUN pip3 install click==7.0
+
+# Deploy SAI Challenger CLI
+COPY setup.py            /sai-challenger/setup.py
+COPY cli/__init__.py     /sai-challenger/cli/__init__.py
+COPY cli/main.py         /sai-challenger/cli/main.py
+COPY common/setup.py     /sai-challenger/common/setup.py
+COPY common/__init__.py  /sai-challenger/common/__init__.py
+COPY common/sai.py       /sai-challenger/common/sai.py
+COPY common/sai_npu.py   /sai-challenger/common/sai_npu.py
+
+RUN pip3 install --editable /sai-challenger/common \
+        && pip3 install --editable /sai-challenger
 
 WORKDIR /sai-challenger/tests
 

@@ -150,6 +150,65 @@ def list(obj_type):
         click.echo()
 
 
+@cli.group()
+def stats():
+    """Manage SAI object's stats"""
+    pass
+
+
+# 'stats get' command
+@stats.command()
+@click.argument('oid', metavar='<oid>', required=True, type=str)
+@click.argument('cntrs', metavar='<cntrs>', required=True, type=str, nargs=-1)
+def get(oid, cntrs):
+    """Get SAI object's stats"""
+
+    click.echo()
+    if not oid.startswith("oid:"):
+        click.echo("SAI object ID must start with 'oid:' prefix\n")
+        return False
+
+    sai = SaiNpu(exec_params)
+
+    attrs = []
+    for cntr in cntrs:
+        attrs.append(cntr)
+        attrs.append('')
+
+    status, data = sai.get_stats(oid, attrs, False)
+    if status != "SAI_STATUS_SUCCESS":
+        click.echo(status + '\n')
+        return False
+
+    data = data.counters()
+    for cntr in cntrs:
+        click.echo("{:<48} {:>8}".format(cntr, data[cntr]))
+    click.echo()
+
+
+# 'stats clear' command
+@stats.command()
+@click.argument('oid', metavar='<oid>', required=True, type=str)
+@click.argument('cntrs', metavar='<cntrs>', required=True, type=str, nargs=-1)
+def clear(oid, cntrs):
+    """Clear SAI object's stats"""
+
+    click.echo()
+    if not oid.startswith("oid:"):
+        click.echo("SAI object ID must start with 'oid:' prefix\n")
+        return False
+
+    sai = SaiNpu(exec_params)
+
+    attrs = []
+    for cntr in cntrs:
+        attrs.append(cntr)
+        attrs.append('')
+
+    status = sai.clear_stats(oid, attrs, False)
+    click.echo(status + '\n')
+
+
 # 'version' subcommand
 @cli.command()
 def version():

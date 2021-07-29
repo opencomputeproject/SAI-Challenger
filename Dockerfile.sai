@@ -76,6 +76,9 @@ RUN dpkg -i libswsscommon_1.0.0_amd64.deb \
 # Install PTF dependencies
 RUN pip3 install scapy
 
+# Install SAI Challenger CLI dependencies
+RUN pip3 install click==7.0
+
 # Update Redis configuration
 RUN sed -ri 's/^# unixsocket/unixsocket/' /etc/redis/redis.conf
 RUN sed -ri 's/^unixsocketperm .../unixsocketperm 777/' /etc/redis/redis.conf
