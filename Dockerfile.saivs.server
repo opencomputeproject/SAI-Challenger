@@ -95,7 +95,7 @@ RUN cd sonic-sairedis \
         && make install && ldconfig
 
 # Install SAI Challenger CLI dependencies
-RUN pip3 install click==7.0
+RUN pip3 install click==7.0 pytest
 
 # Deploy SAI Challenger CLI
 COPY setup.py            /sai-challenger/setup.py
