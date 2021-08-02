@@ -1,3 +1,4 @@
+import socket
 import pytest
 from sai import SaiObjType
 from ptf.testutils import simple_tcp_packet, send_packet, verify_packets, verify_packet, verify_no_packet_any, verify_no_packet, verify_any_packet_any_port
@@ -26,7 +27,7 @@ def test_l2_access_to_access_vlan(npu, dataplane):
                                     ip_id=101,
                                     ip_ttl=64)
 
-            send_packet(dataplane, 0, str(pkt))
+            send_packet(dataplane, 0, pkt)
             verify_packets(dataplane, pkt, [1])
     finally:
         for idx in range(max_port):
@@ -58,7 +59,7 @@ def test_l2_trunk_to_trunk_vlan(npu, dataplane):
                                     ip_id=101,
                                     ip_ttl=64)
 
-            send_packet(dataplane, 0, str(pkt))
+            send_packet(dataplane, 0, pkt)
             verify_packets(dataplane, pkt, [1])
     finally:
         npu.flush_fdb_entries(["SAI_FDB_FLUSH_ATTR_BV_ID", vlan_oid])
@@ -96,7 +97,7 @@ def test_l2_access_to_trunk_vlan(npu, dataplane):
                                     ip_id=102,
                                     ip_ttl=64,
                                     pktlen=104)
-            send_packet(dataplane, 0, str(pkt))
+            send_packet(dataplane, 0, pkt)
             verify_packets(dataplane, exp_pkt, [1])
     finally:
         for idx in range(2):
@@ -135,7 +136,7 @@ def test_l2_trunk_to_access_vlan(npu, dataplane):
                                     ip_dst='10.0.0.1',
                                     ip_id=102,
                                     ip_ttl=64)
-            send_packet(dataplane, 0, str(pkt))
+            send_packet(dataplane, 0, pkt)
             verify_packets(dataplane, exp_pkt, [1])
     finally:
         for idx in range(2):
@@ -167,11 +168,11 @@ def test_l2_flood(npu, dataplane):
                                     ip_id=107,
                                     ip_ttl=64)
 
-            send_packet(dataplane, 0, str(pkt))
+            send_packet(dataplane, 0, pkt)
             verify_packets(dataplane, pkt, [1, 2])
-            send_packet(dataplane, 1, str(pkt))
+            send_packet(dataplane, 1, pkt)
             verify_packets(dataplane, pkt, [0, 2])
-            send_packet(dataplane, 2, str(pkt))
+            send_packet(dataplane, 2, pkt)
             verify_packets(dataplane, pkt, [0, 1])
     finally:
         for idx in range(3):
@@ -244,7 +245,7 @@ def test_l2_lag(npu, dataplane):
                                         ip_id=109,
                                         ip_ttl=64)
 
-                send_packet(dataplane, 3, str(pkt))
+                send_packet(dataplane, 3, pkt)
                 rcv_idx = verify_any_packet_any_port(dataplane, [pkt], [0, 1, 2])
                 count[rcv_idx] += 1
                 dst_ip += 1
@@ -259,13 +260,13 @@ def test_l2_lag(npu, dataplane):
                                     ip_ttl=64)
 
             print("Sending packet port 1 (lag member) -> port 4")
-            send_packet(dataplane, 0, str(pkt))
+            send_packet(dataplane, 0, pkt)
             verify_packets(dataplane, pkt, [3])
             print("Sending packet port 2 (lag member) -> port 4")
-            send_packet(dataplane, 1, str(pkt))
+            send_packet(dataplane, 1, pkt)
             verify_packets(dataplane, pkt, [3])
             print("Sending packet port 3 (lag member) -> port 4")
-            send_packet(dataplane, 2, str(pkt))
+            send_packet(dataplane, 2, pkt)
             verify_packets(dataplane, pkt, [3])
     finally:
         npu.remove_fdb(vlan_oid, macs[0])
@@ -328,7 +329,7 @@ def test_l2_vlan_bcast_ucast(npu, dataplane):
             for idx in range(len(npu.dot1q_bp_oids)):
                 expected_ports.append(idx)
 
-            send_packet(dataplane, 0, str(bcast_pkt))
+            send_packet(dataplane, 0, bcast_pkt)
             verify_packets(dataplane, bcast_pkt, expected_ports)
 
             for idx, mac in enumerate(macs):
@@ -338,7 +339,7 @@ def test_l2_vlan_bcast_ucast(npu, dataplane):
                                               ip_id=101,
                                               ip_ttl=64)
 
-                send_packet(dataplane, 0, str(ucast_pkt))
+                send_packet(dataplane, 0, ucast_pkt)
                 verify_packets(dataplane, ucast_pkt, [idx])
 
     finally:
@@ -407,11 +408,11 @@ def test_l2_mtu(npu, dataplane):
                                          ip_id=101,
                                          ip_ttl=64)
 
-            send_packet(dataplane, 0, str(pkt))
+            send_packet(dataplane, 0, pkt)
             verify_packet(dataplane, pkt, 1)
             verify_packet(dataplane, tag_pkt, 2)
 
-            send_packet(dataplane, 0, str(pkt1))
+            send_packet(dataplane, 0, pkt1)
             verify_packet(dataplane, pkt1, 1)
             verify_no_packet(dataplane, tag_pkt1, 2)
 
@@ -453,12 +454,12 @@ def test_fdb_bulk_create(npu, dataplane):
             # Check no flooding for created FDB entries
             for mac in macs:
                 pkt = simple_tcp_packet(eth_dst=mac, eth_src=src_mac)
-                send_packet(dataplane, 1, str(pkt))
+                send_packet(dataplane, 1, pkt)
                 verify_packets(dataplane, pkt, [0])
 
             # Check flooding if no FDB entry
             pkt = simple_tcp_packet(eth_dst=dst_mac, eth_src=src_mac)
-            send_packet(dataplane, 1, str(pkt))
+            send_packet(dataplane, 1, pkt)
             egress_ports = list(range(len(npu.port_oids)))
             egress_ports.remove(1)
             verify_packets(dataplane, pkt, egress_ports)
@@ -479,7 +480,7 @@ def test_fdb_bulk_remove(npu, dataplane):
             # Check no flooding for created FDB entries
             for mac in macs:
                 pkt = simple_tcp_packet(eth_dst=mac, eth_src=src_mac)
-                send_packet(dataplane, 1, str(pkt))
+                send_packet(dataplane, 1, pkt)
                 verify_packets(dataplane, pkt, [0])
 
         # Bulk remove FDB entries
@@ -500,7 +501,7 @@ def test_fdb_bulk_remove(npu, dataplane):
             egress_ports.remove(1)
             for mac in macs:
                 pkt = simple_tcp_packet(eth_dst=mac, eth_src=src_mac)
-                send_packet(dataplane, 1, str(pkt))
+                send_packet(dataplane, 1, pkt)
                 verify_packets(dataplane, pkt, egress_ports)
 
     finally:
