@@ -61,14 +61,7 @@ vlan_attrs_updated = {}
 )
 def test_get_before_set_attr(npu, dataplane, sai_vlan_obj, attr, attr_type, attr_val):
     status, data = npu.get_by_type(sai_vlan_obj, attr, attr_type, do_assert=False)
-
-    if status == "SAI_STATUS_NOT_SUPPORTED" or status == "SAI_STATUS_ATTR_NOT_SUPPORTED_0":
-        pytest.skip("not supported")
-
-    if status == "SAI_STATUS_NOT_IMPLEMENTED" or status == "SAI_STATUS_ATTR_NOT_IMPLEMENTED_0":
-        pytest.skip("not implemented")
-
-    assert status == "SAI_STATUS_SUCCESS"
+    npu.assert_status_success(status)
 
     if attr == "SAI_VLAN_ATTR_STP_INSTANCE":
         status, data = npu.get(npu.oid, ["SAI_SWITCH_ATTR_DEFAULT_STP_INST_ID", attr_val], False)
@@ -113,14 +106,8 @@ def test_set_attr(npu, dataplane, sai_vlan_obj, attr, attr_value):
         attr_value = data.oid()
 
     status = npu.set(sai_vlan_obj, [attr, attr_value], False)
+    npu.assert_status_success(status)
 
-    if status == "SAI_STATUS_NOT_SUPPORTED" or status == "SAI_STATUS_ATTR_NOT_SUPPORTED_0":
-        pytest.skip("not supported")
-
-    if status == "SAI_STATUS_NOT_IMPLEMENTED" or status == "SAI_STATUS_ATTR_NOT_IMPLEMENTED_0":
-        pytest.skip("not implemented")
-
-    assert status == "SAI_STATUS_SUCCESS"
     vlan_attrs_updated[attr] = attr_value
 
 
@@ -130,14 +117,7 @@ def test_set_attr(npu, dataplane, sai_vlan_obj, attr, attr_value):
 )
 def test_get_after_set_attr(npu, dataplane, sai_vlan_obj, attr, attr_type, attr_value):
     status, data = npu.get_by_type(sai_vlan_obj, attr, attr_type, do_assert=False)
-
-    if status == "SAI_STATUS_NOT_SUPPORTED" or status == "SAI_STATUS_ATTR_NOT_SUPPORTED_0":
-        pytest.skip("not supported")
-
-    if status == "SAI_STATUS_NOT_IMPLEMENTED" or status == "SAI_STATUS_ATTR_NOT_IMPLEMENTED_0":
-        pytest.skip("not implemented")
-
-    assert status == "SAI_STATUS_SUCCESS"
+    npu.assert_status_success(status)
 
     if attr in vlan_attrs_updated:
         assert data.value() == vlan_attrs_updated[attr]
@@ -220,14 +200,7 @@ def test_vlan_create_negative(npu, dataplane, vlan_id, expected_status):
 )
 def test_vlan_mbr_get_before_set_attr(npu, dataplane, sai_vlan_member, attr, attr_type):
     status, data = npu.get_by_type(sai_vlan_member[0], attr, attr_type, do_assert=False)
-
-    if status == "SAI_STATUS_NOT_SUPPORTED" or status == "SAI_STATUS_ATTR_NOT_SUPPORTED_0":
-        pytest.skip("not supported")
-
-    if status == "SAI_STATUS_NOT_IMPLEMENTED" or status == "SAI_STATUS_ATTR_NOT_IMPLEMENTED_0":
-        pytest.skip("not implemented")
-
-    assert status == "SAI_STATUS_SUCCESS"
+    npu.assert_status_success(status)
 
     if attr == "SAI_VLAN_MEMBER_ATTR_BRIDGE_PORT_ID":
         assert data.value() == npu.dot1q_bp_oids[0]
@@ -247,14 +220,7 @@ def test_vlan_mbr_get_before_set_attr(npu, dataplane, sai_vlan_member, attr, att
 )
 def test_vlan_member_set(npu, dataplane, sai_vlan_member, attr, attr_value):
     status = npu.set(sai_vlan_member[0], [attr, attr_value], False)
-
-    if status == "SAI_STATUS_NOT_SUPPORTED" or status == "SAI_STATUS_ATTR_NOT_SUPPORTED_0":
-        pytest.skip("not supported")
-
-    if status == "SAI_STATUS_NOT_IMPLEMENTED" or status == "SAI_STATUS_ATTR_NOT_IMPLEMENTED_0":
-        pytest.skip("not implemented")
-
-    assert status == "SAI_STATUS_SUCCESS"
+    npu.assert_status_success(status)
 
 
 @pytest.mark.parametrize(
@@ -263,14 +229,7 @@ def test_vlan_member_set(npu, dataplane, sai_vlan_member, attr, attr_value):
 )
 def test_vlan_mbr_get_after_set_attr(npu, dataplane, sai_vlan_member, attr, attr_type):
     status, data = npu.get_by_type(sai_vlan_member[0], attr, attr_type, do_assert=False)
-
-    if status == "SAI_STATUS_NOT_SUPPORTED" or status == "SAI_STATUS_ATTR_NOT_SUPPORTED_0":
-        pytest.skip("not supported")
-
-    if status == "SAI_STATUS_NOT_IMPLEMENTED" or status == "SAI_STATUS_ATTR_NOT_IMPLEMENTED_0":
-        pytest.skip("not implemented")
-
-    assert status == "SAI_STATUS_SUCCESS"
+    npu.assert_status_success(status)
 
 
 @pytest.mark.parametrize(

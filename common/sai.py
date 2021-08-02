@@ -3,6 +3,7 @@ import redis
 import time
 import json
 import os
+import pytest
 
 '''
 SAI version:
@@ -483,3 +484,14 @@ class Sai:
                 print("Iggnored line {}: {}".format(cnt, rec))
 
         print("Current SAI objects: {}".format(self.rec2vid))
+
+    def assert_status_success(self, status, skip_not_supported=True, skip_not_implemented=True):
+        if skip_not_supported:
+            if status == "SAI_STATUS_NOT_SUPPORTED" or status == "SAI_STATUS_ATTR_NOT_SUPPORTED_0":
+                pytest.skip("not supported")
+
+        if skip_not_implemented:
+            if status == "SAI_STATUS_NOT_IMPLEMENTED" or status == "SAI_STATUS_ATTR_NOT_IMPLEMENTED_0":
+                pytest.skip("not implemented")
+
+        assert status == "SAI_STATUS_SUCCESS"

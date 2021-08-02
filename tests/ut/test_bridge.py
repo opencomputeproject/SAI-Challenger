@@ -35,13 +35,7 @@ def sai_bport_obj(npu):
 )
 def test_get_before_set_attr(npu, dataplane, sai_bport_obj, attr, attr_type):
     status, data = npu.get_by_type(sai_bport_obj, attr, attr_type, do_assert=False)
-    if status == "SAI_STATUS_NOT_SUPPORTED" or status == "SAI_STATUS_ATTR_NOT_SUPPORTED_0":
-        pytest.skip("not supported")
-
-    if status == "SAI_STATUS_NOT_IMPLEMENTED" or status == "SAI_STATUS_ATTR_NOT_IMPLEMENTED_0":
-        pytest.skip("not implemented")
-
-    assert status == "SAI_STATUS_SUCCESS"
+    npu.assert_status_success(status)
 
     if attr == "SAI_BRIDGE_PORT_ATTR_PORT_ID":
         assert data.value() == npu.port_oids[0]
@@ -76,14 +70,7 @@ def test_get_before_set_attr(npu, dataplane, sai_bport_obj, attr, attr_type):
 )
 def test_set_attr(npu, dataplane, sai_bport_obj, attr, attr_value):
     status = npu.set(sai_bport_obj, [attr, attr_value], False)
-
-    if status == "SAI_STATUS_NOT_SUPPORTED" or status == "SAI_STATUS_ATTR_NOT_SUPPORTED_0":
-        pytest.skip("not supported")
-
-    if status == "SAI_STATUS_NOT_IMPLEMENTED" or status == "SAI_STATUS_ATTR_NOT_IMPLEMENTED_0":
-        pytest.skip("not implemented")
-
-    assert status == "SAI_STATUS_SUCCESS"
+    npu.assert_status_success(status)
 
     if status == "SAI_STATUS_SUCCESS":
         bport_attrs_updated[attr] = attr_value
@@ -102,11 +89,4 @@ def test_set_attr(npu, dataplane, sai_bport_obj, attr, attr_value):
 )
 def test_get_after_set_attr(npu, dataplane, sai_bport_obj, attr, attr_type):
     status, data = npu.get_by_type(sai_bport_obj, attr, attr_type, do_assert=False)
-
-    if status == "SAI_STATUS_NOT_SUPPORTED" or status == "SAI_STATUS_ATTR_NOT_SUPPORTED_0":
-        pytest.skip("not supported")
-
-    if status == "SAI_STATUS_NOT_IMPLEMENTED" or status == "SAI_STATUS_ATTR_NOT_IMPLEMENTED_0":
-        pytest.skip("not implemented")
-
-    assert status == "SAI_STATUS_SUCCESS"
+    npu.assert_status_success(status)
