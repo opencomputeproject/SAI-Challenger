@@ -506,3 +506,65 @@ def test_fdb_bulk_remove(npu, dataplane):
 
     finally:
         npu.flush_fdb_entries(["SAI_FDB_FLUSH_ATTR_BV_ID", npu.default_vlan_oid])
+
+        
+def test_l2_mac_move_1(npu, dataplane):
+    vlan_id = "100"
+    macs = ['00:11:11:11:11:11', '00:22:22:22:22:22']
+    max_port = 3
+    vlan_mbr_oids = []
+    vlan_oid = npu.create(SaiObjType.VLAN, ["SAI_VLAN_ATTR_VLAN_ID", vlan_id])
+
+    for idx in range(max_port):
+        npu.remove_vlan_member(npu.default_vlan_oid, npu.dot1q_bp_oids[idx])
+        vlan_mbr = npu.create_vlan_member(vlan_oid, npu.dot1q_bp_oids[idx], "SAI_VLAN_TAGGING_MODE_UNTAGGED")
+        vlan_mbr_oids.append(vlan_mbr)
+        npu.set(npu.port_oids[idx], ["SAI_PORT_ATTR_PORT_VLAN_ID", vlan_id])
+    
+    try:
+        if npu.run_traffic:
+        
+            pkt1 = simple_tcp_packet(eth_dst=macs[1],
+                                     eth_src=macs[0],
+                                     ip_dst='192.168.0.2',
+                                     ip_src='192.168.0.1',
+                                     ip_id=105,
+                                     ip_ttl=64)
+
+            pkt2 = simple_tcp_packet(eth_dst=macs[0],
+                                     eth_src=macs[1],
+                                     ip_dst='192.168.0.1',
+                                     ip_src='192.168.0.2',
+                                     ip_id=105,
+                                     ip_ttl=64)
+            send_packet(dataplane, 0, pkt1)
+            verify_packets(dataplane, pkt1, [1, 2])
+
+            send_packet(dataplane, 1, pkt2)
+            verify_packets(dataplane, pkt2, [0])
+
+            time.sleep(1)
+
+            send_packet(dataplane, 0, pkt1)
+            verify_packets(dataplane, pkt1, [1])
+            verify_no_packet(dataplane, pkt1, 2)
+
+            time.sleep(1)
+
+            send_packet(dataplane, 2, pkt2)
+            verify_packets(dataplane, pkt2, [0])
+
+            time.sleep(1)
+
+            send_packet(dataplane, 0, pkt1)
+            verify_packets(dataplane, pkt1, [2])
+            verify_no_packet(dataplane, pkt1, 1)
+   
+    finally:
+        npu.flush_fdb_entries(["SAI_FDB_FLUSH_ATTR_BV_ID", vlan_oid])
+        for idx in range(max_port):
+            npu.remove(vlan_mbr_oids[idx])
+            npu.create_vlan_member(npu.default_vlan_oid, npu.dot1q_bp_oids[idx], "SAI_VLAN_TAGGING_MODE_UNTAGGED")
+            npu.set(npu.port_oids[idx], ["SAI_PORT_ATTR_PORT_VLAN_ID", npu.default_vlan_id])
+        
+        npu.remove(vlan_oid)
