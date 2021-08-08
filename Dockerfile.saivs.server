@@ -105,6 +105,8 @@ COPY common/setup.py     /sai-challenger/common/setup.py
 COPY common/__init__.py  /sai-challenger/common/__init__.py
 COPY common/sai.py       /sai-challenger/common/sai.py
 COPY common/sai_npu.py   /sai-challenger/common/sai_npu.py
+COPY scripts/sai-cli-completion.sh   /sai-challenger/scripts/sai-cli-completion.sh
+RUN echo ". /sai-challenger/scripts/sai-cli-completion.sh" >> /root/.bashrc
 
 RUN pip3 install --editable /sai-challenger/common \
         && pip3 install --editable /sai-challenger
