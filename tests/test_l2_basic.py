@@ -5,6 +5,17 @@ from ptf.testutils import simple_tcp_packet, send_packet, verify_packets, verify
 
 
 def test_l2_access_to_access_vlan(npu, dataplane):
+    """
+    Description:
+    Check access to access VLAN members forwarding
+
+    Test scenario:
+    1. Create a VLAN 10
+    2. Add two ports as untagged members to the VLAN
+    3. Setup static FDB entries for port 1 and port 2
+    4. Send a simple untagged packet on port 1 and verify packet on port 2
+    5. Clean up configuration
+    """
     vlan_id = "10"
     macs = ['00:11:11:11:11:11', '00:22:22:22:22:22']
     max_port = 2
@@ -40,6 +51,17 @@ def test_l2_access_to_access_vlan(npu, dataplane):
 
 
 def test_l2_trunk_to_trunk_vlan(npu, dataplane):
+    """
+    Description:
+    Check trunk to trunk VLAN members forwarding
+
+    Test scenario:
+    1. Create a VLAN 10
+    2. Add two ports as tagged members to the VLAN
+    3. Setup static FDB entries for port 1 and port 2
+    4. Send a simple vlan tag (10) packet on port 1 and verify packet on port 2
+    5. Clean up configuration
+    """
     vlan_id = "10"
     macs = ['00:11:11:11:11:11', '00:22:22:22:22:22']
 
@@ -69,6 +91,17 @@ def test_l2_trunk_to_trunk_vlan(npu, dataplane):
 
 
 def test_l2_access_to_trunk_vlan(npu, dataplane):
+    """
+    Description:
+    Check access to trunk VLAN members forwarding
+
+    Test scenario:
+    1. Create a VLAN 10
+    2. Add a untagged interfaces for port 1 and  tagged interface for port 2 as members
+    3. Setup static FDB entries for port 1 and port 2
+    4. Send a simple untagged packet on port 1 and verify packet on port 2 (w/ Vlan 10)
+    5. Clean up configuration
+    """
     vlan_id = "10"
     macs = ['00:11:11:11:11:11', '00:22:22:22:22:22']
 
@@ -109,6 +142,17 @@ def test_l2_access_to_trunk_vlan(npu, dataplane):
 
 
 def test_l2_trunk_to_access_vlan(npu, dataplane):
+    """
+    Description:
+    Check trunk to access VLAN members forwarding
+
+    Test scenario:
+    1. Create a VLAN 10
+    2. Add a tagged interfaces for port 1 and  untagged interface for port 2 as members
+    3. Setup static FDB entries for port 1 and port 2
+    4. Send a simple tagged packet on port 1 and verify packet on port 2 (untagged)
+    5. Clean up configuration
+    """
     vlan_id = "10"
     macs = ['00:11:11:11:11:11', '00:22:22:22:22:22']
 
@@ -148,6 +192,16 @@ def test_l2_trunk_to_access_vlan(npu, dataplane):
 
 
 def test_l2_flood(npu, dataplane):
+    """
+    Description:
+    Test that the packet received on a port is flooded to all VLAN members
+
+    Test scenario:
+    1. Create a VLAN 10
+    2. Add three ports as untagged members to the VLAN
+    3. Send packet on each port and verify that it only shows up on the other two ports
+    4. Clean up configuration
+    """
     vlan_id = "10"
     macs = ['00:11:11:11:11:11', '00:22:22:22:22:22']
     vlan_mbr_oids = []
@@ -183,6 +237,22 @@ def test_l2_flood(npu, dataplane):
 
 
 def test_l2_lag(npu, dataplane):
+    """
+    Description:
+    Check that the packets are equally divided among LAG members.
+
+    Test scenario:
+    1. Remove three bridge ports from default .1Q bridge
+    2. Remove port 4 from the default VLAN
+    3. Create a LAG group with 3 ports
+    4. Create a VLAN 10 and VLAN members
+    5. Set PVID for LAG and port 4
+    6. Setup static FDB entries for port 4 and the LAG with unique MAC addresses
+    7. Send packets with varying ip addresses and check count of packets received in ports 1 through 3
+    8. Verify that the counts are around divided equally amongst ports with a margin of error 10%
+    9. Send packets from each of the members and check they are received on port 4 (with port 4's destination MAC)
+    10. Clean up configuration
+    """
     vlan_id = "10"
     macs = ['00:11:11:11:11:11', '00:22:22:22:22:22']
     max_port = 3
@@ -303,6 +373,20 @@ def test_l2_lag(npu, dataplane):
 
 
 def test_l2_vlan_bcast_ucast(npu, dataplane):
+    """
+    Description:
+    VLAN broadcast and known unicast test.
+    Verify the broadcast packet reaches all ports in the VLAN and known unicast packet reaches specific port.
+
+    Test scenario:
+    1. Create a VLAN 10
+    2. Add ports as untagged members to the VLAN
+    3. Add MAC for each port
+    4. Send untagged broadcast packet from port 1, verify all ports receive the packet
+    5. Send untagged unicast packets from port 1 to the rest of the vlan members ports.
+       Verify only one port at a time receives the packet and port n does not.
+    6. Clean up configuration
+    """
     vlan_id = "10"
     macs = []
 
@@ -326,14 +410,14 @@ def test_l2_vlan_bcast_ucast(npu, dataplane):
                                           ip_ttl=64)
 
             expected_ports = []
-            for idx in range(len(npu.dot1q_bp_oids)):
+            for idx in range(1, len(npu.dot1q_bp_oids)):
                 expected_ports.append(idx)
 
             send_packet(dataplane, 0, bcast_pkt)
             verify_packets(dataplane, bcast_pkt, expected_ports)
 
-            for idx, mac in enumerate(macs):
-                ucast_pkt = simple_tcp_packet(eth_dst=mac,
+            for idx in range(1, len(npu.dot1q_bp_oids)):
+                ucast_pkt = simple_tcp_packet(eth_dst=macs[idx],
                                               eth_src='00:00:00:00:00:01',
                                               ip_dst='10.0.0.1',
                                               ip_id=101,
@@ -352,6 +436,24 @@ def test_l2_vlan_bcast_ucast(npu, dataplane):
 
 
 def test_l2_mtu(npu, dataplane):
+    """
+    Description:
+    Send untagged packet with max MTU size and verify forwarding.
+    Add VLAN tag so that the total packet size exceeds the MTU value and verify behavior.
+    Default action is to drop packets exceeding configured MTU value.
+
+    Test scenario:
+    1. Create VLAN 10 in the database
+    2. Fetch the MTU for the port P1, P2, P3
+    3. Create two member port (port P1 and P2) as untagged port and port P3 as tagged port of vlan 10
+    4. Set MTU size 1500 for port P1, P2 and P3
+    5. Set the Port VLAN ID 10 for port P1, P2 and P3
+    6. Send untagged TCP packet of size 1400 bytes on port 1.
+    7. Untagged packet of size 1400 should be received at port 2 and tagged packet of vlan 10 should be received at port 3.
+    8. Send untagged TCP packet of size 1500 bytes on port 1.
+    9. Untagged packet of size 1500 should be received at port 2 and tagged packet of vlan 10 should not be received at port 3.
+    10. Clean up configuration
+    """
     vlan_id = "10"
     port_mtu = "1500"
     port_default_mtu = []
@@ -426,6 +528,16 @@ def test_l2_mtu(npu, dataplane):
 
 
 def test_fdb_bulk_create(npu, dataplane):
+    """
+    Description:
+    Bulk create FDB entries and check with the traffic.
+
+    Test scenario:
+    1. Bulk create FDB entries
+    2. Check no flooding for created FDB entries
+    3. Check flooding if no FDB entry
+    4. Flush all entries by VLAN
+    """
     macs = ['00:11:11:11:11:11', '00:22:22:22:22:22',
             '00:33:33:33:33:33', '00:44:44:44:44:44']
     entry = {
@@ -468,6 +580,17 @@ def test_fdb_bulk_create(npu, dataplane):
 
 
 def test_fdb_bulk_remove(npu, dataplane):
+    """
+    Description:
+    Bulk remove FDB entries and check with the traffic.
+
+    Test scenario:
+    1. Bulk create FDB entries
+    2. Check no flooding for created FDB entries
+    3. Bulk remove FDB entries
+    4. Check flooding if no FDB entry
+    5. Flush all entries by VLAN
+    """
     src_mac = '00:00:00:11:22:33'
     macs = ['00:11:11:11:11:11', '00:22:22:22:22:22',
             '00:33:33:33:33:33', '00:44:44:44:44:44']
@@ -509,6 +632,27 @@ def test_fdb_bulk_remove(npu, dataplane):
 
         
 def test_l2_mac_move_1(npu, dataplane):
+    """
+    Description:
+    Create VLAN 100 and add member ports 1, 2 and 3. Send packet on port 1 with
+    src_mac=MAC1 and dst_mac=MAC2. Verify MAC1 is learnt on port 1 and packet is flooded
+    to other member ports (2 and 3 in this example). Send packet on port 2 with src_mac=MAC2
+    and dst_mac=MAC1. Verify MAC2 is learnt on port 2. After learning, verify that packet
+    from port 1 is only forwarded to port 2 and not to port 3. Repeat the test by sending
+    same packet (src_mac=MAC2 and dst_mac=MAC1), on port 3. Verify that station movement
+    occurred and MAC2 is learnt on port 3. Packet from port 1 destined to MAC2 must be forwarded
+    to port 3 and not to port 2 after the MAC-movement.
+
+    Test scenario:
+    1. Create VLAN 100 and associate 3 untagged ports (port 1,2,3) as the member port of VLAN 100
+    2. Set attribute value of "Port VLAN ID 100" for the ports 1, 2, 3
+    3. Send packet from port 1 with src_mac=MAC1 and dst_mac=MAC2
+    4. Send packet from port 2 with src_mac=MAC2 and dst_mac=MAC1
+    5. After MAC learning, repeat step 3 and verify that packet from port 1 is only forwarded to port 2 and not to port 3
+    6. Send packet (src_mac=MAC2 and dst_mac=MAC1) on port 3
+    7. Send packet (src_mac=MAC1 and dst_mac=MAC2) from port 1
+    8. Clean up configuration
+    """
     vlan_id = "100"
     macs = ['00:11:11:11:11:11', '00:22:22:22:22:22']
     max_port = 3
