@@ -494,3 +494,38 @@ class Sai:
                 pytest.skip("not implemented")
 
         assert status == "SAI_STATUS_SUCCESS"
+
+    def remote_cmd_operate(self, cmd, args=None):
+        self.r.delete("SAI_CHALLENGER_CMD_QUEUE")
+        self.r.delete("SAI_CHALLENGER_CMD_STATUS_QUEUE")
+        if args is not None:
+            if type(args) != str:
+                args = json.dumps(args)
+            self.r.rpush("SAI_CHALLENGER_CMD_QUEUE", cmd, args)
+        else:
+            print(cmd)
+            self.r.rpush("SAI_CHALLENGER_CMD_QUEUE", cmd)
+
+        status = []
+        tout = 0.05
+        attempts = self.attempts
+
+        while len(status) == 0 and attempts > 0:
+            time.sleep(tout)
+            attempts -= 1
+            status = self.r.lrange("SAI_CHALLENGER_CMD_STATUS_QUEUE", 0, -1)
+
+        self.r.delete("SAI_CHALLENGER_CMD_STATUS_QUEUE")
+        return status[0].decode("utf-8") if len(status) > 0 else "err"
+
+    def remote_iface_exists(self, iface):
+        return self.remote_cmd_operate("iface_exists", iface) == "ok"
+
+    def remote_iface_is_up(self, iface):
+        return self.remote_cmd_operate("iface_is_up", iface) == "ok"
+
+    def remote_iface_agent_start(self, ifaces):
+        return self.remote_cmd_operate("start_nn_agent", ifaces) == "ok"
+
+    def remote_iface_agent_stop(self):
+        return self.remote_cmd_operate("stop_nn_agent") == "ok"
