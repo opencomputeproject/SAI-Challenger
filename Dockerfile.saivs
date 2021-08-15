@@ -112,6 +112,20 @@ RUN cd sonic-sairedis \
         && ./autogen.sh && ./configure --with-sai=vs && make -j4 \
         && make install && ldconfig
 
+# Install ptf_nn_agent dependencies
+RUN pip install cffi==1.10.0 \
+        && wget https://github.com/nanomsg/nanomsg/archive/1.0.0.tar.gz \
+        && tar xvfz 1.0.0.tar.gz \
+        && cd nanomsg-1.0.0 \
+        && mkdir -p build \
+        && cd build \
+        && cmake .. \
+        && make install \
+        && ldconfig \
+        && cd ../.. \
+        && rm -rf 1.0.0.tar.gz nanomsg-1.0.0 \
+        && pip install nnpy
+
 WORKDIR /sai-challenger/tests
 
 CMD ["/usr/bin/supervisord"]
