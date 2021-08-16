@@ -15,7 +15,10 @@ docker build -f Dockerfile.client -t sai-challenger-client .
 
 Run SAI server:
 ```sh
-docker run --name saivs -v $(pwd):/sai-challenger -d saivs-server
+docker run --name saivs \
+	--cap-add=NET_ADMIN \
+	--device /dev/net/tun:/dev/net/tun \
+	-d saivs-server
 ```
 
 Run SAI Challenger testcases:

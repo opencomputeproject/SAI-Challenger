@@ -89,6 +89,7 @@ RUN sed -ri '/imklog/s/^/#/' /etc/rsyslog.conf
 COPY scripts/sai.profile /etc/sai.d/sai.profile
 COPY scripts/lanemap.ini /usr/share/sonic/hwsku/lanemap.ini
 COPY scripts/server/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY scripts/veth-create.sh /usr/bin/veth-create.sh
 
 WORKDIR /sai
 
@@ -117,6 +118,10 @@ COPY common/sai.py       /sai-challenger/common/sai.py
 COPY common/sai_npu.py   /sai-challenger/common/sai_npu.py
 COPY scripts/sai-cli-completion.sh   /sai-challenger/scripts/sai-cli-completion.sh
 RUN echo ". /sai-challenger/scripts/sai-cli-completion.sh" >> /root/.bashrc
+
+# Remote commands listener
+COPY scripts/redis-cmd-listener.py   /sai-challenger/scripts/redis-cmd-listener.py
+COPY ptf/ptf_nn/ptf_nn_agent.py      /sai-challenger/ptf/ptf_nn/ptf_nn_agent.py
 
 RUN pip3 install --editable /sai-challenger/common \
         && pip3 install --editable /sai-challenger
