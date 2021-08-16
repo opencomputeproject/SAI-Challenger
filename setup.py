@@ -12,6 +12,10 @@ setup(
         'click==7.0',
     ],
     packages=['cli'],
+    scripts=[
+        'ptf/ptf_nn/ptf_nn_agent.py',
+        'scripts/redis-cmd-listener.py'
+    ],
     entry_points={
         'console_scripts': [
             'sai = cli.main:cli',
