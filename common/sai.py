@@ -202,7 +202,13 @@ class Sai:
         self.r.shutdown()
 
     def alloc_vid(self, obj_type):
-        vid = self.r.incr("VIDCOUNTER")
+        vid = None
+        if obj_type == SaiObjType.SWITCH:
+            if self.r.get("VIDCOUNTER") is None:
+                self.r.set("VIDCOUNTER", 0)
+                vid = 0
+        if vid is None:
+            vid = self.r.incr("VIDCOUNTER")
         return "oid:" + hex((obj_type.value << 48) | vid)
 
     def vid_to_type(self, vid):

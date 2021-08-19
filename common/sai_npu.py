@@ -7,11 +7,10 @@ from sai import SaiObjType
 
 class SaiNpu(Sai):
 
-    oid = "oid:0x21000000000000"
-
     def __init__(self, exec_params):
         super().__init__(exec_params)
 
+        self.oid = "oid:0x0"
         self.dot1q_br_oid = "oid:0x0"
         self.default_vlan_oid = "oid:0x0"
         self.default_vlan_id = "0"
@@ -29,7 +28,7 @@ class SaiNpu(Sai):
         sw_attr.append("SAI_SWITCH_ATTR_TYPE")
         sw_attr.append("SAI_SWITCH_TYPE_NPU")
 
-        self.create("SAI_OBJECT_TYPE_SWITCH:" + self.oid, sw_attr)
+        self.oid = self.create(SaiObjType.SWITCH, sw_attr)
         self.rec2vid[self.oid] = self.oid
 
         # Default .1Q bridge
