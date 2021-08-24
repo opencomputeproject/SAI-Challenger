@@ -3,6 +3,8 @@ import time
 from sai import Sai
 from sai import SaiData
 from sai import SaiObjType
+from sai_dataplane import SaiDataPlane
+from sai_dataplane import SaiHostifDataPlane
 
 
 class SaiNpu(Sai):
@@ -17,6 +19,8 @@ class SaiNpu(Sai):
         self.default_vrf_oid = "oid:0x0"
         self.port_oids = []
         self.dot1q_bp_oids = []
+        self.hostif_dataplane = None
+        self.hostif_map = None
 
     def init(self, attr):
         self.port_oids.clear()
@@ -301,3 +305,33 @@ class SaiNpu(Sai):
                 return
 
         assert False
+
+    def hostif_dataplane_start(self, ifaces):
+        self.hostif_map = dict()
+
+        # Start ptf_nn_agent.py on DUT
+        if self.remote_iface_agent_start(ifaces) == False:
+            return None
+
+        for inum, iname in ifaces.items():
+            socket_addr = 'tcp://{}:10001'.format(self.server_ip)
+            self.hostif_map[(0, int(inum))] = socket_addr
+
+        self.hostif_dataplane = SaiHostifDataPlane(ifaces, self.server_ip)
+        self.hostif_dataplane.init()
+        return self.hostif_dataplane
+
+    def hostif_dataplane_stop(self):
+        self.dataplane_pkt_listen()
+        self.hostif_map = None
+        self.hostif_dataplane.deinit()
+        self.hostif_dataplane = None
+        return self.remote_iface_agent_stop()
+
+    def hostif_pkt_listen(self):
+        self.port_map = SaiDataPlane.getPortMap()
+        SaiDataPlane.setPortMap(self.hostif_map)
+
+    def dataplane_pkt_listen(self):
+        self.hostif_map = SaiDataPlane.getPortMap()
+        SaiDataPlane.setPortMap(self.port_map)

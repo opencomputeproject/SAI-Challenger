@@ -103,8 +103,7 @@ RUN cd sonic-sairedis \
         && make install && ldconfig
 
 # Install ptf_nn_agent dependencies
-RUN pip install cffi==1.10.0 \
-        && wget https://github.com/nanomsg/nanomsg/archive/1.0.0.tar.gz \
+RUN wget https://github.com/nanomsg/nanomsg/archive/1.0.0.tar.gz \
         && tar xvfz 1.0.0.tar.gz \
         && cd nanomsg-1.0.0 \
         && mkdir -p build \
@@ -114,7 +113,7 @@ RUN pip install cffi==1.10.0 \
         && ldconfig \
         && cd ../.. \
         && rm -rf 1.0.0.tar.gz nanomsg-1.0.0 \
-        && pip install nnpy
+        && pip3 install nnpy
 
 WORKDIR /sai-challenger/tests
 

@@ -13,7 +13,6 @@ setup(
     ],
     packages=['cli'],
     scripts=[
-        'ptf/ptf_nn/ptf_nn_agent.py',
         'scripts/redis-cmd-listener.py'
     ],
     entry_points={

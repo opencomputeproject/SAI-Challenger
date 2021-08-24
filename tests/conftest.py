@@ -21,6 +21,7 @@ sys.path.append(commondir)
 
 from sai_npu import SaiNpu
 from sai_npu_vs import SaiNpuVs
+from sai_dataplane import SaiDataPlane
 
 
 ##@var DEBUG_LEVELS
@@ -147,19 +148,6 @@ def logging_setup(config):
     ptf.open_logfile('main')
 
 
-def pcap_setup(config):
-    """
-    Set up dataplane packet capturing based on config
-    """
-
-    if config["log_dir"] == None:
-        filename = os.path.splitext(config["log_file"])[0] + '.pcap'
-        ptf.dataplane_instance.start_pcap(filename)
-    else:
-        # start_pcap is called per-test in base_tests
-        pass
-
-
 @pytest.fixture(scope="session")
 def npu(exec_params):
     npu = None
@@ -207,7 +195,8 @@ def dataplane_init():
         try:
             import nnpy
         except:
-            die("Cannot use 'nn' platform if nnpy package is not installed")
+            logging.critical("Cannot use 'nn' platform if nnpy package is not installed")
+            sys.exit(1)
 
     platform_mod = None
     try:
@@ -223,7 +212,8 @@ def dataplane_init():
         raise
 
     if config["port_map"] is None:
-        die("Interface port map was not defined by the platform. Exiting.")
+        logging.critical("Interface port map was not defined by the platform. Exiting.")
+        sys.exit(1)
 
     logging.debug("Configuration: " + str(config))
     logging.info("port map: " + str(config["port_map"]))
@@ -233,7 +223,8 @@ def dataplane_init():
     ptf.testutils.MINSIZE = config['minsize']
 
     if os.getuid() != 0 and not config["allow_user"] and platform_name != "nn":
-        die("Super-user privileges required. Please re-run with sudo or as root.")
+        logging.critical("Super-user privileges required. Please re-run with sudo or as root.")
+        sys.exit(1)
 
     if config["random_seed"] is not None:
         logging.info("Random seed: %d" % config["random_seed"])
@@ -249,50 +240,29 @@ def dataplane_init():
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 
     # Set up the dataplane
-    ptf.dataplane_instance = ptf.dataplane.DataPlane(config)
-    pcap_setup(config)
+    dataplane_instance = ptf.dataplane.DataPlane(config)
+    if config["log_dir"] == None:
+        filename = os.path.splitext(config["log_file"])[0] + '.pcap'
+        dataplane_instance.start_pcap(filename)
+
     for port_id, ifname in config["port_map"].items():
         device, port = port_id
-        ptf.dataplane_instance.port_add(ifname, device, port)
+        dataplane_instance.port_add(ifname, device, port)
 
     logging.info("++++++++ " + time.asctime() + " ++++++++")
 
-    yield
+    yield dataplane_instance
 
     # Shutdown the dataplane
-    ptf.dataplane_instance.stop_pcap()  # no-op is pcap not started
-    ptf.dataplane_instance.kill()
-    ptf.dataplane_instance = None
+    dataplane_instance.stop_pcap()
+    dataplane_instance.kill()
 
-
-class DataplaneBase(unittest.TestCase):
-    def __init__(self):
-        pass
-
-    def setUp(self):
-        self.dataplane = ptf.dataplane_instance
-        self.dataplane.flush()
-        if config["log_dir"] != None:
-            filename = os.path.join(config["log_dir"], str(self)) + ".pcap"
-            self.dataplane.start_pcap(filename)
-
-    def before_send(self, pkt, device_number=0, port_number=-1):
-        pass
-
-    def at_receive(self, pkt, device_number=0, port_number=-1):
-        pass
-
-    def tearDown(self):
-        if config["log_dir"] != None:
-            self.dataplane.stop_pcap()
 
 @pytest.fixture(scope="function")
 def dataplane(dataplane_init):
-    dataplane = DataplaneBase()
+    dataplane = SaiDataPlane(dataplane_init)
     dataplane.setUp()
 
     yield dataplane
 
     dataplane.tearDown()
-
-
