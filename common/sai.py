@@ -165,9 +165,10 @@ class Sai:
     attempts = 40
 
     def __init__(self, exec_params):
+        self.server_ip = exec_params["server"]
         self.loglevel = exec_params["loglevel"]
-        self.r = redis.Redis(host=exec_params["server"], port=6379, db=1)
-        self.loglevel_db = redis.Redis(host=exec_params["server"], port=6379, db=3)
+        self.r = redis.Redis(host=self.server_ip, port=6379, db=1)
+        self.loglevel_db = redis.Redis(host=self.server_ip, port=6379, db=3)
         self.cache = {}
         self.rec2vid = {}
 
@@ -530,6 +531,14 @@ class Sai:
 
     def remote_iface_is_up(self, iface):
         return self.remote_cmd_operate("iface_is_up", iface) == "ok"
+
+    def remote_iface_status_set(self, iface, status):
+        admin = "up" if status else "down"
+        args = {
+            "iface": iface,
+            "admin": admin
+        }
+        return self.remote_cmd_operate("set_iface_status", args) == "ok"
 
     def remote_iface_agent_start(self, ifaces):
         return self.remote_cmd_operate("start_nn_agent", ifaces) == "ok"

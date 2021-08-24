@@ -8,5 +8,8 @@ setup(
     author='Andriy Kokhan',
     author_email='andriy.kokhan@gmail.com',
     url='https://github.com/PLVision/sai-challenger',
-    py_modules=['sai', 'sai_npu'],
+    install_requires=[
+        'ptf',
+    ],
+    py_modules=['sai', 'sai_npu', 'sai_dataplane'],
 )
