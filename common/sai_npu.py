@@ -21,8 +21,18 @@ class SaiNpu(Sai):
         self.dot1q_bp_oids = []
         self.hostif_dataplane = None
         self.hostif_map = None
+        self.sku_config = None
 
     def init(self, attr):
+        # Load SKU configuration is any
+        if self.sku is not None:
+            try:
+                f = open(f"../sku/{self.sku}.json")
+                self.sku_config = json.load(f)
+                f.close()
+            except Exception as e:
+                assert False, f"{e}"
+
         self.port_oids.clear()
         self.dot1q_bp_oids.clear()
 
@@ -65,6 +75,10 @@ class SaiNpu(Sai):
             self.dot1q_bp_oids = self.get(self.dot1q_br_oid,
                                          ["SAI_BRIDGE_ATTR_PORT_LIST", self.make_list(bport_num, "oid:0x0")]).oids()
             assert (bport_num == len(self.dot1q_bp_oids))
+
+        # Update SKU
+        if self.sku_config is not None:
+            self.set_sku_mode(self.sku_config)
 
     def reset(self):
         self.cleanup()
@@ -335,3 +349,63 @@ class SaiNpu(Sai):
     def dataplane_pkt_listen(self):
         self.hostif_map = SaiDataPlane.getPortMap()
         SaiDataPlane.setPortMap(self.port_map)
+
+    def set_sku_mode(self, sku):
+        # Remove existing ports
+        num_ports = len(self.dot1q_bp_oids)
+        for idx in range(num_ports):
+            self.remove_vlan_member(self.default_vlan_oid, self.dot1q_bp_oids[idx])
+            self.remove(self.dot1q_bp_oids[idx])
+            self.remove(self.port_oids[idx])
+        self.port_oids.clear()
+        self.dot1q_bp_oids.clear()
+
+        # Create ports as per SKU
+        for fp_port in sorted(sku["port"], key=int):
+            port_attr = [
+                "SAI_PORT_ATTR_ADMIN_STATE",   "true",
+                "SAI_PORT_ATTR_PORT_VLAN_ID",  self.default_vlan_id,
+            ]
+
+            # Lanes
+            lanes = sku["port"][fp_port]["lanes"]
+            lanes = str(lanes.count(',') + 1) + ":" + lanes
+            port_attr.append("SAI_PORT_ATTR_HW_LANE_LIST")
+            port_attr.append(lanes)
+
+            # Speed
+            speed = sku["port"][fp_port]["speed"] if "speed" in sku["port"][fp_port] else sku["speed"]
+            port_attr.append("SAI_PORT_ATTR_SPEED")
+            port_attr.append(speed)
+
+            # Autoneg
+            autoneg = sku["port"][fp_port]["autoneg"] if "autoneg" in sku["port"][fp_port] else sku["autoneg"]
+            autoneg = "true" if autoneg == "on" else "false"
+            port_attr.append("SAI_PORT_ATTR_AUTO_NEG_MODE")
+            port_attr.append(autoneg)
+
+            # FEC
+            fec = sku["port"][fp_port]["fec"] if "fec" in sku["port"][fp_port] else sku["fec"]
+            if fec == "rs":
+                fec = "SAI_PORT_FEC_MODE_RS"
+            elif fec == "fc":
+                fec = "SAI_PORT_FEC_MODE_FC"
+            else:
+                fec = "SAI_PORT_FEC_MODE_NONE"
+            port_attr.append("SAI_PORT_ATTR_FEC_MODE")
+            port_attr.append(fec)
+
+            port_oid = self.create(SaiObjType.PORT, port_attr)
+            self.port_oids.append(port_oid)
+
+        # Create bridge ports and default VLAN members
+        for port_oid in self.port_oids:
+            bp_oid = self.create(SaiObjType.BRIDGE_PORT,
+                                [
+                                    "SAI_BRIDGE_PORT_ATTR_TYPE", "SAI_BRIDGE_PORT_TYPE_PORT",
+                                    "SAI_BRIDGE_PORT_ATTR_PORT_ID", port_oid,
+                                    #"SAI_BRIDGE_PORT_ATTR_BRIDGE_ID", self.dot1q_br_oid,
+                                    "SAI_BRIDGE_PORT_ATTR_ADMIN_STATE", "true"
+                                ])
+            self.dot1q_bp_oids.append(bp_oid)
+            self.create_vlan_member(self.default_vlan_oid, bp_oid, "SAI_VLAN_TAGGING_MODE_UNTAGGED")

@@ -116,6 +116,7 @@ def pytest_addoption(parser):
     parser.addoption("--saivs", action="store_true", default=False, help="running tests on top of libsaivs")
     parser.addoption("--loglevel", action="store", default='NOTICE', help="syncd logging level")
     parser.addoption("--npu", action="store", default='vs', help="NPU type")
+    parser.addoption("--sku", action="store", default=None, help="SKU mode")
 
 
 @pytest.fixture(scope="session")
@@ -126,6 +127,7 @@ def exec_params(request):
     config_param["saivs"] = request.config.getoption("--saivs")
     config_param["loglevel"] = request.config.getoption("--loglevel")
     config_param["npu"] = request.config.getoption("--npu")
+    config_param["sku"] = request.config.getoption("--sku")
     return config_param
 
 
