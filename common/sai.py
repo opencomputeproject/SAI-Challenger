@@ -175,6 +175,7 @@ class Sai:
         self.libsaivs = (exec_params["saivs"] or
                          (not self.client_mode and not os.path.isfile("/usr/local/lib/libsai.so")))
         self.run_traffic = exec_params["traffic"] and not self.libsaivs
+        self.sku = exec_params["sku"]
 
     def cleanup(self):
         '''
@@ -276,58 +277,49 @@ class Sai:
 
     def create(self, obj, attrs, do_assert = True):
         vid = None
-        #print(obj)
         if type(obj) == SaiObjType:
             vid = self.alloc_vid(obj)
             obj = "SAI_OBJECT_TYPE_" + obj.name + ":" + vid
         if type(attrs) != str:
             attrs = json.dumps(attrs)
         status = self.operate(obj, attrs, "Screate")
-        #print(status)
         status[2] = status[2].decode("utf-8")
         if do_assert:
-            assert status[2] == 'SAI_STATUS_SUCCESS'
+            assert status[2] == 'SAI_STATUS_SUCCESS', f"create({obj}, {attrs}) --> {status}"
             return vid
 
         return status[2], vid
 
     def remove(self, obj, do_assert = True):
-        #print(obj)
         if obj.startswith("oid:"):
             obj = self.vid_to_type(obj) + ":" + obj
         status = self.operate(obj, "{}", "Dremove")
-        #print(status)
         status[2] = status[2].decode("utf-8")
         if do_assert:
-            assert status[2] == 'SAI_STATUS_SUCCESS'
+            assert status[2] == 'SAI_STATUS_SUCCESS', f"remove({obj}) --> {status}"
         return status[2]
 
     def set(self, obj, attr, do_assert = True):
-        #print(obj)
         if obj.startswith("oid:"):
             obj = self.vid_to_type(obj) + ":" + obj
         if type(attr) != str:
             attr = json.dumps(attr)
-        #print(attr)
         status = self.operate(obj, attr, "Sset")
         status[2] = status[2].decode("utf-8")
-        #print(status)
         if do_assert:
-            assert status[2] == 'SAI_STATUS_SUCCESS'
+            assert status[2] == 'SAI_STATUS_SUCCESS', f"set({obj}, {attr}) --> {status}"
         return status[2]
 
     def get(self, obj, attrs, do_assert = True):
-        #print(obj)
         if obj.startswith("oid:"):
             obj = self.vid_to_type(obj) + ":" + obj
         if type(attrs) != str:
             attrs = json.dumps(attrs)
         status = self.operate(obj, attrs, "Sget")
         status[2] = status[2].decode("utf-8")
-        #print(status)
 
         if do_assert:
-            assert status[2] == 'SAI_STATUS_SUCCESS'
+            assert status[2] == 'SAI_STATUS_SUCCESS', f"get({obj}, {attrs}) --> {status}"
 
         data = SaiData(status[1].decode("utf-8"))
         if do_assert:
