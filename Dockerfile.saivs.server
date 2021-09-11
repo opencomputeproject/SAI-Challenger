@@ -131,6 +131,7 @@ COPY ptf/ptf_nn/ptf_nn_agent.py      /sai-challenger/ptf/ptf_nn/ptf_nn_agent.py
 COPY ptf/setup.py                    /sai-challenger/ptf/setup.py
 COPY ptf/README.md                   /sai-challenger/ptf/README.md
 COPY ptf/src/ptf/afpacket.py         /sai-challenger/ptf/src/ptf/afpacket.py
+COPY ptf/requirements.txt            /sai-challenger/ptf/requirements.txt
 
 RUN echo "#mock" > /sai-challenger/ptf/ptf \
         && touch /sai-challenger/ptf/src/ptf/__init__.py \
