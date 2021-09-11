@@ -9,13 +9,13 @@ import pytest
 SAI version:
   Branch v1.8
   Tag N/A (v1.8.1+)
-  Commit bf36303
-  May 17, 2021
+  Commit a6af2e8
+  Aug 27, 2021
 
 This SAI version is used by sonic-buildimage:
   Branch master
-  Commit 4c4799e
-  Jun 18, 2021
+  Commit b19d42e
+  Sep 11, 2021
 '''
 
 class SaiObjType(Enum):

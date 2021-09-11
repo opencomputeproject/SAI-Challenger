@@ -3,22 +3,19 @@ FROM debian:buster
 MAINTAINER andriy.kokhan@gmail.com
 
 # The sonic-swss-common and sonic-sairedis commits were taken from
-# sonic-buildimage master 4c4799e commited on Jun 18, 2021
+# sonic-buildimage master b19d42e commited on Sep 11, 2021
 #
-# https://github.com/Azure/sonic-buildimage/tree/4c4799e
+# https://github.com/Azure/sonic-buildimage/tree/b19d42e
 #
 # SAI version:
 #   Branch v1.8
 #   Tag N/A (v1.8.1+)
-#   Commit bf36303
-#   May 17, 2021
+#   Commit a6af2e8
+#   Aug 27, 2021
 
-
-ARG SWSS_COMMON_VER=11db9ba
-ARG SAIREDIS_VER=0e2105a
-ARG SAI_VER=bf36303
-
-#COPY ["no-check-valid-until", "/etc/apt/apt.conf.d/"]
+ARG SWSS_COMMON_VER=4253aa6
+ARG SAIREDIS_VER=696ad99
+ARG SAI_VER=a6af2e8
 
 RUN echo "deb [arch=amd64] http://debian-archive.trafficmanager.net/debian/ buster main contrib non-free" >> /etc/apt/sources.list && \
         echo "deb-src [arch=amd64] http://debian-archive.trafficmanager.net/debian/ buster main contrib non-free" >> /etc/apt/sources.list && \
@@ -57,7 +54,7 @@ RUN apt-get install -y redis-server libhiredis0.14
 RUN apt-get install -y \
         make libtool m4 autoconf dh-exec debhelper automake cmake pkg-config \
         libhiredis-dev libnl-3-dev libnl-genl-3-dev libnl-route-3-dev swig3.0 \
-        libpython2.7-dev libgtest-dev libboost-dev
+        libpython2.7-dev libgtest-dev libboost-dev autoconf-archive
 
 RUN apt-get install -y \
         libnl-3-dev libnl-genl-3-dev libnl-route-3-dev libnl-nf-3-dev libzmq3-dev
