@@ -86,7 +86,22 @@ class SaiNpu(Sai):
         attr = []
         self.init(attr)
 
-    def flush_fdb_entries(self, attrs):
+    def flush_fdb_entries(self, attrs=None):
+        """
+        To flush all static entries, set SAI_FDB_FLUSH_ATTR_ENTRY_TYPE = SAI_FDB_FLUSH_ENTRY_TYPE_STATIC.
+        To flush both static and dynamic entries, then set SAI_FDB_FLUSH_ATTR_ENTRY_TYPE = SAI_FDB_FLUSH_ENTRY_TYPE_ALL.
+        The API uses AND operation when multiple attributes are specified:
+
+        1) Flush all entries in FDB table - Do not specify any attribute
+        2) Flush all entries by bridge port - Set SAI_FDB_FLUSH_ATTR_BRIDGE_PORT_ID
+        3) Flush all entries by VLAN - Set SAI_FDB_FLUSH_ATTR_BV_ID with object id as vlan object
+        4) Flush all entries by bridge port and VLAN - Set SAI_FDB_FLUSH_ATTR_BRIDGE_PORT_ID
+           and SAI_FDB_FLUSH_ATTR_BV_ID
+        5) Flush all static entries by bridge port and VLAN - Set SAI_FDB_FLUSH_ATTR_ENTRY_TYPE,
+           SAI_FDB_FLUSH_ATTR_BRIDGE_PORT_ID, and SAI_FDB_FLUSH_ATTR_BV_ID
+        """
+        if attrs is None:
+            attrs = []
         if type(attrs) != str:
             attrs = json.dumps(attrs)
         status = self.operate("SAI_OBJECT_TYPE_SWITCH:" + self.oid, attrs, "Sflush")
@@ -281,14 +296,14 @@ class SaiNpu(Sai):
                        "SAI_FDB_ENTRY_ATTR_PACKET_ACTION",  action
                    ])
 
-    def remove_fdb(self, vlan_oid, mac):
+    def remove_fdb(self, vlan_oid, mac, do_assert = True):
         self.remove('SAI_OBJECT_TYPE_FDB_ENTRY:' + json.dumps(
                        {
                            "bvid"      : vlan_oid,
                            "mac"       : mac,
                            "switch_id" : self.oid
-                       })
-                   )
+                       }),
+                    do_assert)
 
     def create_vlan_member(self, vlan_oid, bp_oid, tagging_mode):
         oid = self.create(SaiObjType.VLAN_MEMBER,
