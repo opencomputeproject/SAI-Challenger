@@ -1,4 +1,4 @@
-import socket
+import ipaddress
 import pytest
 from sai import SaiObjType
 from ptf.testutils import simple_tcp_packet, send_packet, verify_packets, verify_packet, verify_no_packet_any, verify_no_packet, verify_any_packet_any_port
@@ -304,13 +304,12 @@ def test_l2_lag(npu, dataplane):
     try:
         if npu.run_traffic:
             count = [0, 0, 0]
-            dst_ip = int(socket.inet_aton('10.10.10.1').encode('hex'),16)
+            dst_ip = ipaddress.IPv4Address('10.10.10.1')
             max_itrs = 200
             for i in range(0, max_itrs):
-                dst_ip_addr = socket.inet_ntoa(hex(dst_ip)[2:].zfill(8).decode('hex'))
                 pkt = simple_tcp_packet(eth_dst=macs[0],
                                         eth_src=macs[1],
-                                        ip_dst=dst_ip_addr,
+                                        ip_dst=str(dst_ip),
                                         ip_src='192.168.8.1',
                                         ip_id=109,
                                         ip_ttl=64)
