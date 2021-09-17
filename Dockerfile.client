@@ -2,13 +2,6 @@ FROM debian:buster
 
 MAINTAINER andriy.kokhan@gmail.com
 
-# The sonic-swss-common and sonic-sairedis commits taken from
-# sonic-buildimage master 30b6668 commited on Feb 27, 2021
-#
-# https://github.com/Azure/sonic-buildimage/tree/30b6668
-
-#COPY ["no-check-valid-until", "/etc/apt/apt.conf.d/"]
-
 RUN echo "deb [arch=amd64] http://debian-archive.trafficmanager.net/debian/ buster main contrib non-free" >> /etc/apt/sources.list && \
         echo "deb-src [arch=amd64] http://debian-archive.trafficmanager.net/debian/ buster main contrib non-free" >> /etc/apt/sources.list && \
         echo "deb [arch=amd64] http://debian-archive.trafficmanager.net/debian-security/ buster/updates main contrib non-free" >> /etc/apt/sources.list && \
@@ -21,23 +14,14 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Install generic packages
 RUN apt-get update && apt-get install -y \
         apt-utils \
-        vim \
-        curl \
-        wget \
-        unzip \
-        git \
         procps \
         build-essential \
-        graphviz \
-        doxygen \
-        aspell \
-        python \
-        python-pip \
+        python3 \
         python3-pip \
         rsyslog \
         supervisor
 
-RUN python3 -m pip install redis pytest pytest_dependency
+RUN pip3 install redis pytest pytest_dependency
 
 # Install PTF dependencies
 RUN pip3 install scapy
