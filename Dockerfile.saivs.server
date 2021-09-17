@@ -45,7 +45,8 @@ RUN apt-get update && apt-get install -y \
         rsyslog \
         supervisor
 
-RUN python3 -m pip install redis
+# Add support for supervisord to handle startup dependencies
+RUN pip3 install supervisord-dependent-startup==1.4.0
 
 # Install dependencies
 RUN apt-get install -y redis-server libhiredis0.14
@@ -62,24 +63,26 @@ RUN apt-get install -y \
 RUN git clone --recursive https://github.com/Azure/sonic-swss-common \
         && cd sonic-swss-common \
         && git checkout ${SWSS_COMMON_VER} \
-        && ./autogen.sh && ./configure && dpkg-buildpackage -us -uc -b
-
-RUN dpkg -i libswsscommon_1.0.0_amd64.deb \
+        && ./autogen.sh && ./configure && dpkg-buildpackage -us -uc -b \
+        && cd .. \
+        && dpkg -i libswsscommon_1.0.0_amd64.deb \
         && dpkg -i libswsscommon-dev_1.0.0_amd64.deb \
         && dpkg -i libswsscommon-dbg_1.0.0_amd64.deb \
         && dpkg -i python-swsscommon_1.0.0_amd64.deb \
-        && dpkg -i python3-swsscommon_1.0.0_amd64.deb
+        && dpkg -i python3-swsscommon_1.0.0_amd64.deb \
+        && rm -rf sonic-swss-common \
+        && rm -f *swsscommon*
 
-# Update Redis configuration
-RUN sed -ri 's/^# unixsocket/unixsocket/' /etc/redis/redis.conf
-RUN sed -ri 's/^unixsocketperm .../unixsocketperm 777/' /etc/redis/redis.conf
-RUN sed -ri 's/redis-server.sock/redis.sock/' /etc/redis/redis.conf
-
-# Enable keyspace notifications as per sonic-swss-common/README.md
-RUN sed -ri 's/notify-keyspace-events ""/notify-keyspace-events AKE/' /etc/redis/redis.conf
-
-# Do not daemonize redis-server since supervisord will manage it
-RUN sed -ri 's/^daemonize yes/daemonize no/' /etc/redis/redis.conf
+# Update Redis configuration:
+# - Enable keyspace notifications as per sonic-swss-common/README.md
+# - Do not daemonize redis-server since supervisord will manage it
+# - Do not save Redis DB on disk
+RUN sed -ri 's/^# unixsocket/unixsocket/' /etc/redis/redis.conf \
+        && sed -ri 's/^unixsocketperm .../unixsocketperm 777/' /etc/redis/redis.conf \
+        && sed -ri 's/redis-server.sock/redis.sock/' /etc/redis/redis.conf \
+        && sed -ri 's/notify-keyspace-events ""/notify-keyspace-events AKE/' /etc/redis/redis.conf \
+        && sed -ri 's/^daemonize yes/daemonize no/' /etc/redis/redis.conf \
+        && sed -ri 's/^save/# save/' /etc/redis/redis.conf
 
 # Disable kernel logging support
 RUN sed -ri '/imklog/s/^/#/' /etc/rsyslog.conf
@@ -97,14 +100,14 @@ RUN git clone https://github.com/Azure/sonic-sairedis.git \
         && git submodule update --init --recursive \
         && cd SAI && git fetch origin \
         && git checkout ${SAI_VER} \
-        && git submodule update --init --recursive
-
-RUN cd sonic-sairedis \
+        && git submodule update --init --recursive \
+        && cd .. \
         && ./autogen.sh && ./configure --with-sai=vs && make -j4 \
-        && make install && ldconfig
+        && make install && ldconfig \
+        && cp -R tests .. && rm -rf * && mv ../tests .
 
 # Install SAI Challenger CLI dependencies
-RUN pip3 install click==7.0 pytest
+RUN pip3 install click==7.0 pytest redis
 
 # Deploy SAI Challenger CLI
 COPY setup.py            /sai-challenger/setup.py
