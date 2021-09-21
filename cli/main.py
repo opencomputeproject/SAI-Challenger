@@ -10,7 +10,8 @@ exec_params = {
     "server": "localhost",
     "traffic": False,
     "saivs": False,
-    "loglevel": "NOTICE"
+    "loglevel": "NOTICE",
+    "sku": None
 }
 
 
