@@ -17,8 +17,6 @@ ARG SWSS_COMMON_VER=4253aa6
 ARG SAIREDIS_VER=696ad99
 ARG SAI_VER=a6af2e8
 
-#COPY ["no-check-valid-until", "/etc/apt/apt.conf.d/"]
-
 RUN echo "deb [arch=amd64] http://debian-archive.trafficmanager.net/debian/ buster main contrib non-free" >> /etc/apt/sources.list && \
         echo "deb-src [arch=amd64] http://debian-archive.trafficmanager.net/debian/ buster main contrib non-free" >> /etc/apt/sources.list && \
         echo "deb [arch=amd64] http://debian-archive.trafficmanager.net/debian-security/ buster/updates main contrib non-free" >> /etc/apt/sources.list && \
@@ -118,7 +116,8 @@ RUN git clone https://github.com/Azure/sonic-sairedis.git \
         && cp -R tests .. && rm -rf * && mv ../tests .
 
 # Install ptf_nn_agent dependencies
-RUN wget https://github.com/nanomsg/nanomsg/archive/1.0.0.tar.gz \
+RUN apt-get install -y libffi-dev \
+        && wget https://github.com/nanomsg/nanomsg/archive/1.0.0.tar.gz \
         && tar xvfz 1.0.0.tar.gz \
         && cd nanomsg-1.0.0 \
         && mkdir -p build \

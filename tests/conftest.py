@@ -19,8 +19,10 @@ import ptf.ptfutils
 commondir = os.path.join(curdir, '../common')
 sys.path.append(commondir)
 
+npudir = os.path.join(curdir, '../npu')
+sys.path.append(npudir)
+
 from sai_npu import SaiNpu
-from sai_npu_vs import SaiNpuVs
 from sai_dataplane import SaiDataPlane
 
 
@@ -153,10 +155,23 @@ def logging_setup(config):
 @pytest.fixture(scope="session")
 def npu(exec_params):
     npu = None
+
     if exec_params["npu"] == "generic":
         npu = SaiNpu(exec_params)
-    elif exec_params["npu"] == "vs":
-        npu = SaiNpuVs(exec_params)
+    else:
+        npu_mod = None
+        npu_name = "sai_npu_" + exec_params["npu"]
+        try:
+            npu_mod = imp.load_module(npu_name, *imp.find_module(npu_name))
+        except:
+            logging.critical("Failed to import " + npu_name + " NPU module")
+            sys.exit(1)
+
+        try:
+            npu = npu_mod.SaiNpuImpl(exec_params)
+        except:
+            logging.critical("Failed to instantiate " + npu_name + " NPU")
+            sys.exit(1)
 
     if npu is not None:
         npu.reset()
