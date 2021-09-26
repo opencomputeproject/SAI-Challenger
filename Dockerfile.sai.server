@@ -117,7 +117,8 @@ RUN echo ". /sai-challenger/scripts/sai-cli-completion.sh" >> /root/.bashrc
 COPY scripts/redis-cmd-listener.py   /sai-challenger/scripts/redis-cmd-listener.py
 
 # Install ptf_nn_agent dependencies
-RUN wget https://github.com/nanomsg/nanomsg/archive/1.0.0.tar.gz \
+RUN apt-get install -y libffi-dev \
+        && wget https://github.com/nanomsg/nanomsg/archive/1.0.0.tar.gz \
         && tar xvfz 1.0.0.tar.gz \
         && cd nanomsg-1.0.0 \
         && mkdir -p build \
