@@ -1,9 +1,9 @@
 from setuptools import setup
 
 setup(
-    name="sai-challenger-cli",
+    name="sai-challenger-extensions",
     version='0.1',
-    description='Command-line utilities for SAI Challenger',
+    description='SAI Challenger CLI & basic topologies',
     license='Apache 2.0',
     author='Andriy Kokhan',
     author_email='andriy.kokhan@gmail.com',
@@ -11,7 +11,7 @@ setup(
     install_requires=[
         'click==7.0',
     ],
-    packages=['cli'],
+    packages=['cli', 'topologies'],
     scripts=[
         'scripts/redis-cmd-listener.py'
     ],

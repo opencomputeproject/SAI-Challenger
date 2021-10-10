@@ -335,6 +335,24 @@ class SaiNpu(Sai):
 
         assert False
 
+    def create_route(self, dest, vrf_oid, attrs=None):
+        self.create('SAI_OBJECT_TYPE_ROUTE_ENTRY:' + json.dumps(
+                        {
+                             "dest":      dest,
+                             "switch_id": self.oid,
+                             "vr":        vrf_oid
+                        }
+                   ), attrs)
+
+    def remove_route(self, dest, vrf_oid):
+        self.remove('SAI_OBJECT_TYPE_ROUTE_ENTRY:' + json.dumps(
+                       {
+                           "dest":      dest,
+                           "switch_id": self.oid,
+                           "vr":        vrf_oid
+                       })
+                    )
+
     def hostif_dataplane_start(self, ifaces):
         self.hostif_map = dict()
 
