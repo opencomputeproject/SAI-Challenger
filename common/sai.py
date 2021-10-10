@@ -352,9 +352,29 @@ class Sai:
             status, data = self.get(obj, [attr, "oid:0x0"], do_assert)
         elif attr_type == "bool":
             status, data = self.get(obj, [attr, "true"], do_assert)
-        else:
+        elif attr_type == "sai_mac_t":
+            status, data = self.get(obj, [attr, "00:00:00:00:00:00"], do_assert)
+        elif attr_type == "sai_ip_address_t":
+            status, data = self.get(obj, [attr, "0.0.0.0"], do_assert)
+        elif attr_type == "sai_ip4_t":
+            status, data = self.get(obj, [attr, "0.0.0.0&mask:0.0.0.0"], do_assert)
+        elif attr_type == "sai_ip6_t":
+            status, data = self.get(obj, [attr, "::0.0.0.0&mask:0:0:0:0:0:0:0:0"], do_assert)
+        elif attr_type.startswith("sai_") or attr_type == "":
             status, data = self.get(obj, [attr, ""], do_assert)
+        else:
+            assert False, f"Unsupported attribute type: get_by_type({obj}, {attr}, {attr_type})"
         return status, data
+
+    def get_list(self, obj, attr, value):
+        status, data = self.get(obj, [attr, "1:" + value], False)
+        if status == "SAI_STATUS_BUFFER_OVERFLOW":
+            in_data = self.make_list(data.uint32(), value)
+            data = self.get(obj, [attr, in_data])
+        else:
+            assert status == 'SAI_STATUS_SUCCESS', f"get_list({obj}, {attr}, {value}) --> {status}"
+
+        return data.to_list()
 
     def get_oids(self, obj_type=None):
         oids = []
