@@ -20,6 +20,7 @@ class SaiNpu(Sai):
         self.port_oids = []
         self.dot1q_bp_oids = []
         self.hostif_dataplane = None
+        self.port_map = None
         self.hostif_map = None
         self.sku_config = None
 
@@ -376,12 +377,15 @@ class SaiNpu(Sai):
         return self.remote_iface_agent_stop()
 
     def hostif_pkt_listen(self):
-        self.port_map = SaiDataPlane.getPortMap()
+        assert self.hostif_map
+        if self.port_map is None:
+            self.port_map = SaiDataPlane.getPortMap()
         SaiDataPlane.setPortMap(self.hostif_map)
 
     def dataplane_pkt_listen(self):
-        self.hostif_map = SaiDataPlane.getPortMap()
-        SaiDataPlane.setPortMap(self.port_map)
+        if self.hostif_map and self.port_map:
+            SaiDataPlane.setPortMap(self.port_map)
+            self.port_map = None
 
     def set_sku_mode(self, sku):
         # Remove existing ports
