@@ -8,14 +8,14 @@ import pytest
 '''
 SAI version:
   Branch v1.8
-  Tag N/A (v1.8.1+)
-  Commit a6af2e8
-  Aug 27, 2021
+  Tag v1.9.1
+  Commit 740a487
+  Sep 29, 2021
 
 This SAI version is used by sonic-buildimage:
   Branch master
-  Commit b19d42e
-  Sep 11, 2021
+  Commit 9c4a7c2
+  Oct 24, 2021
 '''
 
 class SaiObjType(Enum):
@@ -79,7 +79,7 @@ class SaiObjType(Enum):
     BRIDGE_PORT              = 58
     TUNNEL_MAP_ENTRY         = 59
     TAM                      = 60
-    SEGMENTROUTE_SIDLIST     = 61
+    SRV6_SIDLIST             = 61
     PORT_POOL                = 62
     INSEG_ENTRY              = 63
     DTEL                     = 64
@@ -114,6 +114,12 @@ class SaiObjType(Enum):
     SYSTEM_PORT              = 93
     FINE_GRAINED_HASH_FIELD  = 94
     SWITCH_TUNNEL            = 95
+    MY_SID_ENTRY             = 96
+    MY_MAC                   = 97
+    NEXT_HOP_GROUP_MAP       = 98
+    IPSEC                    = 99
+    IPSEC_PORT               = 100
+    IPSEC_SA                 = 101
 
 
 class SaiData:
