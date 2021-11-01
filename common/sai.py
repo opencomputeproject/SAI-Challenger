@@ -217,6 +217,14 @@ class Sai:
         obj_type = int(vid[4:], 16) >> 48
         return "SAI_OBJECT_TYPE_" + SaiObjType(obj_type).name
 
+    def vid_to_rid(self, vid):
+        assert vid.startswith("oid:"), f"Invalid VID format {vid}"
+        rid = self.r.hget("VIDTORID", vid)
+        if rid is not None:
+            rid = rid.decode("utf-8")
+            assert rid.startswith("oid:"), f"Invalid RID format {vid}"
+        return rid
+
     def get_vid(self, obj_type, value=None):
         if obj_type.name not in self.cache:
             self.cache[obj_type.name] = {}
@@ -299,9 +307,11 @@ class Sai:
 
     def remove(self, obj, do_assert = True):
         if obj.startswith("oid:"):
+            assert self.vid_to_rid(obj), f"Unable to retrieve RID by VID {obj}"
             obj = self.vid_to_type(obj) + ":" + obj
-        else:
-            obj = obj.replace(" ", "")
+        assert obj.startswith("SAI_OBJECT_TYPE_")
+        obj = obj.replace(" ", "")
+
         status = self.operate(obj, "{}", "Dremove")
         status[2] = status[2].decode("utf-8")
         if do_assert:
@@ -310,9 +320,11 @@ class Sai:
 
     def set(self, obj, attr, do_assert = True):
         if obj.startswith("oid:"):
+            assert self.vid_to_rid(obj), f"Unable to retrieve RID by VID {obj}"
             obj = self.vid_to_type(obj) + ":" + obj
-        else:
-            obj = obj.replace(" ", "")
+        assert obj.startswith("SAI_OBJECT_TYPE_")
+        obj = obj.replace(" ", "")
+
         if type(attr) != str:
             attr = json.dumps(attr)
         status = self.operate(obj, attr, "Sset")
@@ -323,9 +335,11 @@ class Sai:
 
     def get(self, obj, attrs, do_assert = True):
         if obj.startswith("oid:"):
+            assert self.vid_to_rid(obj), f"Unable to retrieve RID by VID {obj}"
             obj = self.vid_to_type(obj) + ":" + obj
-        else:
-            obj = obj.replace(" ", "")
+        assert obj.startswith("SAI_OBJECT_TYPE_")
+        obj = obj.replace(" ", "")
+
         if type(attrs) != str:
             attrs = json.dumps(attrs)
         status = self.operate(obj, attrs, "Sget")
