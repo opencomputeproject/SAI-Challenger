@@ -7,7 +7,7 @@ import pytest
 
 '''
 SAI version:
-  Branch v1.8
+  Branch v1.9
   Tag v1.9.1
   Commit 740a487
   Sep 29, 2021

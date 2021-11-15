@@ -1,4 +1,4 @@
-FROM debian:buster
+FROM debian:buster-slim
 
 MAINTAINER andriy.kokhan@gmail.com
 
@@ -8,7 +8,7 @@ MAINTAINER andriy.kokhan@gmail.com
 # https://github.com/Azure/sonic-buildimage/tree/9c4a7c2
 #
 # SAI version:
-#   Branch v1.8
+#   Branch v1.9
 #   Tag v1.9.1
 #   Commit 740a487
 #   Sep 29, 2021
@@ -27,11 +27,12 @@ RUN echo "deb [arch=amd64] http://debian-archive.trafficmanager.net/debian/ bust
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Install generic packages
-RUN apt-get update && apt-get install -y \
+RUN apt-get -o Acquire::Check-Valid-Until=false update && apt-get install -y \
         apt-utils \
         vim \
         curl \
         wget \
+        iproute2 \
         unzip \
         git \
         procps \
@@ -39,8 +40,6 @@ RUN apt-get update && apt-get install -y \
         graphviz \
         doxygen \
         aspell \
-        python \
-        python-pip \
         python3-pip \
         rsyslog \
         supervisor
@@ -67,11 +66,39 @@ RUN git clone --recursive https://github.com/Azure/sonic-swss-common \
         && cd .. \
         && dpkg -i libswsscommon_1.0.0_amd64.deb \
         && dpkg -i libswsscommon-dev_1.0.0_amd64.deb \
-        && dpkg -i libswsscommon-dbg_1.0.0_amd64.deb \
-        && dpkg -i python-swsscommon_1.0.0_amd64.deb \
-        && dpkg -i python3-swsscommon_1.0.0_amd64.deb \
         && rm -rf sonic-swss-common \
         && rm -f *swsscommon*
+
+WORKDIR /sai
+
+COPY *.deb .
+RUN dpkg -i *.deb
+
+RUN git clone https://github.com/Azure/sonic-sairedis.git \
+        && cd sonic-sairedis \
+        && git checkout ${SAIREDIS_VER} \
+        && git submodule update --init --recursive \
+        && cd SAI && git fetch origin \
+        && git checkout ${SAI_VER} \
+        && git submodule update --init --recursive \
+        && cd .. \
+        && ./autogen.sh && ./configure --with-sai=vs && make -j4 \
+        && make install && ldconfig \
+        && cp -R tests .. && rm -rf * && mv ../tests .
+
+# Install ptf_nn_agent dependencies
+RUN apt-get install -y libffi-dev \
+        && wget https://github.com/nanomsg/nanomsg/archive/1.0.0.tar.gz \
+        && tar xvfz 1.0.0.tar.gz \
+        && cd nanomsg-1.0.0 \
+        && mkdir -p build \
+        && cd build \
+        && cmake .. \
+        && make install \
+        && ldconfig \
+        && cd ../.. \
+        && rm -rf 1.0.0.tar.gz nanomsg-1.0.0 \
+        && pip3 install nnpy
 
 # Update Redis configuration:
 # - Enable keyspace notifications as per sonic-swss-common/README.md
@@ -87,27 +114,12 @@ RUN sed -ri 's/^# unixsocket/unixsocket/' /etc/redis/redis.conf \
 # Disable kernel logging support
 RUN sed -ri '/imklog/s/^/#/' /etc/rsyslog.conf
 
+# Setup supervisord
 COPY scripts/sai.profile /etc/sai.d/sai.profile
 COPY scripts/lanemap.ini /usr/share/sonic/hwsku/lanemap.ini
 COPY scripts/server/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY scripts/veth-create.sh /usr/bin/veth-create.sh
 
-WORKDIR /sai
-
-COPY *.deb .
-RUN dpkg -i *.deb
-
-RUN git clone https://github.com/Azure/sonic-sairedis.git \
-        && cd sonic-sairedis \
-        && git checkout ${SAIREDIS_VER} \
-        && git submodule update --init --recursive \
-        && cd SAI && git fetch origin \
-        && git checkout ${SAI_VER} \
-        && git submodule update --init --recursive \
-        && cd .. \
-        && ./autogen.sh && ./configure && make -j4 \
-        && make install && ldconfig \
-        && cp -R tests .. && rm -rf * && mv ../tests .
 
 # Install SAI Challenger CLI dependencies
 RUN pip3 install click==7.0 pytest redis
@@ -121,25 +133,12 @@ COPY common/__init__.py  /sai-challenger/common/__init__.py
 COPY common/sai.py       /sai-challenger/common/sai.py
 COPY common/sai_npu.py   /sai-challenger/common/sai_npu.py
 COPY common/sai_dataplane.py         /sai-challenger/common/sai_dataplane.py
+COPY topologies          /sai-challenger/topologies
 COPY scripts/sai-cli-completion.sh   /sai-challenger/scripts/sai-cli-completion.sh
 RUN echo ". /sai-challenger/scripts/sai-cli-completion.sh" >> /root/.bashrc
 
 # Deploy a remote commands listener
 COPY scripts/redis-cmd-listener.py   /sai-challenger/scripts/redis-cmd-listener.py
-
-# Install ptf_nn_agent dependencies
-RUN apt-get install -y libffi-dev \
-        && wget https://github.com/nanomsg/nanomsg/archive/1.0.0.tar.gz \
-        && tar xvfz 1.0.0.tar.gz \
-        && cd nanomsg-1.0.0 \
-        && mkdir -p build \
-        && cd build \
-        && cmake .. \
-        && make install \
-        && ldconfig \
-        && cd ../.. \
-        && rm -rf 1.0.0.tar.gz nanomsg-1.0.0 \
-        && pip3 install nnpy
 
 # Install ptf_nn_agent and PTF helpers (required by sai_dataplane.py)
 COPY ptf/ptf_nn/ptf_nn_agent.py      /sai-challenger/ptf/ptf_nn/ptf_nn_agent.py
