@@ -1,4 +1,4 @@
-FROM debian:buster
+FROM debian:buster-slim
 
 MAINTAINER andriy.kokhan@gmail.com
 
@@ -27,11 +27,12 @@ RUN echo "deb [arch=amd64] http://debian-archive.trafficmanager.net/debian/ bust
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Install generic packages
-RUN apt-get update && apt-get install -y \
+RUN apt-get -o Acquire::Check-Valid-Until=false update && apt-get install -y \
         apt-utils \
         vim \
         curl \
         wget \
+        iproute2 \
         unzip \
         git \
         procps \
@@ -39,13 +40,9 @@ RUN apt-get update && apt-get install -y \
         graphviz \
         doxygen \
         aspell \
-        python \
-        python-pip \
         python3-pip \
         rsyslog \
         supervisor
-
-RUN pip3 install redis pytest pytest_dependency pytest-html
 
 # Add support for supervisord to handle startup dependencies
 RUN pip3 install supervisord-dependent-startup==1.4.0
@@ -69,37 +66,8 @@ RUN git clone --recursive https://github.com/Azure/sonic-swss-common \
         && cd .. \
         && dpkg -i libswsscommon_1.0.0_amd64.deb \
         && dpkg -i libswsscommon-dev_1.0.0_amd64.deb \
-        && dpkg -i libswsscommon-dbg_1.0.0_amd64.deb \
-        && dpkg -i python-swsscommon_1.0.0_amd64.deb \
-        && dpkg -i python3-swsscommon_1.0.0_amd64.deb \
         && rm -rf sonic-swss-common \
         && rm -f *swsscommon*
-
-# Install PTF dependencies
-RUN pip3 install scapy
-
-# Install SAI Challenger CLI dependencies
-RUN pip3 install click==7.0
-RUN echo ". /sai-challenger/scripts/sai-cli-completion.sh" >> /root/.bashrc
-
-# Update Redis configuration:
-# - Enable keyspace notifications as per sonic-swss-common/README.md
-# - Do not daemonize redis-server since supervisord will manage it
-# - Do not save Redis DB on disk
-RUN sed -ri 's/^# unixsocket/unixsocket/' /etc/redis/redis.conf \
-        && sed -ri 's/^unixsocketperm .../unixsocketperm 777/' /etc/redis/redis.conf \
-        && sed -ri 's/redis-server.sock/redis.sock/' /etc/redis/redis.conf \
-        && sed -ri 's/notify-keyspace-events ""/notify-keyspace-events AKE/' /etc/redis/redis.conf \
-        && sed -ri 's/^daemonize yes/daemonize no/' /etc/redis/redis.conf \
-        && sed -ri 's/^save/# save/' /etc/redis/redis.conf
-
-# Disable kernel logging support
-RUN sed -ri '/imklog/s/^/#/' /etc/rsyslog.conf
-
-COPY scripts/sai.profile /etc/sai.d/sai.profile
-COPY scripts/lanemap.ini /usr/share/sonic/hwsku/lanemap.ini
-COPY scripts/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-COPY scripts/veth-create.sh /usr/bin/veth-create.sh
 
 WORKDIR /sai
 
@@ -128,6 +96,35 @@ RUN apt-get install -y libffi-dev \
         && cd ../.. \
         && rm -rf 1.0.0.tar.gz nanomsg-1.0.0 \
         && pip3 install nnpy
+
+# Update Redis configuration:
+# - Enable keyspace notifications as per sonic-swss-common/README.md
+# - Do not daemonize redis-server since supervisord will manage it
+# - Do not save Redis DB on disk
+RUN sed -ri 's/^# unixsocket/unixsocket/' /etc/redis/redis.conf \
+        && sed -ri 's/^unixsocketperm .../unixsocketperm 777/' /etc/redis/redis.conf \
+        && sed -ri 's/redis-server.sock/redis.sock/' /etc/redis/redis.conf \
+        && sed -ri 's/notify-keyspace-events ""/notify-keyspace-events AKE/' /etc/redis/redis.conf \
+        && sed -ri 's/^daemonize yes/daemonize no/' /etc/redis/redis.conf \
+        && sed -ri 's/^save/# save/' /etc/redis/redis.conf
+
+# Disable kernel logging support
+RUN sed -ri '/imklog/s/^/#/' /etc/rsyslog.conf
+
+# Setup supervisord
+COPY scripts/sai.profile /etc/sai.d/sai.profile
+COPY scripts/lanemap.ini /usr/share/sonic/hwsku/lanemap.ini
+COPY scripts/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY scripts/veth-create.sh /usr/bin/veth-create.sh
+
+# Install PTF dependencies
+RUN pip3 install scapy
+
+# Install SAI Challenger CLI dependencies
+RUN pip3 install click==7.0
+RUN echo ". /sai-challenger/scripts/sai-cli-completion.sh" >> /root/.bashrc
+
+RUN pip3 install redis pytest pytest_dependency pytest-html
 
 WORKDIR /sai-challenger/tests
 
