@@ -8,14 +8,14 @@ import pytest
 '''
 SAI version:
   Branch v1.7
-  Tag v1.7.1-1
-  Commit c0bdac2
-  Jan 24, 2021
+  Tag N/A (v1.7.1+)
+  Commit 2139b73
+  Sep 20, 2021
 
 This SAI version is used by sonic-buildimage:
   Branch 202012
-  Commit 346b916
-  Jun 18, 2021
+  Commit c87ec48
+  Nov 16, 2021
 '''
 
 class SaiObjType(Enum):
