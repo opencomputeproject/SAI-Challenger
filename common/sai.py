@@ -375,7 +375,9 @@ class Sai:
             status, data = self.get(obj, [attr, "0.0.0.0&mask:0.0.0.0"], do_assert)
         elif attr_type == "sai_ip6_t":
             status, data = self.get(obj, [attr, "::0.0.0.0&mask:0:0:0:0:0:0:0:0"], do_assert)
-        elif attr_type.startswith("sai_") or attr_type == "":
+        elif attr_type == "sai_u32_range_t":
+            status, data = self.get(obj, [attr, "0,0"], do_assert)
+        elif attr_type.startswith("sai_") or attr_type == "" or attr_type == "char":
             status, data = self.get(obj, [attr, ""], do_assert)
         else:
             assert False, f"Unsupported attribute type: get_by_type({obj}, {attr}, {attr_type})"
