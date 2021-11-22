@@ -336,7 +336,13 @@ class SaiNpu(Sai):
 
         assert False
 
-    def create_route(self, dest, vrf_oid, attrs=None):
+    def create_route(self, dest, vrf_oid, nh_oid=None, opt_attr=None):
+        attrs = []
+        if nh_oid:
+            attrs += ["SAI_ROUTE_ENTRY_ATTR_NEXT_HOP_ID", nh_oid]
+        if opt_attr is None:
+            opt_attr = []
+        attrs += opt_attr
         self.create('SAI_OBJECT_TYPE_ROUTE_ENTRY:' + json.dumps(
                         {
                              "dest":      dest,
