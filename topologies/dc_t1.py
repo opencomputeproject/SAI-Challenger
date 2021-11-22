@@ -41,18 +41,16 @@ def config(npu):
     npu.dot1q_bp_oids.clear()
 
     # Create default routes
-    npu.create_route("0.0.0.0/0", npu.default_vrf_oid,
+    npu.create_route("0.0.0.0/0", npu.default_vrf_oid, None,
                      ["SAI_ROUTE_ENTRY_ATTR_PACKET_ACTION", "SAI_PACKET_ACTION_DROP"])
-    npu.create_route("::/0", npu.default_vrf_oid,
+    npu.create_route("::/0", npu.default_vrf_oid, None,
                      ["SAI_ROUTE_ENTRY_ATTR_PACKET_ACTION", "SAI_PACKET_ACTION_DROP"])
 
     # Create Loopback RIF routes
-    npu.create_route("fe80::5054:ff:fe12:3456/128", npu.default_vrf_oid,
-                     ["SAI_ROUTE_ENTRY_ATTR_PACKET_ACTION", "SAI_PACKET_ACTION_FORWARD",
-                      "SAI_ROUTE_ENTRY_ATTR_NEXT_HOP_ID", cpu_port_oid])
-    npu.create_route("fe80::/10", npu.default_vrf_oid,
-                     ["SAI_ROUTE_ENTRY_ATTR_PACKET_ACTION", "SAI_PACKET_ACTION_FORWARD",
-                      "SAI_ROUTE_ENTRY_ATTR_NEXT_HOP_ID", cpu_port_oid])
+    npu.create_route("fe80::5054:ff:fe12:3456/128", npu.default_vrf_oid, cpu_port_oid,
+                     ["SAI_ROUTE_ENTRY_ATTR_PACKET_ACTION", "SAI_PACKET_ACTION_FORWARD"])
+    npu.create_route("fe80::/10", npu.default_vrf_oid, cpu_port_oid,
+                     ["SAI_ROUTE_ENTRY_ATTR_PACKET_ACTION", "SAI_PACKET_ACTION_FORWARD"])
 
     yield topo_cfg
     
