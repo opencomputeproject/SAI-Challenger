@@ -116,6 +116,7 @@ COPY scripts/sai.profile /etc/sai.d/sai.profile
 COPY scripts/lanemap.ini /usr/share/sonic/hwsku/lanemap.ini
 COPY scripts/server/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY scripts/veth-create.sh /usr/bin/veth-create.sh
+COPY scripts/sai.json /etc/sai/sai.json
 
 # Install SAI Challenger CLI dependencies
 RUN pip3 install click==7.0 pytest redis
