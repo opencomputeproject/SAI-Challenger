@@ -84,7 +84,31 @@ RUN git clone https://github.com/Azure/sonic-sairedis.git \
         && cd .. \
         && ./autogen.sh && ./configure --with-sai=vs && make -j4 \
         && make install && ldconfig \
-        && cp -R tests .. && rm -rf * && mv ../tests .
+        && mkdir -p /usr/include/sai \
+        && mv SAI/experimental  /usr/include/sai/experimental \
+        && mv SAI/inc  /usr/include/sai/inc \
+        && mkdir -p /usr/include/sai/meta \
+        && cp SAI/meta/*.h  /usr/include/sai/meta/ \   
+        && mv tests .. && rm -rf * && mv ../tests .
+
+
+# Build attr_list_generator and generate /etc/sai/sai.json
+COPY scripts/gen_attr_list /sai/gen_attr_list
+
+RUN cd /sai/gen_attr_list \
+        && [ -d json ] && rm -rf json \
+        ; git clone https://github.com/nlohmann/json.git \
+        && cd json \
+        && git checkout 7440786b813534b567f6f6b87afb2aa19f97cc89 \
+        && cd .. \
+        && [ -d build ] && rm -rf build \
+        ; mkdir build \
+        && cd build \
+        && cmake .. \
+        && make -j$(nproc) \
+        && mkdir -p /etc/sai \
+        && ./attr_list_generator > /etc/sai/sai.json \
+        && rm -rf /sai/gen_attr_list 
 
 # Install ptf_nn_agent dependencies
 RUN apt-get install -y libffi-dev \
@@ -119,7 +143,6 @@ COPY scripts/sai.profile /etc/sai.d/sai.profile
 COPY scripts/lanemap.ini /usr/share/sonic/hwsku/lanemap.ini
 COPY scripts/server/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY scripts/veth-create.sh /usr/bin/veth-create.sh
-COPY scripts/sai.json /etc/sai/sai.json
 
 # Install SAI Challenger CLI dependencies
 RUN pip3 install click==7.0 pytest redis
