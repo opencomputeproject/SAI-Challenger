@@ -247,6 +247,31 @@ class Sai:
     def make_list(self, length, elem):
         return "{}:".format(length) + (elem + ",") * (length - 1) + elem
 
+    def make_acl_list(self, length):
+        return f'false:{self.make_list(length, "0")}'
+
+    def make_acl_resource_list(self, length):
+        attr_value = {
+            "count": length,
+            "list": [{"avail_num": "", "bind_point": "", "stage": ""}] * length
+        }
+        return json.dumps(attr_value).replace(" ", "")
+
+    def make_map_list(self, length):
+        attr_value = {
+            "count": length,
+            "list": [{"key": 0, "value": 0}] * length
+        }
+        return json.dumps(attr_value).replace(" ", "")
+
+    def make_system_port_config_list(self, length):
+        attr_value = {
+            "count": length,
+            "list": [{"port_id": "", "attached_switch_id": "", "attached_core_index": "",
+                      "attached_core_port_index": "", "speed": "", "num_voq": ""}] * length
+        }
+        return json.dumps(attr_value).replace(" ", "")
+
     def operate(self, obj, attrs, op):
         self.r.delete("GETRESPONSE_KEY_VALUE_OP_QUEUE")
 
@@ -357,9 +382,8 @@ class Sai:
     def get_by_type(self, obj, attr, attr_type, do_assert = True):
         # TODO: Check how to map these types into the struct or list
         unsupported_types = [
-                                "sai_port_eye_values_list_t", "sai_prbs_rx_state_t", "sai_port_err_status_list_t",
-                                "sai_fabric_port_reachability_t", "sai_acl_resource_list_t", "sai_map_list_t",
-                                "sai_system_port_config_list_t", "sai_acl_capability_t"
+                                "sai_port_eye_values_list_t", "sai_prbs_rx_state_t",
+                                "sai_port_err_status_list_t", "sai_fabric_port_reachability_t"
                             ]
         if attr_type == "sai_object_list_t":
             status, data = self.get(obj, [attr, "1:oid:0x0"], do_assert)
@@ -371,6 +395,30 @@ class Sai:
             status, data = self.get(obj, [attr, "1:0"], do_assert)
             if status == "SAI_STATUS_BUFFER_OVERFLOW":
                 status, data = self.get(obj, [attr, self.make_list(data.uint32(), "0")], do_assert)
+        elif attr_type == "sai_acl_capability_t":
+            status, data = self.get(obj, [attr, self.make_acl_list(1)], do_assert)
+            if status == "SAI_STATUS_BUFFER_OVERFLOW":
+                # extract number of actions supported for the stage
+                # e.g. ["SAI_SWITCH_ATTR_ACL_STAGE_EGRESS","true:51"] -> 51
+                length = int(data.to_json()[1].split(":")[1])
+                status, data = self.get(obj, [attr, self.make_acl_list(length)], do_assert)
+        elif attr_type == "sai_acl_resource_list_t":
+            status, data = self.get(obj, [attr, self.make_acl_resource_list(1)], do_assert)
+            if status == "SAI_STATUS_BUFFER_OVERFLOW":
+                # extract number of actions supported for the stage
+                # e.g. ['SAI_SWITCH_ATTR_AVAILABLE_ACL_TABLE', '{"count":10,"list":null}'] -> 10
+                length = json.loads(data.to_json()[1])["count"]
+                status, data = self.get(obj, [attr, self.make_acl_resource_list(length)], do_assert)
+        elif attr_type == "sai_map_list_t":
+            status, data = self.get(obj, [attr, self.make_map_list(1)], do_assert)
+            if status == "SAI_STATUS_BUFFER_OVERFLOW":
+                length = json.loads(data.to_json()[1])["count"]
+                status, data = self.get(obj, [attr, self.make_map_list(length)], do_assert)
+        elif attr_type == "sai_system_port_config_list_t":
+            status, data = self.get(obj, [attr, self.make_system_port_config_list(1)], do_assert)
+            if status == "SAI_STATUS_BUFFER_OVERFLOW":
+                length = json.loads(data.to_json()[1])["count"]
+                status, data = self.get(obj, [attr, self.make_system_port_config_list(length)], do_assert)
         elif attr_type == "sai_object_id_t":
             status, data = self.get(obj, [attr, "oid:0x0"], do_assert)
         elif attr_type == "bool":
