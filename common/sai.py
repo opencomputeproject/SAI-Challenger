@@ -354,11 +354,19 @@ class Sai:
         return status[2], data
 
     def get_by_type(self, obj, attr, attr_type, do_assert = True):
+        # TODO: Check how to map these types into the struct or list
+        unsupported_types = [
+                                "sai_port_eye_values_list_t", "sai_prbs_rx_state_t", "sai_port_err_status_list_t",
+                                "sai_fabric_port_reachability_t", "sai_acl_resource_list_t", "sai_map_list_t",
+                                "sai_system_port_config_list_t", "sai_acl_capability_t"
+                            ]
         if attr_type == "sai_object_list_t":
             status, data = self.get(obj, [attr, "1:oid:0x0"], do_assert)
             if status == "SAI_STATUS_BUFFER_OVERFLOW":
                 status, data = self.get(obj, [attr, self.make_list(data.uint32(), "oid:0x0")], do_assert)
-        elif attr_type == "sai_s32_list_t" or attr_type == "sai_u32_list_t":
+        elif attr_type == "sai_s32_list_t" or attr_type == "sai_u32_list_t" or \
+                attr_type == "sai_s16_list_t" or attr_type == "sai_u16_list_t" or\
+                attr_type == "sai_s8_list_t" or attr_type == "sai_u8_list_t" or attr_type == "sai_vlan_list_t":
             status, data = self.get(obj, [attr, "1:0"], do_assert)
             if status == "SAI_STATUS_BUFFER_OVERFLOW":
                 status, data = self.get(obj, [attr, self.make_list(data.uint32(), "0")], do_assert)
@@ -374,8 +382,10 @@ class Sai:
             status, data = self.get(obj, [attr, "0.0.0.0&mask:0.0.0.0"], do_assert)
         elif attr_type == "sai_ip6_t":
             status, data = self.get(obj, [attr, "::0.0.0.0&mask:0:0:0:0:0:0:0:0"], do_assert)
-        elif attr_type == "sai_u32_range_t":
+        elif attr_type == "sai_u32_range_t" or attr_type == "sai_s32_range_t":
             status, data = self.get(obj, [attr, "0,0"], do_assert)
+        elif attr_type in unsupported_types:
+            status, data = "not supported", None
         elif attr_type.startswith("sai_") or attr_type == "" or attr_type == "char":
             status, data = self.get(obj, [attr, ""], do_assert)
         else:
