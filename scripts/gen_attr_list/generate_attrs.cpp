@@ -31,6 +31,7 @@ void type_name(nlohmann::json &json, const char *const name)
     std::for_each(name, std::next(name, strlen(name)), [&result](const char ch) {
         result += std::tolower(ch);
     });
+
     if (result == "bool" || result == "macsec_sci")
     {
         json["type"] = "bool";
@@ -41,7 +42,39 @@ void type_name(nlohmann::json &json, const char *const name)
     }
     else if (result == "chardata")
     {
-        json["type"] = "char[32]";
+        json["type"] = "char";
+    }
+    else if (result == "int32_list")
+    {
+        json["type"] = "sai_s32_list_t";
+    }
+    else if (result == "uint32_list")
+    {
+        json["type"] = "sai_u32_list_t";
+    }
+    else if (result == "int8_list")
+    {
+        json["type"] = "sai_s8_list_t";
+    }
+    else if (result == "uint8_list")
+    {
+        json["type"] = "sai_u8_list_t";
+    }
+    else if (result == "int16_list")
+    {
+        json["type"] = "sai_s16_list_t";
+    }
+    else if (result == "uint16_list")
+    {
+        json["type"] = "sai_u16_list_t";
+    }
+    else if (result == "int32_range")
+    {
+        json["type"] = "sai_s32_range_t";
+    }
+    else if (result == "uint32_range")
+    {
+        json["type"] = "sai_u32_range_t";
     }
     else if (result == undefined)
     {
