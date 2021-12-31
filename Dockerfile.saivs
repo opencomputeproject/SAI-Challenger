@@ -48,7 +48,7 @@ RUN apt-get -o Acquire::Check-Valid-Until=false update && apt-get install -y \
 RUN pip3 install supervisord-dependent-startup==1.4.0
 
 # Install dependencies
-RUN apt-get install -y redis-server libhiredis0.14
+RUN apt-get install -y redis-server libhiredis0.14 python3-redis
 
 # Install sonic-swss-common & sonic-sairedis building dependencies
 RUN apt-get install -y \
@@ -148,7 +148,7 @@ RUN pip3 install scapy
 RUN pip3 install click==7.0
 RUN echo ". /sai-challenger/scripts/sai-cli-completion.sh" >> /root/.bashrc
 
-RUN pip3 install redis pytest pytest_dependency pytest-html
+RUN pip3 install pytest pytest_dependency pytest-html
 
 WORKDIR /sai-challenger/tests
 
