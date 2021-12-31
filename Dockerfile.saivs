@@ -92,15 +92,10 @@ RUN git clone https://github.com/Azure/sonic-sairedis.git \
 # Build attr_list_generator and generate /etc/sai/sai.json
 COPY scripts/gen_attr_list /sai/gen_attr_list
 
+RUN apt-get install -y nlohmann-json-dev
 RUN cd /sai/gen_attr_list \
-        && [ -d json ] && rm -rf json \
-        ; git clone https://github.com/nlohmann/json.git \
-        && cd json \
-        && git checkout 7440786b813534b567f6f6b87afb2aa19f97cc89 \
-        && cd .. \
-        && [ -d build ] && rm -rf build \
-        ; mkdir build \
-        && cd build \
+        && mkdir build && cd build \
+        && export LDFLAGS="-Wl,--copy-dt-needed-entries" \
         && cmake .. \
         && make -j$(nproc) \
         && mkdir -p /etc/sai \
