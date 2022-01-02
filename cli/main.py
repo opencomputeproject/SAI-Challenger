@@ -163,27 +163,17 @@ def dump(oid):
         click.echo("SAI object ID must start with 'oid:' prefix\n")
         return False
 
-    try:
-        path = "/etc/sai/sai.json"
-        f = open(path, "r")
-        sai_str = f.read()
-        sai_json = json.loads(sai_str)
-    except IOError:
-        click.echo("Error: Can not open {}\n".format(path))
-        return False
-
     sai = SaiNpu(exec_params)
     obj_type = sai.vid_to_type(oid)
+    meta = sai.get_meta(obj_type)
 
-    for item in sai_json:
-        if obj_type in item.values():
-            for attr in item['attributes']:
-                status, data = sai.get_by_type(oid, attr['name'], attr['properties']['type'], False)
-                if status == "SAI_STATUS_SUCCESS":
-                    data = data.to_json()
-                    click.echo("{:<50} {}".format(data[0], data[1]))
-                else:
-                    click.echo("{:<50} {}".format(attr['name'], status))
+    for attr in meta['attributes']:
+        status, data = sai.get_by_type(oid, attr['name'], attr['properties']['type'], False)
+        if status == "SAI_STATUS_SUCCESS":
+            data = data.to_json()
+            click.echo("{:<50} {}".format(data[0], data[1]))
+        else:
+            click.echo("{:<50} {}".format(attr['name'], status))
     click.echo()
 
 
