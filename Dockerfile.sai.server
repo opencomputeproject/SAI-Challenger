@@ -139,7 +139,7 @@ COPY scripts/server/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY scripts/veth-create.sh /usr/bin/veth-create.sh
 
 # Install SAI Challenger CLI dependencies
-RUN pip3 install click==7.0 pytest
+RUN pip3 install click==8.0 pytest
 
 # Deploy SAI Challenger CLI
 COPY setup.py            /sai-challenger/setup.py

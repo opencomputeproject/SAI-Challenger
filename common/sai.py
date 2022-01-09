@@ -178,6 +178,45 @@ class Sai:
         self.run_traffic = exec_params["traffic"] and not self.libsaivs
         self.sku = exec_params["sku"]
 
+    @staticmethod
+    def get_meta(obj_type=None):
+        try:
+            path = "/etc/sai/sai.json"
+            f = open(path, "r")
+            sai_str = f.read()
+            sai_json = json.loads(sai_str)
+        except IOError:
+            return None
+
+        if obj_type is not None:
+            if type(obj_type) == SaiObjType:
+                obj_type = "SAI_OBJECT_TYPE_" + SaiObjType(obj_type).name
+            else:
+                assert type(obj_type) == str
+                assert obj_type.startswith("SAI_OBJECT_TYPE_")
+
+            for item in sai_json:
+                if obj_type in item.values():
+                    return item
+            else:
+                return None
+        return sai_json
+
+    @staticmethod
+    def get_obj_attrs(sai_obj_type):
+        meta = Sai.get_meta(sai_obj_type)
+        if meta is None:
+            return []
+        return [(attr['name'], attr['properties']['type']) for attr in meta['attributes']]
+
+    @staticmethod
+    def get_obj_attr_type(sai_obj_type, sai_obj_attr):
+        attrs = Sai.get_obj_attrs(sai_obj_type)
+        for attr in attrs:
+            if attr[0] == sai_obj_attr:
+                return attr[1]
+        return None
+
     def cleanup(self):
         '''
         Flushes Redis DB and restarts syncd application.
@@ -213,7 +252,8 @@ class Sai:
             vid = self.r.incr("VIDCOUNTER")
         return "oid:" + hex((obj_type.value << 48) | vid)
 
-    def vid_to_type(self, vid):
+    @staticmethod
+    def vid_to_type(vid):
         obj_type = int(vid[4:], 16) >> 48
         return "SAI_OBJECT_TYPE_" + SaiObjType(obj_type).name
 
