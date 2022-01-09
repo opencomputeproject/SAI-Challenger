@@ -138,7 +138,7 @@ COPY scripts/veth-create.sh /usr/bin/veth-create.sh
 RUN pip3 install scapy
 
 # Install SAI Challenger CLI dependencies
-RUN pip3 install click==7.0
+RUN pip3 install click==8.0
 RUN echo ". /sai-challenger/scripts/sai-cli-completion.sh" >> /root/.bashrc
 
 RUN pip3 install pytest pytest_dependency pytest-html

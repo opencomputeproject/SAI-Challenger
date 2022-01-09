@@ -214,6 +214,14 @@ class Sai:
             return []
         return [(attr['name'], attr['properties']['type']) for attr in meta['attributes']]
 
+    @staticmethod
+    def get_obj_attr_type(sai_obj_type, sai_obj_attr):
+        attrs = Sai.get_obj_attrs(sai_obj_type)
+        for attr in attrs:
+            if attr[0] == sai_obj_attr:
+                return attr[1]
+        return None
+
     def cleanup(self):
         '''
         Flushes Redis DB and restarts syncd application.

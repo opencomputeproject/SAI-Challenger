@@ -26,7 +26,7 @@ def cli():
 # 'get' command
 @cli.command()
 @click.argument('oid', metavar='<oid>', required=True, type=str)
-@click.argument('attrs', metavar='<attr> [<attr_type>]', required=True, type=str, nargs=-1)
+@click.argument('attrs', metavar='<attr-1> .. <attr-n>', required=True, type=str, nargs=-1)
 def get(oid, attrs):
     """Retrieve SAI object's attributes"""
 
@@ -36,22 +36,21 @@ def get(oid, attrs):
         return False
 
     sai = SaiNpu(exec_params)
-    for i in range(0, len(attrs), 2):
-        if not attrs[i].startswith("SAI_"):
-            click.echo("Invalid SAI object's attribute {} provided\n".format(attrs[i]))
+
+    obj_type = sai.vid_to_type(oid)
+    for attr in attrs:
+        attr_type = sai.get_obj_attr_type(obj_type, attr)
+        if attr_type is None:
+            click.echo("Unknown SAI object's attribute {}\n".format(attr))
             return False
 
-        attr_type = ''
-        if i < len(attrs) - 1:
-            attr_type = attrs[i + 1]
-
-        status, data = sai.get_by_type(oid, attrs[i], attr_type, False)
+        status, data = sai.get_by_type(oid, attr, attr_type, False)
         if status != "SAI_STATUS_SUCCESS":
             click.echo(status + '\n')
             return False
 
         data = data.to_json()
-        click.echo("{:<32} {}".format(data[0], data[1]))
+        click.echo("{:<48} {}".format(data[0], data[1]))
 
     click.echo()
 

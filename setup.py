@@ -9,7 +9,7 @@ setup(
     author_email='andriy.kokhan@gmail.com',
     url='https://github.com/PLVision/sai-challenger',
     install_requires=[
-        'click==7.0',
+        'click==8.0',
     ],
     packages=['cli', 'topologies'],
     scripts=[
