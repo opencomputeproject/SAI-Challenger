@@ -23,7 +23,7 @@ The client-server mode **CAN** be used in all the cases defined for the standalo
 
 To get SAI Challenger sources:
 ```sh
-git clone https://github.com/PLVision/sai-challenger.git
+git clone https://github.com/opencomputeproject/SAI-Challenger.git
 cd sai-challenger/
 git submodule update --init --recursive
 ```
