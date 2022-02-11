@@ -114,7 +114,7 @@ class SaiNpu(Sai):
             obj = self.vid_to_type(obj) + ":" + obj
         if type(attrs) != str:
             attrs = json.dumps(attrs)
-        status = self.operate(obj, attrs, "Sclear_stats")    
+        status = self.operate(obj, attrs, "Sclear_stats")
         status[2] = status[2].decode("utf-8")
         if do_assert:
             assert status[2] == 'SAI_STATUS_SUCCESS'
@@ -134,7 +134,7 @@ class SaiNpu(Sai):
         if do_assert:
             return data
 
-        return status[2], data 
+        return status[2], data
 
     def __bulk_attr_serialize(self, attr):
         data = ""
@@ -370,6 +370,7 @@ class SaiNpu(Sai):
         for inum, iname in ifaces.items():
             socket_addr = 'tcp://{}:10001'.format(self.server_ip)
             self.hostif_map[(0, int(inum))] = socket_addr
+            assert self.remote_iface_is_up(iname), f"Interface {iname} must be up before dataplane init."
 
         self.hostif_dataplane = SaiHostifDataPlane(ifaces, self.server_ip)
         self.hostif_dataplane.init()

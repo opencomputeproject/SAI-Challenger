@@ -1,2 +1,8 @@
 scripts/gen_attr_list/build
 scripts/gen_attr_list/CMakeLists.txt.user
+common/build
+common/dist
+common/sai_challenger.egg-info
+venv
+.idea
+.vscode
