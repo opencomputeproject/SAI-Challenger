@@ -155,7 +155,7 @@ class SaiData:
         value = self.to_json()
         while i < len(value):
             cntrs_dict[value[i]] = int(value[i + 1])
-            i = i + 2        
+            i = i + 2
         return cntrs_dict
 
     def value(self):
@@ -320,7 +320,7 @@ class Sai:
     def operate(self, obj, attrs, op):
         self.r.delete("GETRESPONSE_KEY_VALUE_OP_QUEUE")
 
-        tout = 0.01
+        tout = 0.03
         attempts = self.attempts
         while len(self.r.lrange("GETRESPONSE_KEY_VALUE_OP_QUEUE", 0, -1)) > 0 and attempts > 0:
             time.sleep(0.01)

@@ -28,6 +28,20 @@ RUN pip3 install pytest pytest_dependency pytest-html
 # Install PTF dependencies
 RUN pip3 install scapy
 
+# Install ptf_nn_agent dependencies
+RUN apt-get install -y libffi-dev cmake wget \
+        && wget https://github.com/nanomsg/nanomsg/archive/1.0.0.tar.gz \
+        && tar xvfz 1.0.0.tar.gz \
+        && cd nanomsg-1.0.0 \
+        && mkdir -p build \
+        && cd build \
+        && cmake .. \
+        && make install \
+        && ldconfig \
+        && cd ../.. \
+        && rm -rf 1.0.0.tar.gz nanomsg-1.0.0 \
+        && pip3 install nnpy
+
 # Disable kernel logging support
 RUN sed -ri '/imklog/s/^/#/' /etc/rsyslog.conf
 
