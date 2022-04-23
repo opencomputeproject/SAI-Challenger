@@ -5,17 +5,6 @@ import json
 import os
 import pytest
 
-'''
-SAI version:
-  Branch v1.9
-  Commit 0f86ec5
-  Nov 11, 2021
-
-This SAI version is used by sonic-buildimage:
-  Branch master
-  Commit b0f0d4e
-  Dec 28, 2021
-'''
 
 class SaiObjType(Enum):
     PORT                     =  1
@@ -334,7 +323,7 @@ class Sai:
         obj = obj.replace(' ', '')
 
         self.r.lpush("ASIC_STATE_KEY_VALUE_OP_QUEUE", obj, attrs, op)
-        self.r.publish("ASIC_STATE_CHANNEL", "G")
+        self.r.publish("ASIC_STATE_CHANNEL@1", "G")
 
         status = []
         attempts = self.attempts
