@@ -84,7 +84,7 @@ def test_l2_trunk_to_trunk_vlan(npu, dataplane):
             send_packet(dataplane, 0, pkt)
             verify_packets(dataplane, pkt, [1])
     finally:
-        npu.flush_fdb_entries(["SAI_FDB_FLUSH_ATTR_BV_ID", vlan_oid])
+        npu.flush_fdb_entries(["SAI_FDB_FLUSH_ATTR_BV_ID", vlan_oid, "SAI_FDB_FLUSH_ATTR_ENTRY_TYPE", "SAI_FDB_FLUSH_ENTRY_TYPE_STATIC"])
         npu.remove(vlan_member1)
         npu.remove(vlan_member2)
         npu.remove(vlan_oid)
@@ -338,8 +338,7 @@ def test_l2_lag(npu, dataplane):
             send_packet(dataplane, 2, pkt)
             verify_packets(dataplane, pkt, [3])
     finally:
-        npu.remove_fdb(vlan_oid, macs[0])
-        npu.remove_fdb(vlan_oid, macs[1])
+        npu.flush_fdb_entries(["SAI_FDB_FLUSH_ATTR_BV_ID", vlan_oid, "SAI_FDB_FLUSH_ATTR_ENTRY_TYPE", "SAI_FDB_FLUSH_ENTRY_TYPE_ALL"])
 
         npu.remove_vlan_member(vlan_oid, lag_bp_oid)
         npu.remove_vlan_member(vlan_oid, npu.dot1q_bp_oids[3])
@@ -426,8 +425,8 @@ def test_l2_vlan_bcast_ucast(npu, dataplane):
                 verify_packets(dataplane, ucast_pkt, [idx])
 
     finally:
+        npu.flush_fdb_entries(["SAI_FDB_FLUSH_ATTR_BV_ID", vlan_oid, "SAI_FDB_FLUSH_ATTR_ENTRY_TYPE", "SAI_FDB_FLUSH_ENTRY_TYPE_ALL"])
         for idx, bp_oid in enumerate(npu.dot1q_bp_oids):
-            npu.remove_fdb(vlan_oid, macs[idx])
             npu.remove_vlan_member(vlan_oid, bp_oid)
             npu.create_vlan_member(npu.default_vlan_oid, bp_oid, "SAI_VLAN_TAGGING_MODE_UNTAGGED")
             npu.set(npu.port_oids[idx], ["SAI_PORT_ATTR_PORT_VLAN_ID", npu.default_vlan_id])
@@ -518,6 +517,7 @@ def test_l2_mtu(npu, dataplane):
             verify_no_packet(dataplane, tag_pkt1, 2)
 
     finally:
+        npu.flush_fdb_entries(["SAI_FDB_FLUSH_ATTR_BV_ID", vlan_oid, "SAI_FDB_FLUSH_ATTR_ENTRY_TYPE", "SAI_FDB_FLUSH_ENTRY_TYPE_ALL"])
         for idx, oid in enumerate(npu.port_oids[0:max_port]):
             npu.remove_vlan_member(vlan_oid, npu.dot1q_bp_oids[idx])
             npu.create_vlan_member(npu.default_vlan_oid, npu.dot1q_bp_oids[idx], "SAI_VLAN_TAGGING_MODE_UNTAGGED")
@@ -575,7 +575,7 @@ def test_fdb_bulk_create(npu, dataplane):
             egress_ports.remove(1)
             verify_packets(dataplane, pkt, egress_ports)
     finally:
-        npu.flush_fdb_entries(["SAI_FDB_FLUSH_ATTR_BV_ID", npu.default_vlan_oid])
+        npu.flush_fdb_entries(["SAI_FDB_FLUSH_ATTR_BV_ID", npu.default_vlan_oid, "SAI_FDB_FLUSH_ATTR_ENTRY_TYPE", "SAI_FDB_FLUSH_ENTRY_TYPE_ALL"])
 
 
 def test_fdb_bulk_remove(npu, dataplane):
@@ -627,7 +627,7 @@ def test_fdb_bulk_remove(npu, dataplane):
                 verify_packets(dataplane, pkt, egress_ports)
 
     finally:
-        npu.flush_fdb_entries(["SAI_FDB_FLUSH_ATTR_BV_ID", npu.default_vlan_oid])
+        npu.flush_fdb_entries(["SAI_FDB_FLUSH_ATTR_BV_ID", npu.default_vlan_oid, "SAI_FDB_FLUSH_ATTR_ENTRY_TYPE", "SAI_FDB_FLUSH_ENTRY_TYPE_ALL"])
 
         
 def test_l2_mac_move_1(npu, dataplane):
@@ -704,7 +704,7 @@ def test_l2_mac_move_1(npu, dataplane):
             verify_no_packet(dataplane, pkt1, 1)
    
     finally:
-        npu.flush_fdb_entries(["SAI_FDB_FLUSH_ATTR_BV_ID", vlan_oid])
+        npu.flush_fdb_entries(["SAI_FDB_FLUSH_ATTR_BV_ID", vlan_oid, "SAI_FDB_FLUSH_ATTR_ENTRY_TYPE", "SAI_FDB_FLUSH_ENTRY_TYPE_ALL"])
         for idx in range(max_port):
             npu.remove(vlan_mbr_oids[idx])
             npu.create_vlan_member(npu.default_vlan_oid, npu.dot1q_bp_oids[idx], "SAI_VLAN_TAGGING_MODE_UNTAGGED")

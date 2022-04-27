@@ -102,7 +102,7 @@ class SaiNpu(Sai):
            SAI_FDB_FLUSH_ATTR_BRIDGE_PORT_ID, and SAI_FDB_FLUSH_ATTR_BV_ID
         """
         if attrs is None:
-            attrs = []
+            attrs = ["SAI_FDB_FLUSH_ATTR_ENTRY_TYPE", "SAI_FDB_FLUSH_ENTRY_TYPE_ALL"]
         if type(attrs) != str:
             attrs = json.dumps(attrs)
         status = self.operate("SAI_OBJECT_TYPE_SWITCH:" + self.oid, attrs, "Sflush")
