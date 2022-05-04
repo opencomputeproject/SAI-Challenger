@@ -34,9 +34,6 @@ class SaiNpu(Sai):
             except Exception as e:
                 assert False, f"{e}"
 
-        self.port_oids.clear()
-        self.dot1q_bp_oids.clear()
-
         sw_attr = attr.copy()
         sw_attr.append("SAI_SWITCH_ATTR_INIT_SWITCH")
         sw_attr.append("true")
@@ -80,6 +77,11 @@ class SaiNpu(Sai):
         # Update SKU
         if self.sku_config is not None:
             self.set_sku_mode(self.sku_config)
+
+    def cleanup(self):
+        super().cleanup()
+        self.port_oids.clear()
+        self.dot1q_bp_oids.clear()
 
     def reset(self):
         self.cleanup()
