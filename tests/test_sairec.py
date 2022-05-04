@@ -1,4 +1,11 @@
 import pytest
+import time
+
+@pytest.fixture(scope="function")
+def vs_teardown(npu, exec_params):
+    yield
+    if exec_params["npu"] == "vs":
+        npu.reset()
 
 
 @pytest.mark.parametrize(
@@ -15,8 +22,13 @@ import pytest
         "BCM56850/remove_create_port.rec"
     ],
 )
-def test_apply_sairec(npu, exec_params, dataplane, fname):
+def test_apply_sairec(npu, exec_params, dataplane, fname, vs_teardown):
+    if exec_params["npu"] != "vs":
+        pytest.skip("VS specific scenario")
+
     if exec_params["server"] != 'localhost':
         pytest.skip("Currently not supported in client-server mode")
+
+    npu.cleanup()
+    time.sleep(5)
     npu.apply_rec("/sai/sonic-sairedis/tests/" + fname)
-    npu.reset()

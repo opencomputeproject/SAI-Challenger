@@ -483,7 +483,10 @@ class Sai:
 
         values = []
         for i, _ in enumerate(keys):
-            values.append(json.dumps(keys[i]).replace(" ", ""))
+            k = keys[i]
+            if type(k) != str:
+                k = json.dumps(k).replace(" ", "")
+            values.append(k)
             if (len(attrs) > 1):
                 str_attr = self.__bulk_attr_serialize(attrs[i])
             values.append(str_attr)
@@ -542,8 +545,11 @@ class Sai:
         key = key + ":" + str(len(keys))
 
         values = []
-        for i, v in enumerate(keys):
-            values.append(json.dumps(v).replace(" ", ""))
+        for i, _ in enumerate(keys):
+            k = keys[i]
+            if type(k) != str:
+                k = json.dumps(k).replace(" ", "")
+            values.append(k)
             values.append("")
 
         status = self.operate(key, json.dumps(values), "Dbulkremove")
@@ -615,7 +621,10 @@ class Sai:
 
         values = []
         for i, _ in enumerate(keys):
-            values.append(json.dumps(keys[i]).replace(" ", ""))
+            k = keys[i]
+            if type(k) != str:
+                k = json.dumps(k).replace(" ", "")
+            values.append(k)
             if (len(attrs) > 1):
                 str_attr = self.__bulk_attr_serialize(attrs[i])
             values.append(str_attr)
@@ -807,10 +816,6 @@ class Sai:
             print("#{}: {}".format(cnt, record))
             rec = record[0]
             if rec[0] == 'c':
-                if "SAI_OBJECT_TYPE_SWITCH" in rec[1]:
-                    print("Object \"{}\" already exists!". format(rec[1]))
-                    continue
-
                 attrs = []
                 if len(rec) > 2:
                     for attr in rec[2:]:
@@ -845,7 +850,9 @@ class Sai:
                     # Convert into ["sai-object-type", "key"]
                     key = key.split(":", 1)[1]
 
-                    bulk_keys.append(json.loads(key))
+                    if key.startswith("{"):
+                        key = json.loads(key)
+                    bulk_keys.append(key)
                     bulk_attrs.append(attrs)
 
                 self.bulk_create(record[0][1], bulk_keys, bulk_attrs)
@@ -873,7 +880,9 @@ class Sai:
                     # Convert into ["sai-object-type", "key"]
                     key = key.split(":", 1)[1]
 
-                    bulk_keys.append(json.loads(key))
+                    if key.startswith("{"):
+                        key = json.loads(key)
+                    bulk_keys.append(key)
                     bulk_attrs.append(attr)
 
                 self.bulk_set(record[0][1], bulk_keys, bulk_attrs)
@@ -892,7 +901,9 @@ class Sai:
                     # Convert into ["sai-object-type", "key"]
                     key = key.split(":", 1)[1]
 
-                    bulk_keys.append(json.loads(key))
+                    if key.startswith("{"):
+                        key = json.loads(key)
+                    bulk_keys.append(key)
 
                 self.bulk_remove(record[0][1], bulk_keys)
 
