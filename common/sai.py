@@ -235,6 +235,8 @@ class Sai:
         self.r.flushall()
         self.loglevel_db.hmset('syncd:syncd', {'LOGLEVEL':self.loglevel, 'LOGOUTPUT':'SYSLOG'})
         self.r.shutdown()
+        self.cache = {}
+        self.rec2vid = {}
 
     def alloc_vid(self, obj_type):
         vid = None
@@ -413,6 +415,229 @@ class Sai:
 
         return status[2], data
 
+    def __bulk_attr_serialize(self, attr):
+        data = ""
+        # Input attributes: [a, v, a, v, ...]
+        # Serialized attributes format: "a=v|a=v|..."
+        for i, v in enumerate(attr):
+            if i % 2 == 0:
+                if len(data) > 0:
+                    data += "|"
+                data += v + "="
+            else:
+                data += v
+        return data
+
+    def bulk_create(self, obj, keys, attrs, do_assert = True):
+        '''
+        Bulk create objects
+
+        Parameters:
+            obj (SaiObjType): The type of objects to be created
+            keys (list): The list of objects to be created.
+                    E.g.:
+                    [
+                        {
+                            "bvid"      : vlan_oid,
+                            "mac"       : "00:00:00:00:00:01",
+                            "switch_id" : self.sw_oid
+                        },
+                        {...}
+                    ]
+            attrs (list): The list of the lists of objects' attributes.
+                    In case just one set of the attributes provided, all objects
+                    will be created with this set of the attributes.
+                    E.g.:
+                    [
+                        [
+                            "SAI_FDB_ENTRY_ATTR_TYPE",           "SAI_FDB_ENTRY_TYPE_STATIC",
+                            "SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID", self.sw.dot1q_bp_oids[0]
+                        ],
+                        [...]
+                    ]
+            do_assert (bool): Assert that the bulk create operation succeeded.
+
+        Usage example:
+            bulk_create(SaiObjType.FDB_ENTRY, [key1, key2, ...], [attrs1, attrs2, ...])
+            bulk_create(SaiObjType.FDB_ENTRY, [key1, key2, ...], [attrs])
+
+            where, attrsN = [attr1, val1, attr2, val2, ...]
+
+        Returns:
+            The tuple with two elements.
+            The first element contains bulk create operation status:
+                * "SAI_STATUS_SUCCESS" on success when all objects were created;
+                * "SAI_STATUS_FAILURE" when any of the objects fails to create;
+            The second element contains the list of statuses of each individual object
+            creation result.
+        '''
+        assert (type(obj) == SaiObjType) or (type(obj) == str and obj.startswith("SAI_OBJECT_TYPE_"))
+        assert len(keys) == len(attrs) or len(attrs) == 1
+
+        key = "SAI_OBJECT_TYPE_" + obj.name if type(obj) == SaiObjType else obj
+        key = key + ":" + str(len(keys))
+
+        str_attr = ""
+        if (len(attrs) == 1):
+            str_attr = self.__bulk_attr_serialize(attrs[0])
+
+        values = []
+        for i, _ in enumerate(keys):
+            values.append(json.dumps(keys[i]).replace(" ", ""))
+            if (len(attrs) > 1):
+                str_attr = self.__bulk_attr_serialize(attrs[i])
+            values.append(str_attr)
+
+        status = self.operate(key, json.dumps(values), "Sbulkcreate")
+
+        status[1] = status[1].decode("utf-8")
+        status[1] = json.loads(status[1])
+        entry_status = []
+        for i, v in enumerate(status[1]):
+            if i % 2 == 0:
+                entry_status.append(v)
+
+        status[2] = status[2].decode("utf-8")
+
+        if do_assert:
+            print(entry_status)
+            assert status[2] == 'SAI_STATUS_SUCCESS'
+            return status[2], entry_status
+
+        return status[2], entry_status
+
+    def bulk_remove(self, obj, keys, do_assert = True):
+        '''
+        Bulk remove objects
+
+        Parameters:
+            obj (SaiObjType): The type of objects to be removed
+            keys (list): The list of objects to be removed.
+                    E.g.:
+                    [
+                        {
+                            "bvid"      : vlan_oid,
+                            "mac"       : "00:00:00:00:00:01",
+                            "switch_id" : self.sw_oid
+                        },
+                        {...}
+                    ]
+            do_assert (bool): Assert that the bulk remove operation succeeded.
+
+        Usage example:
+            bulk_remove(SaiObjType.FDB_ENTRY, [key1, key2, ...])
+            bulk_remove(SaiObjType.FDB_ENTRY, [key1, key2, ...], False)
+
+        Returns:
+            The tuple with two elements.
+            The first element contains bulk remove operation status:
+                * "SAI_STATUS_SUCCESS" on success when all objects were removed;
+                * "SAI_STATUS_FAILURE" when any of the objects fails to remove;
+            The second element contains the list of statuses of each individual object
+            removal result.
+        '''
+        assert (type(obj) == SaiObjType) or (type(obj) == str and obj.startswith("SAI_OBJECT_TYPE_"))
+
+        key = "SAI_OBJECT_TYPE_" + obj.name if type(obj) == SaiObjType else obj
+        key = key + ":" + str(len(keys))
+
+        values = []
+        for i, v in enumerate(keys):
+            values.append(json.dumps(v).replace(" ", ""))
+            values.append("")
+
+        status = self.operate(key, json.dumps(values), "Dbulkremove")
+
+        status[1] = status[1].decode("utf-8")
+        status[1] = json.loads(status[1])
+        entry_status = []
+        for i, v in enumerate(status[1]):
+            if i % 2 == 0:
+                entry_status.append(v)
+
+        status[2] = status[2].decode("utf-8")
+
+        if do_assert:
+            print(entry_status)
+            assert status[2] == 'SAI_STATUS_SUCCESS'
+            return status[2], entry_status
+
+        return status[2], entry_status
+
+    def bulk_set(self, obj, keys, attrs, do_assert = True):
+        '''
+        Bulk set objects attribute
+
+        Parameters:
+            obj (SaiObjType): The type of objects to be updated
+            keys (list): The list of objects to be updated.
+                    E.g.:
+                    [
+                        {
+                            "bvid"      : vlan_oid,
+                            "mac"       : "00:00:00:00:00:01",
+                            "switch_id" : self.sw_oid
+                        },
+                        {...}
+                    ]
+            attrs (list): The list of objects' attributes, one attribute per object.
+                    In case just one attribute provided, all objects
+                    will be updated with the provided value of this attribute.
+                    E.g.:
+                    [
+                        "SAI_FDB_ENTRY_ATTR_TYPE",           "SAI_FDB_ENTRY_TYPE_STATIC",
+                        "SAI_FDB_ENTRY_ATTR_TYPE",           "SAI_FDB_ENTRY_TYPE_DYNAMIC",
+                        ...
+                    ]
+            do_assert (bool): Assert that the bulk set operation succeeded.
+
+        Usage example:
+            bulk_set(SaiObjType.FDB_ENTRY, [key1, key2, ...], [attr1, attr2, ...])
+            bulk_set(SaiObjType.FDB_ENTRY, [key1, key2, ...], [attr])
+
+        Returns:
+            The tuple with two elements.
+            The first element contains bulk set operation status:
+                * "SAI_STATUS_SUCCESS" on success when all objects were updated;
+                * "SAI_STATUS_FAILURE" when any of the objects fails to update;
+            The second element contains the list of statuses of each individual object
+            set attribute result.
+        '''
+        assert (type(obj) == SaiObjType) or (type(obj) == str and obj.startswith("SAI_OBJECT_TYPE_"))
+        assert len(keys) == len(attrs) or len(attrs) == 1
+
+        key = "SAI_OBJECT_TYPE_" + obj.name if type(obj) == SaiObjType else obj
+        key = key + ":" + str(len(keys))
+
+        str_attr = ""
+        if (len(attrs) == 1):
+            str_attr = self.__bulk_attr_serialize(attrs[0])
+
+        values = []
+        for i, _ in enumerate(keys):
+            values.append(json.dumps(keys[i]).replace(" ", ""))
+            if (len(attrs) > 1):
+                str_attr = self.__bulk_attr_serialize(attrs[i])
+            values.append(str_attr)
+
+        status = self.operate(key, json.dumps(values), "Sbulkset")
+
+        status[1] = status[1].decode("utf-8")
+        status[1] = json.loads(status[1])
+        entry_status = []
+        for i, v in enumerate(status[1]):
+            if i % 2 == 0:
+                entry_status.append(v)
+
+        status[2] = status[2].decode("utf-8")
+
+        if do_assert:
+            print(entry_status)
+            assert status[2] == 'SAI_STATUS_SUCCESS'
+            return status[2], entry_status
+
+        return status[2], entry_status
+
     def get_by_type(self, obj, attr, attr_type, do_assert = True):
         # TODO: Check how to map these types into the struct or list
         unsupported_types = [
@@ -515,15 +740,15 @@ class Sai:
         key_list = key.split(":", 1)
         vid = key_list[1]
 
-        if action == "c":
+        if action == "c" or action == "C":
             # Convert object type from string to enum format
             obj_type = SaiObjType[key_list[0][len("SAI_OBJECT_TYPE_"):]]
             # Allocate new VID and add it to the map
             vid = self.get_vid(obj_type, key_list[1])
             self.rec2vid[key_list[1]] = vid
-        elif action == "g" or action == "s":
+        elif action == "g" or action == "s" or action == "S":
             vid = self.rec2vid[key_list[1]]
-        elif action == "r":
+        elif action == "r" or action == "R":
             vid = self.rec2vid.pop(key_list[1])
 
         return key_list[0] + ":" + vid
@@ -541,25 +766,46 @@ class Sai:
         return new_key
 
     def __update_key(self, action, key):
-        if ":oid:" in key:
-            return self.__update_oid_key(action, key)
-        else:
+        if "{" in key:
             return self.__update_entry_key_oids(key)
+        else:
+            return self.__update_oid_key(action, key)
 
     def __parse_rec(self, fname):
+        '''
+        Non-bulk entry format:
+        data|action|sai-object-type:key|attr1|attr2
+
+        Will be converted into:
+        [["action", "sai-object-type:key", "attr1", "attr2"]]
+
+        Bulk entry format:
+        data|action|sai-object-type||key1|attr1|attr2||...||key-n|attr1|attr2
+
+        Will be converted into:
+        [["action", "sai-object-type"], ["key", "attr1", "attr2"], ..., [key-n", "attr1", "attr2"]]
+        '''
         cnt = 0
         rec = {}
         fp = open(fname, 'r')
         for line in fp:
+            data = []
             cnt += 1
-            rec[cnt] = line.strip().split("|")[1:]
+            bulk_tokens = line.strip().split("||")
+            for idx, token in enumerate(bulk_tokens):
+                tokens = token.strip().split("|")
+                if idx == 0:
+                    tokens = tokens[1:]
+                data.append(tokens)
+            rec[cnt] = data #if len(data) > 1 else data[0]
         return rec
 
     def apply_rec(self, fname):
         oids = []
         records = self.__parse_rec(fname)
-        for cnt, rec in records.items():
-            print("#{}: {}".format(cnt, rec))
+        for cnt, record in records.items():
+            print("#{}: {}".format(cnt, record))
+            rec = record[0]
             if rec[0] == 'c':
                 if "SAI_OBJECT_TYPE_SWITCH" in rec[1]:
                     print("Object \"{}\" already exists!". format(rec[1]))
@@ -577,28 +823,93 @@ class Sai:
 
                 self.create(self.__update_key(rec[0], rec[1]), attrs)
 
+            elif rec[0] == 'C':
+                # record = [["action", "sai-object-type"], ["key", "attr1", "attr2"], ..., [key-n", "attr1", "attr2"]]
+                bulk_keys = []
+                bulk_attrs = []
+                for idx, entry in enumerate(record[1:]):
+                    # New bulk entry
+                    attrs = []
+                    for attr in entry[1:]:
+                        attrs += attr.split('=')
+
+                    # Update OIDs in the attributes
+                    for i in range(1, len(attrs), 2):
+                        if "oid:" in attrs[i] and attrs[i] != "oid:0x0":
+                            attrs[i] = self.rec2vid[attrs[i]]
+
+                    # Convert into "sai-object-type:key"
+                    key = record[0][1] + ":" + record[idx + 1][0]
+                    # Update OIDs in the key
+                    key = self.__update_key(rec[0], key)
+                    # Convert into ["sai-object-type", "key"]
+                    key = key.split(":", 1)[1]
+
+                    bulk_keys.append(json.loads(key))
+                    bulk_attrs.append(attrs)
+
+                self.bulk_create(record[0][1], bulk_keys, bulk_attrs)
+
             elif rec[0] == 's':
                 data = rec[2].split('=')
                 if "oid:" in data[1]:
                     data[1] = self.rec2vid[data[1]]
 
                 self.set(self.__update_key(rec[0], rec[1]), data)
+
+            elif rec[0] == 'S':
+                # record = [["action", "sai-object-type"], ["key", "attr"], ..., [key-n", "attr"]]
+                bulk_keys = []
+                bulk_attrs = []
+                for idx, entry in enumerate(record[1:]):
+                    attr = entry[1].split('=')
+                    if "oid:" in attr[1] and attrs[i] != "oid:0x0":
+                        attr[1] = self.rec2vid[attr[1]]
+
+                    # Convert into "sai-object-type:key"
+                    key = record[0][1] + ":" + record[idx + 1][0]
+                    # Update OIDs in the key
+                    key = self.__update_key(rec[0], key)
+                    # Convert into ["sai-object-type", "key"]
+                    key = key.split(":", 1)[1]
+
+                    bulk_keys.append(json.loads(key))
+                    bulk_attrs.append(attr)
+
+                self.bulk_set(record[0][1], bulk_keys, bulk_attrs)
+
             elif rec[0] == 'r':
                 self.remove(self.__update_key(rec[0], rec[1]))
+
+            elif rec[0] == 'R':
+                # record = [["action", "sai-object-type"], ["key"], ..., [key-n"]]
+                bulk_keys = []
+                for idx, entry in enumerate(record[1:]):
+                    # Convert into "sai-object-type:key"
+                    key = record[0][1] + ":" + record[idx + 1][0]
+                    # Update OIDs in the key
+                    key = self.__update_key(rec[0], key)
+                    # Convert into ["sai-object-type", "key"]
+                    key = key.split(":", 1)[1]
+
+                    bulk_keys.append(json.loads(key))
+
+                self.bulk_remove(record[0][1], bulk_keys)
+
             elif rec[0] == 'g':
                 attrs = []
                 if len(rec) > 2:
                     for attr in rec[2:]:
                         attrs += attr.split('=')
 
-                data = self.get(self.__update_key(rec[0], rec[1]), attrs)
-
-                jdata = data.to_json()
-                for idx in range(1, len(jdata), 2):
-                    if ":oid:" in jdata[idx]:
-                        oids += data.oids(idx)
-                    elif "oid:" in jdata[idx]:
-                        oids.append(data.oid(idx))
+                status, data = self.get(self.__update_key(rec[0], rec[1]), attrs, False)
+                if status == "SAI_STATUS_SUCCESS":
+                    jdata = data.to_json()
+                    for idx in range(1, len(jdata), 2):
+                        if ":oid:" in jdata[idx]:
+                            oids += data.oids(idx)
+                        elif "oid:" in jdata[idx]:
+                            oids.append(data.oid(idx))
             elif rec[0] == 'G':
                 attrs = []
                 for attr in rec[2:]:
