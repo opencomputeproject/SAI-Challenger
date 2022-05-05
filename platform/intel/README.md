@@ -1,7 +1,7 @@
 ## To start SAI Challenger on top of SAI implementation for Tofino Model
 Update submodules
 ```sh
-git submodule update --init recursive
+git submodule update --init --recursive
 ```
 Copy Debian packages with Intel SDK and Tofino Model into the root folder
 of SAI Challenger sources:
