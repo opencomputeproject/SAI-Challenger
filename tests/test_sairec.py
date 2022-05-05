@@ -8,6 +8,13 @@ def vs_teardown(npu, exec_params):
         npu.reset()
 
 
+@pytest.fixture(scope="function")
+def tofino_teardown(npu, exec_params):
+    yield
+    if "tofino" in exec_params["npu"]:
+        npu.reset()
+
+
 @pytest.mark.parametrize(
     "fname",
     [
@@ -32,3 +39,20 @@ def test_apply_sairec(npu, exec_params, dataplane, fname, vs_teardown):
     npu.cleanup()
     time.sleep(5)
     npu.apply_rec("/sai/sonic-sairedis/tests/" + fname)
+
+
+@pytest.mark.parametrize(
+    "fname",
+    [
+        "t0_full.rec",
+        "t1_full.rec",
+        "t1_lag_full.rec",
+    ],
+)
+def test_tofino_scenario(npu, exec_params, dataplane, fname, tofino_teardown):
+    if 'tofino' not in exec_params["npu"]:
+        pytest.skip("Tofino specific scenario")
+
+    npu.cleanup()
+    time.sleep(15)
+    npu.apply_rec("/sai-challenger/platform/intel/scenarios/" + fname)
