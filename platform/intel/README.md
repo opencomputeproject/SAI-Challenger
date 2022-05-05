@@ -1,6 +1,9 @@
 ## To start SAI Challenger on top of SAI implementation for Tofino Model
-
-Install Debian packages with Intel SDK and Tofino Model into the root folder
+Update submodules
+```sh
+git submodule update --init recursive
+```
+Copy Debian packages with Intel SDK and Tofino Model into the root folder
 of SAI Challenger sources:
 ```sh
 bfnsdk_1.0.0_amd64.deb
