@@ -1,0 +1,138 @@
+{
+    "PortToIf": [
+        {
+            "device_port":0,
+            "if": "eth1"
+        },
+        {
+            "device_port":1,
+            "if": "eth2"
+        },
+        {
+            "device_port":2,
+            "if": "eth3"
+        },
+        {
+            "device_port":3,
+            "if": "eth4"
+        },
+        {
+            "device_port":4,
+            "if": "eth5"
+        },
+        {
+            "device_port":5,
+            "if": "eth6"
+        },
+        {
+            "device_port":6,
+            "if": "eth7"
+        },
+        {
+            "device_port":7,
+            "if": "eth8"
+        },
+        {
+            "device_port":8,
+            "if": "eth9"
+        },
+        {
+            "device_port":9,
+            "if": "eth10"
+        },
+        {
+            "device_port":10,
+            "if": "eth11"
+        },
+        {
+            "device_port":11,
+            "if": "eth12"
+        },
+        {
+            "device_port":12,
+            "if": "eth13"
+        },
+        {
+            "device_port":13,
+            "if": "eth14"
+        },
+        {
+            "device_port":14,
+            "if": "eth15"
+        },
+        {
+            "device_port":15,
+            "if": "eth16"
+        },
+        {
+            "device_port":16,
+            "if": "eth17"
+        },
+        {
+            "device_port":17,
+            "if": "eth18"
+        },
+        {
+            "device_port":18,
+            "if": "eth19"
+        },
+        {
+            "device_port":19,
+            "if": "eth20"
+        },
+        {
+            "device_port":20,
+            "if": "eth21"
+        },
+        {
+            "device_port":21,
+            "if": "eth22"
+        },
+        {
+            "device_port":22,
+            "if": "eth23"
+        },
+        {
+            "device_port":23,
+            "if": "eth24"
+        },
+        {
+            "device_port":24,
+            "if": "eth25"
+        },
+        {
+            "device_port":25,
+            "if": "eth26"
+        },
+        {
+            "device_port":26,
+            "if": "eth27"
+        },
+        {
+            "device_port":27,
+            "if": "eth28"
+        },
+        {
+            "device_port":28,
+            "if": "eth29"
+        },
+        {
+            "device_port":29,
+            "if": "eth30"
+        },
+        {
+            "device_port":30,
+            "if": "eth31"
+        },
+        {
+            "device_port":31,
+            "if": "eth32"
+        },
+        {
+            "_comment": "Map ethernet CPU port 64 to eth133",
+            "device_port":64,
+            "if": "eth133"
+        }
+    ]
+}
+
