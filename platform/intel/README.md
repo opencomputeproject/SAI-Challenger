@@ -28,5 +28,5 @@ docker run --name sai-challenger-run \
 
 Run SAI Challenger testcases:
 ```sh
-docker exec -ti sai-challenger-run pytest --npu=tofino --sku=tofino_32x100g -v
+docker exec -ti sai-challenger-run pytest --npu=tofino --sku=tofino_32x25g --traffic -v
 ```
