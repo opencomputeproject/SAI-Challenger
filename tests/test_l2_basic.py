@@ -1,5 +1,6 @@
 import ipaddress
 import pytest
+import time
 from sai import SaiObjType
 from ptf.testutils import simple_tcp_packet, send_packet, verify_packets, verify_packet, verify_no_packet_any, verify_no_packet, verify_any_packet_any_port
 
@@ -490,7 +491,7 @@ def test_l2_mtu(npu, dataplane):
                                         eth_dst='00:22:22:22:22:22',
                                         eth_src='00:11:11:11:11:11',
                                         dl_vlan_enable=True,
-                                        vlan_vid=vlan_id,
+                                        vlan_vid=int(vlan_id),
                                         ip_dst='10.0.0.1',
                                         ip_id=101,
                                         ip_ttl=64)
@@ -506,7 +507,7 @@ def test_l2_mtu(npu, dataplane):
                                          eth_dst='00:22:22:22:22:22',
                                          eth_src='00:11:11:11:11:11',
                                          dl_vlan_enable=True,
-                                         vlan_vid=vlan_id,
+                                         vlan_vid=int(vlan_id),
                                          ip_dst='10.0.0.1',
                                          ip_id=101,
                                          ip_ttl=64)

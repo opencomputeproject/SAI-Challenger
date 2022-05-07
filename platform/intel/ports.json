@@ -2,136 +2,136 @@
     "PortToIf": [
         {
             "device_port":0,
-            "if": "eth1"
+            "if": "veth1"
         },
         {
             "device_port":1,
-            "if": "eth2"
+            "if": "veth2"
         },
         {
             "device_port":2,
-            "if": "eth3"
+            "if": "veth3"
         },
         {
             "device_port":3,
-            "if": "eth4"
+            "if": "veth4"
         },
         {
             "device_port":4,
-            "if": "eth5"
+            "if": "veth5"
         },
         {
             "device_port":5,
-            "if": "eth6"
+            "if": "veth6"
         },
         {
             "device_port":6,
-            "if": "eth7"
+            "if": "veth7"
         },
         {
             "device_port":7,
-            "if": "eth8"
+            "if": "veth8"
         },
         {
             "device_port":8,
-            "if": "eth9"
+            "if": "veth9"
         },
         {
             "device_port":9,
-            "if": "eth10"
+            "if": "veth10"
         },
         {
             "device_port":10,
-            "if": "eth11"
+            "if": "veth11"
         },
         {
             "device_port":11,
-            "if": "eth12"
+            "if": "veth12"
         },
         {
             "device_port":12,
-            "if": "eth13"
+            "if": "veth13"
         },
         {
             "device_port":13,
-            "if": "eth14"
+            "if": "veth14"
         },
         {
             "device_port":14,
-            "if": "eth15"
+            "if": "veth15"
         },
         {
             "device_port":15,
-            "if": "eth16"
+            "if": "veth16"
         },
         {
             "device_port":16,
-            "if": "eth17"
+            "if": "veth17"
         },
         {
             "device_port":17,
-            "if": "eth18"
+            "if": "veth18"
         },
         {
             "device_port":18,
-            "if": "eth19"
+            "if": "veth19"
         },
         {
             "device_port":19,
-            "if": "eth20"
+            "if": "veth20"
         },
         {
             "device_port":20,
-            "if": "eth21"
+            "if": "veth21"
         },
         {
             "device_port":21,
-            "if": "eth22"
+            "if": "veth22"
         },
         {
             "device_port":22,
-            "if": "eth23"
+            "if": "veth23"
         },
         {
             "device_port":23,
-            "if": "eth24"
+            "if": "veth24"
         },
         {
             "device_port":24,
-            "if": "eth25"
+            "if": "veth25"
         },
         {
             "device_port":25,
-            "if": "eth26"
+            "if": "veth26"
         },
         {
             "device_port":26,
-            "if": "eth27"
+            "if": "veth27"
         },
         {
             "device_port":27,
-            "if": "eth28"
+            "if": "veth28"
         },
         {
             "device_port":28,
-            "if": "eth29"
+            "if": "veth29"
         },
         {
             "device_port":29,
-            "if": "eth30"
+            "if": "veth30"
         },
         {
             "device_port":30,
-            "if": "eth31"
+            "if": "veth31"
         },
         {
             "device_port":31,
-            "if": "eth32"
+            "if": "veth32"
         },
         {
-            "_comment": "Map ethernet CPU port 64 to eth133",
+            "_comment": "Map ethernet CPU port 64 to veth133",
             "device_port":64,
-            "if": "eth133"
+            "if": "veth133"
         }
     ]
 }
