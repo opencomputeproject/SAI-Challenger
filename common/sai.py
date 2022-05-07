@@ -167,8 +167,8 @@ class Sai:
         self.rec2vid = {}
 
         self.client_mode = not os.path.isfile("/usr/bin/redis-server")
-        self.libsaivs = (exec_params["saivs"] or
-                         (not self.client_mode and not os.path.isfile("/usr/local/lib/libsai.so")))
+        libsai = os.path.isfile("/usr/lib/libsai.so") or os.path.isfile("/usr/local/lib/libsai.so")
+        self.libsaivs = exec_params["saivs"] or (not self.client_mode and not libsai)
         self.run_traffic = exec_params["traffic"] and not self.libsaivs
         self.sku = exec_params["sku"]
 
