@@ -36,8 +36,6 @@ def test_apply_sairec(npu, exec_params, dataplane, fname, vs_teardown):
     if exec_params["server"] != 'localhost':
         pytest.skip("Currently not supported in client-server mode")
 
-    npu.cleanup()
-    time.sleep(5)
     npu.apply_rec("/sai/sonic-sairedis/tests/" + fname)
 
 
@@ -53,6 +51,4 @@ def test_tofino_scenario(npu, exec_params, dataplane, fname, tofino_teardown):
     if 'tofino' not in exec_params["npu"]:
         pytest.skip("Tofino specific scenario")
 
-    npu.cleanup()
-    time.sleep(15)
     npu.apply_rec("/sai-challenger/platform/intel/scenarios/" + fname)

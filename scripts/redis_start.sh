@@ -3,8 +3,8 @@
 # Script to start Redis using supervisord
 #
 
-if [ $(pgrep -x tofino-model | wc -l) = "1" ]; then
-    killall -q tofino-model
+if [ $(pgrep -x syncd | wc -l) = "1" ]; then
+    killall -q syncd
 fi
 
 exec /usr/bin/redis-server /etc/redis/redis.conf \
