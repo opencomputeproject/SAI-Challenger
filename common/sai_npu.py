@@ -85,7 +85,6 @@ class SaiNpu(Sai):
 
     def reset(self):
         self.cleanup()
-        time.sleep(5)
         attr = []
         self.init(attr)
 

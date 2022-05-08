@@ -211,6 +211,14 @@ class Sai:
                 return attr[1]
         return None
 
+    def asser_syncd_running(self, tout=30):
+        for i in range(tout):
+            time.sleep(1)
+            numsub = self.r.execute_command('PUBSUB', 'NUMSUB', 'ASIC_STATE_CHANNEL@1')
+            if numsub[1] >= 1:
+                return
+        assert False, "SyncD has not started yet..."
+
     def cleanup(self):
         '''
         Flushes Redis DB and restarts syncd application.
@@ -237,6 +245,7 @@ class Sai:
         self.r.shutdown()
         self.cache = {}
         self.rec2vid = {}
+        self.asser_syncd_running()
 
     def alloc_vid(self, obj_type):
         vid = None
@@ -810,6 +819,10 @@ class Sai:
         return rec
 
     def apply_rec(self, fname):
+        # Since it's expected that sairedis.rec file contains a full configuration,
+        # we must flush both Redis and NPU state before we start.
+        self.cleanup()
+
         oids = []
         records = self.__parse_rec(fname)
         for cnt, record in records.items():
