@@ -1,14 +1,14 @@
 import pytest
 import time
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="module")
 def vs_teardown(npu, exec_params):
     yield
     if exec_params["npu"] == "vs":
         npu.reset()
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="module")
 def tofino_teardown(npu, exec_params):
     yield
     if "tofino" in exec_params["npu"]:
