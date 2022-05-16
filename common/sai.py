@@ -243,6 +243,7 @@ class Sai:
         self.r.flushall()
         self.loglevel_db.hmset('syncd:syncd', {'LOGLEVEL':self.loglevel, 'LOGOUTPUT':'SYSLOG'})
         self.r.shutdown()
+        time.sleep(2)
         self.cache = {}
         self.rec2vid = {}
         self.asser_syncd_running()
