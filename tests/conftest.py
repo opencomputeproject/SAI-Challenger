@@ -7,6 +7,7 @@ import imp
 import signal
 import random
 import unittest
+import glob
 
 curdir = os.path.dirname(os.path.realpath(__file__))
 ptfdir = os.path.join(curdir, '../ptf/src')
@@ -18,9 +19,6 @@ import ptf.ptfutils
 
 commondir = os.path.join(curdir, '../common')
 sys.path.append(commondir)
-
-npudir = os.path.join(curdir, '../npu')
-sys.path.append(npudir)
 
 from sai_npu import SaiNpu
 from sai_dataplane import SaiDataPlane
@@ -117,7 +115,8 @@ def pytest_addoption(parser):
     parser.addoption("--traffic", action="store_true", default=False, help="run tests with traffic")
     parser.addoption("--saivs", action="store_true", default=False, help="running tests on top of libsaivs")
     parser.addoption("--loglevel", action="store", default='NOTICE', help="syncd logging level")
-    parser.addoption("--npu", action="store", default='vs', help="NPU type")
+    parser.addoption("--npu", action="store", default='BCM56850', help="NPU type")
+    parser.addoption("--target", action="store", default='', help="The target device with this NPU")
     parser.addoption("--sku", action="store", default=None, help="SKU mode")
 
 
@@ -129,6 +128,7 @@ def exec_params(request):
     config_param["saivs"] = request.config.getoption("--saivs")
     config_param["loglevel"] = request.config.getoption("--loglevel")
     config_param["npu"] = request.config.getoption("--npu")
+    config_param["target"] = request.config.getoption("--target")
     config_param["sku"] = request.config.getoption("--sku")
     return config_param
 
@@ -159,18 +159,27 @@ def npu(exec_params):
     if exec_params["npu"] == "generic":
         npu = SaiNpu(exec_params)
     else:
+        npu_path = None
         npu_mod = None
-        npu_name = "sai_npu_" + exec_params["npu"]
+        module_name = "sai_npu"
+
         try:
-            npu_mod = imp.load_module(npu_name, *imp.find_module(npu_name))
+            npu_path = glob.glob("../platform/**/" + exec_params["npu"] + "/", recursive=True)
+            npu_path = npu_path[0]
         except:
-            logging.critical("Failed to import " + npu_name + " NPU module")
+            logging.critical("Failed to find " + exec_params["npu"] + " NPU folder")
+            sys.exit(1)
+        
+        try:
+            npu_mod = imp.load_module(module_name, *imp.find_module(module_name, [npu_path + "../"]))
+        except:
+            logging.critical("Failed to import a module for {} NPU".format(exec_params["npu"]))
             sys.exit(1)
 
         try:
             npu = npu_mod.SaiNpuImpl(exec_params)
         except:
-            logging.critical("Failed to instantiate " + npu_name + " NPU")
+            logging.critical("Failed to instantiate sai_npu module for {} NPU".format(exec_params["npu"]))
             sys.exit(1)
 
     if npu is not None:
