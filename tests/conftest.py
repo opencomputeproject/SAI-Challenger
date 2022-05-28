@@ -171,18 +171,25 @@ def npu(exec_params):
         except:
             logging.critical("Failed to find " + exec_params["asic"] + " NPU folder")
             sys.exit(1)
-        
-        try:
-            npu_mod = imp.load_module(module_name, *imp.find_module(module_name, [asic_dir + "../"]))
-        except:
-            logging.critical("Failed to import a module for {} NPU".format(exec_params["asic"]))
-            sys.exit(1)
 
         try:
-            npu = npu_mod.SaiNpuImpl(exec_params)
+            npu_mod = imp.load_module(module_name, *imp.find_module(module_name, [asic_dir]))
         except:
-            logging.critical("Failed to instantiate sai_npu module for {} NPU".format(exec_params["asic"]))
-            sys.exit(1)
+            logging.info("No {} specific 'sai_npu' module defined..".format(exec_params["asic"]))
+            try:
+                npu_mod = imp.load_module(module_name, *imp.find_module(module_name, [asic_dir + "../"]))
+            except:
+                logging.warn("No platform specific 'sai_npu' module defined..")
+
+        if npu_mod is not None:
+            try:
+                npu = npu_mod.SaiNpuImpl(exec_params)
+            except:
+                logging.critical("Failed to instantiate 'sai_npu' module for {}".format(exec_params["asic"]))
+                sys.exit(1)
+        else:
+            logging.info("Falling back to the default 'sai_npu' module..")
+            npu = SaiNpu(exec_params)
 
     if npu is not None:
         npu.reset()
