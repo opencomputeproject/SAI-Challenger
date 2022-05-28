@@ -2,16 +2,16 @@ import pytest
 import time
 
 @pytest.fixture(scope="module")
-def vs_teardown(npu, exec_params):
+def bcm56850_teardown(npu):
     yield
-    if exec_params["npu"] == "vs":
+    if npu.name == "BCM56850":
         npu.reset()
 
 
 @pytest.fixture(scope="module")
-def tofino_teardown(npu, exec_params):
+def tofino_teardown(npu):
     yield
-    if "tofino" in exec_params["npu"]:
+    if npu.name == "tofino":
         npu.reset()
 
 
@@ -29,8 +29,8 @@ def tofino_teardown(npu, exec_params):
         "BCM56850/remove_create_port.rec"
     ],
 )
-def test_apply_sairec(npu, exec_params, dataplane, fname, vs_teardown):
-    if exec_params["npu"] != "vs":
+def test_apply_sairec(npu, exec_params, dataplane, fname, bcm56850_teardown):
+    if npu.name != "BCM56850":
         pytest.skip("VS specific scenario")
 
     if exec_params["server"] != 'localhost':
@@ -47,8 +47,8 @@ def test_apply_sairec(npu, exec_params, dataplane, fname, vs_teardown):
         "t1_lag_full.rec",
     ],
 )
-def test_tofino_scenario(npu, exec_params, dataplane, fname, tofino_teardown):
-    if 'tofino' not in exec_params["npu"]:
+def test_tofino_scenario(npu, dataplane, fname, tofino_teardown):
+    if npu.name != 'tofino':
         pytest.skip("Tofino specific scenario")
 
-    npu.apply_rec("/sai-challenger/platform/intel/tofino/scenarios/" + fname)
+    npu.apply_rec(f"/sai-challenger/platform/intel/{npu.name}/{npu.target}/scenarios/{fname}")

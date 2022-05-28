@@ -115,7 +115,7 @@ def pytest_addoption(parser):
     parser.addoption("--traffic", action="store_true", default=False, help="run tests with traffic")
     parser.addoption("--saivs", action="store_true", default=False, help="running tests on top of libsaivs")
     parser.addoption("--loglevel", action="store", default='NOTICE', help="syncd logging level")
-    parser.addoption("--npu", action="store", default='BCM56850', help="NPU type")
+    parser.addoption("--asic", action="store", default='BCM56850', help="ASIC type")
     parser.addoption("--target", action="store", default='', help="The target device with this NPU")
     parser.addoption("--sku", action="store", default=None, help="SKU mode")
 
@@ -127,7 +127,7 @@ def exec_params(request):
     config_param["traffic"] = request.config.getoption("--traffic")
     config_param["saivs"] = request.config.getoption("--saivs")
     config_param["loglevel"] = request.config.getoption("--loglevel")
-    config_param["npu"] = request.config.getoption("--npu")
+    config_param["asic"] = request.config.getoption("--asic")
     config_param["target"] = request.config.getoption("--target")
     config_param["sku"] = request.config.getoption("--sku")
     return config_param
@@ -155,31 +155,33 @@ def logging_setup(config):
 @pytest.fixture(scope="session")
 def npu(exec_params):
     npu = None
+    exec_params["asic_dir"] = None
 
-    if exec_params["npu"] == "generic":
+    if exec_params["asic"] == "generic":
         npu = SaiNpu(exec_params)
     else:
-        npu_path = None
+        asic_dir = None
         npu_mod = None
         module_name = "sai_npu"
 
         try:
-            npu_path = glob.glob("../platform/**/" + exec_params["npu"] + "/", recursive=True)
-            npu_path = npu_path[0]
+            asic_dir = glob.glob("../platform/**/" + exec_params["asic"] + "/", recursive=True)
+            asic_dir = asic_dir[0]
+            exec_params["asic_dir"] = asic_dir
         except:
-            logging.critical("Failed to find " + exec_params["npu"] + " NPU folder")
+            logging.critical("Failed to find " + exec_params["asic"] + " NPU folder")
             sys.exit(1)
         
         try:
-            npu_mod = imp.load_module(module_name, *imp.find_module(module_name, [npu_path + "../"]))
+            npu_mod = imp.load_module(module_name, *imp.find_module(module_name, [asic_dir + "../"]))
         except:
-            logging.critical("Failed to import a module for {} NPU".format(exec_params["npu"]))
+            logging.critical("Failed to import a module for {} NPU".format(exec_params["asic"]))
             sys.exit(1)
 
         try:
             npu = npu_mod.SaiNpuImpl(exec_params)
         except:
-            logging.critical("Failed to instantiate sai_npu module for {} NPU".format(exec_params["npu"]))
+            logging.critical("Failed to instantiate sai_npu module for {} NPU".format(exec_params["asic"]))
             sys.exit(1)
 
     if npu is not None:

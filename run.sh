@@ -12,6 +12,7 @@ IMAGE_TYPE="standalone"
 ASIC_TYPE=""
 ASIC_PATH=""
 TARGET=""
+PRIVILEGED=""
 
 print-help() {
     echo
@@ -24,6 +25,7 @@ print-help() {
     echo "     ASIC to be tested"
     echo "  -t TARGET"
     echo "     Target device with this NPU"
+    echo "  -p Run Docker in --privileged mode"
     echo
     exit 0
 }
@@ -46,6 +48,9 @@ while [[ $# -gt 0 ]]; do
         "-t"|"--target")
             TARGET="$2"
             shift
+        ;;
+        "-p")
+            PRIVILEGED="--privileged"
         ;;
     esac
     shift
@@ -109,11 +114,13 @@ if [ "${IMAGE_TYPE}" = "standalone" ]; then
     docker run --name sc-${ASIC_TYPE}-${TARGET}-run \
 	-v $(pwd):/sai-challenger \
 	--cap-add=NET_ADMIN \
+	${PRIVILEGED} \
 	--device /dev/net/tun:/dev/net/tun \
 	-d sc-${ASIC_TYPE}-${TARGET}
 elif [ "${IMAGE_TYPE}" = "server" ]; then
     docker run --name sc-server-${ASIC_TYPE}-${TARGET}-run \
 	--cap-add=NET_ADMIN \
+	${PRIVILEGED} \
 	--device /dev/net/tun:/dev/net/tun \
 	-d sc-server-${ASIC_TYPE}-${TARGET}
 else
