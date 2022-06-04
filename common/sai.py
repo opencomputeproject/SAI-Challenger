@@ -170,7 +170,10 @@ class Sai:
         libsai = os.path.isfile("/usr/lib/libsai.so") or os.path.isfile("/usr/local/lib/libsai.so")
         self.libsaivs = exec_params["saivs"] or (not self.client_mode and not libsai)
         self.run_traffic = exec_params["traffic"] and not self.libsaivs
+        self.name = exec_params["asic"]
+        self.target = exec_params["target"]
         self.sku = exec_params["sku"]
+        self.asic_dir = exec_params["asic_dir"]
 
     @staticmethod
     def get_meta(obj_type=None):
