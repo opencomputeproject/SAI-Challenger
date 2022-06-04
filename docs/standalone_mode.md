@@ -1,6 +1,6 @@
 ## Running SAI Challenger in standalone mode
 
-Build Docker image for `trident2` ASIC for `saivs` target:
+Build Docker image for ASIC `trident2` target `saivs`:
 ```sh
 ./build.sh -a trident2 -t saivs
 ```
