@@ -7,13 +7,13 @@ Build Docker image for ASIC `tofino` target `model`:
 ./build.sh -a tofino -t model
 ```
 
-Start Docker container:
+Start Docker container in `--privileged` mode:
 ```sh
-./run.sh -a tofino -t model
+./run.sh -a tofino -t model -p
 ```
 
 Run SAI Challenger testcases:
 ```sh
-./exec.sh -a tofino -t model pytest --sku=tofino_32x25g --traffic -v -k "test_l2_basic"
+./exec.sh -a tofino -t model pytest --sku=32x25g --traffic -v -k "test_l2_basic"
 ```
 
