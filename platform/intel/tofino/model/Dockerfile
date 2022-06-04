@@ -2,6 +2,10 @@ FROM sc-base
 
 MAINTAINER andriy.kokhan@gmail.com
 
+ENV SC_PLATFORM=intel
+ENV SC_ASIC=tofino
+ENV SC_TARGET=model
+
 WORKDIR /sai
 
 RUN apt-get install -y libgoogle-perftools4

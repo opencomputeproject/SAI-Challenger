@@ -2,6 +2,10 @@ FROM sc-base
 
 MAINTAINER andriy.kokhan@gmail.com
 
+ENV SC_PLATFORM=broadcom
+ENV SC_ASIC=BCM56850
+ENV SC_TARGET=saivs
+
 WORKDIR /sai
 
 RUN git clone https://github.com/Azure/sonic-sairedis.git \

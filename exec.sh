@@ -41,11 +41,19 @@ while [[ $# -gt 0 ]]; do
             shift
         ;;
         "-a"|"--asic")
-            ASIC_TYPE="$2"
+            if [ -z "${EXEC_CMD}" ]; then
+                ASIC_TYPE="$2"
+            else
+                EXEC_CMD="${EXEC_CMD} ${1} ${2}"
+            fi
             shift
         ;;
         "-t"|"--target")
-            TARGET="$2"
+            if [ -z "${EXEC_CMD}" ]; then
+                TARGET="$2"
+            else
+                EXEC_CMD="${EXEC_CMD} ${1} ${2}"
+            fi
             shift
         ;;
         *)
@@ -106,9 +114,13 @@ print-start-options() {
     echo "==========================================="
     echo
     echo " Docker image type  : ${IMAGE_TYPE}"
-    echo " ASIC name          : ${ASIC_TYPE}"
-    echo " ASIC target        : ${TARGET}"
-    echo " Platform path      : ${ASIC_PATH}"
+
+    if [ "${IMAGE_TYPE}" != "client" ]; then
+        echo " ASIC name          : ${ASIC_TYPE}"
+        echo " ASIC target        : ${TARGET}"
+        echo " Platform path      : ${ASIC_PATH}"
+    fi
+
     echo " Container name     : ${CONTAINER}"
     echo " Command            : ${EXEC_CMD}"
     echo
