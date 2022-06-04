@@ -5,4 +5,3 @@ for num in {1..32}; do
     ip link set eth"$num" up
     ip link set veth"$num" up
 done
-

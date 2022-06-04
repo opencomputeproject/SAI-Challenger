@@ -1,32 +1,19 @@
-## To start SAI Challenger on top of SAI implementation for Tofino Model
-Update submodules
+## Running SAI Challenger in standalone mode
+
+Copy Debian packages `bfnsdk_1.0.0_amd64.deb` and `bfnplatform_1.0.0_amd64.deb` with Intel SDK and Tofino Model into `platform/intel/tofino/model/` folder.
+
+Build Docker image for ASIC `tofino` target `model`:
 ```sh
-git submodule update --init --recursive
-```
-Copy Debian packages with Intel SDK and Tofino Model into the root folder
-of SAI Challenger sources:
-```sh
-bfnsdk_1.0.0_amd64.deb
-bfnplatform_1.0.0_amd64.deb
+./build.sh -a tofino -t model
 ```
 
-Build SAI Challenger Docker image with SAI implementation for Tofino Model:
+Start Docker container:
 ```sh
-docker build -f Dockerfile.saivs.intel -t saivs-challenger-intel .
+./run.sh -a tofino -t model
 ```
-
-Start SAI Challenger:
-```sh
-docker run --name sai-challenger-run \
-	-v $(pwd):/sai-challenger \
-	--device /dev/net/tun:/dev/net/tun \
-	--privileged \
-	-d saivs-challenger-intel
-```
-
-## To run SAI Challenger testcases on top of Tofino Model
 
 Run SAI Challenger testcases:
 ```sh
-docker exec -ti sai-challenger-run pytest --npu=tofino --sku=tofino_32x25g --traffic -v
+./exec.sh -a tofino -t model pytest --sku=tofino_32x25g --traffic -v -k "test_l2_basic"
 ```
+

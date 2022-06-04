@@ -1,51 +1,34 @@
-## To start SAI Challenger on top of vslib in client-server mode
+## Running SAI Challenger in client-server mode
 
-In client-server mode, SAI server - syncd linked with vslib - runs in one Docker container.
-Whereas the client - SAI Challenger - runs in the separate Docker container. These two Docker containers can also be running on the separate physical hosts.
-
-Build Docker image with vslib SAI implementation:
+Build client Docker image
 ```sh
-docker build -f Dockerfile.saivs.server -t saivs-server .
+./build.sh -i client
 ```
 
-Build SAI Challenger Docker image with SAI tests:
+Build server Docker image for ASIC `trident2` target `saivs`:
 ```sh
-docker build -f Dockerfile.client -t sai-challenger-client .
-```
-
-Start SAI Challenger server:
-```sh
-docker run --name saivs \
-	--cap-add=NET_ADMIN \
-	--device /dev/net/tun:/dev/net/tun \
-	-d saivs-server
+./build.sh -i server -a trident2 -t saivs
 ```
 
 Start SAI Challenger client:
 ```sh
-docker run --name sai-challenger \
-	-v $(pwd):/sai-challenger \
-	--cap-add=NET_ADMIN \
-	--device /dev/net/tun:/dev/net/tun \
-	-d sai-challenger-client
+./run.sh -i client
 ```
 
-## To run SAI Challenger testcases in client-server mode
+Start SAI Challenger server:
+```sh
+./run.sh -i server -a trident2 -t saivs
+```
 
 Run SAI Challenger testcases:
 ```sh
-docker exec -ti sai-challenger pytest \
-	--sai-server=<saivs-server-ip> --traffic \
-	-v test_l2_basic.py
+./exec.sh -i client pytest --asic trident2 --target saivs --sai-server=172.17.0.4 -v -k "test_l2_basic"
 ```
 
 Run SAI Challenger testcases and generate HTML report:
 ```sh
-docker exec -ti sai-challenger pytest -v \
-	--sai-server=<saivs-server-ip> --traffic \
-	--html=report.html --self-contained-html \
-	test_l2_basic.py
+./exec.sh -i client pytest --asic trident2 --target saivs --sai-server=172.17.0.4 -v -k "test_l2_basic" --html=report.html --self-contained-html
 ```
 
-**NOTE:** The option `--traffic` will be ignored when running on vslib SAI implementation.
+**NOTE:** The option `--traffic` will be ignored when running on `saivs` target.
 

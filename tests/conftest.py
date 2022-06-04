@@ -7,6 +7,7 @@ import imp
 import signal
 import random
 import unittest
+import glob
 
 curdir = os.path.dirname(os.path.realpath(__file__))
 ptfdir = os.path.join(curdir, '../ptf/src')
@@ -18,9 +19,6 @@ import ptf.ptfutils
 
 commondir = os.path.join(curdir, '../common')
 sys.path.append(commondir)
-
-npudir = os.path.join(curdir, '../npu')
-sys.path.append(npudir)
 
 from sai_npu import SaiNpu
 from sai_dataplane import SaiDataPlane
@@ -117,7 +115,8 @@ def pytest_addoption(parser):
     parser.addoption("--traffic", action="store_true", default=False, help="run tests with traffic")
     parser.addoption("--saivs", action="store_true", default=False, help="running tests on top of libsaivs")
     parser.addoption("--loglevel", action="store", default='NOTICE', help="syncd logging level")
-    parser.addoption("--npu", action="store", default='vs', help="NPU type")
+    parser.addoption("--asic", action="store", default=os.getenv('SC_ASIC'), help="ASIC type")
+    parser.addoption("--target", action="store", default=os.getenv('SC_TARGET'), help="The target device with this NPU")
     parser.addoption("--sku", action="store", default=None, help="SKU mode")
 
 
@@ -128,7 +127,8 @@ def exec_params(request):
     config_param["traffic"] = request.config.getoption("--traffic")
     config_param["saivs"] = request.config.getoption("--saivs")
     config_param["loglevel"] = request.config.getoption("--loglevel")
-    config_param["npu"] = request.config.getoption("--npu")
+    config_param["asic"] = request.config.getoption("--asic")
+    config_param["target"] = request.config.getoption("--target")
     config_param["sku"] = request.config.getoption("--sku")
     return config_param
 
@@ -155,23 +155,41 @@ def logging_setup(config):
 @pytest.fixture(scope="session")
 def npu(exec_params):
     npu = None
+    exec_params["asic_dir"] = None
 
-    if exec_params["npu"] == "generic":
+    if exec_params["asic"] == "generic":
         npu = SaiNpu(exec_params)
     else:
+        asic_dir = None
         npu_mod = None
-        npu_name = "sai_npu_" + exec_params["npu"]
+        module_name = "sai_npu"
+
         try:
-            npu_mod = imp.load_module(npu_name, *imp.find_module(npu_name))
+            asic_dir = glob.glob("../platform/**/" + exec_params["asic"] + "/", recursive=True)
+            asic_dir = asic_dir[0]
+            exec_params["asic_dir"] = asic_dir
         except:
-            logging.critical("Failed to import " + npu_name + " NPU module")
+            logging.critical("Failed to find " + exec_params["asic"] + " NPU folder")
             sys.exit(1)
 
         try:
-            npu = npu_mod.SaiNpuImpl(exec_params)
+            npu_mod = imp.load_module(module_name, *imp.find_module(module_name, [asic_dir]))
         except:
-            logging.critical("Failed to instantiate " + npu_name + " NPU")
-            sys.exit(1)
+            logging.info("No {} specific 'sai_npu' module defined..".format(exec_params["asic"]))
+            try:
+                npu_mod = imp.load_module(module_name, *imp.find_module(module_name, [asic_dir + "../"]))
+            except:
+                logging.warn("No platform specific 'sai_npu' module defined..")
+
+        if npu_mod is not None:
+            try:
+                npu = npu_mod.SaiNpuImpl(exec_params)
+            except:
+                logging.critical("Failed to instantiate 'sai_npu' module for {}".format(exec_params["asic"]))
+                sys.exit(1)
+        else:
+            logging.info("Falling back to the default 'sai_npu' module..")
+            npu = SaiNpu(exec_params)
 
     if npu is not None:
         npu.reset()
