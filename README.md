@@ -28,6 +28,10 @@ cd sai-challenger/
 git submodule update --init --recursive
 ```
 
+## Porting SAI Challenger to new platform
+
+For more information on how port SAI Challenger to new platform, please refer to [Porting Guide](docs/porting_guide.md) document.
+
 ## SAI Challenger internals
 
 For more information on how SAI Challenger operates on SAI, please refer to [SAI operation](docs/sai_operation.md) document.
