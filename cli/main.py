@@ -13,7 +13,10 @@ exec_params = {
     "traffic": False,
     "saivs": False,
     "loglevel": "NOTICE",
-    "sku": None
+    "sku": None,
+    "asic": None,
+    "asic_dir": None,
+    "target": None
 }
 
 
