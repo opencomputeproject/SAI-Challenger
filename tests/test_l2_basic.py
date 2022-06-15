@@ -254,7 +254,8 @@ def test_l2_lag(npu, dataplane):
     9. Send packets from each of the members and check they are received on port 4 (with port 4's destination MAC)
     10. Clean up configuration
     """
-    if npu.name == 'tofino':
+    if 'tofino' in npu.name:
+        # Skip for all Tofino NPUs
         pytest.skip("Temporarily disabled for Tofino NPU")
 
     vlan_id = "10"
