@@ -222,6 +222,28 @@ class Sai:
                 return
         assert False, "SyncD has not started yet..."
 
+    def set_loglevel(self, sai_api, loglevel):
+        '''
+        Sets the logging level for SAI APIs (sai_api_t)
+
+        Parameters:
+            sai_api (str): The SAI API (sai_api_t) in string representation.
+                           Both short and long form is supported.
+            loglevel (str): The SAI log level (sai_log_level_t) in string representation.
+                           Both short and long form is supported. The list of supported
+                           log levels in short form of representation:
+                           DEBUG, INFO, NOTICE, WARN, ERROR, CRITICAL.
+        '''
+        if not sai_api.startswith("SAI_API_"):
+            sai_api = "SAI_API_" + sai_api
+
+        if not loglevel.startswith("SAI_LOG_LEVEL_"):
+            loglevel = "SAI_LOG_LEVEL_" + loglevel
+
+        self.loglevel_db.sadd(sai_api + "_KEY_SET", sai_api)
+        self.loglevel_db.hset("_" + sai_api + ":" + sai_api, "LOGLEVEL", loglevel)
+        self.loglevel_db.publish(sai_api + "_CHANNEL@3", "G")
+
     def cleanup(self):
         '''
         Flushes Redis DB and restarts syncd application.
