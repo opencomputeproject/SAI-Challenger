@@ -12,7 +12,7 @@ RUN echo "deb [arch=amd64] http://debian-archive.trafficmanager.net/debian/ bust
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Install generic packages
-RUN apt-get -o Acquire::Check-Valid-Until=false update && apt-get install -y \
+RUN apt-get update && apt-get -o Acquire::Check-Valid-Until=false update && apt-get install -y \
         apt-utils \
         procps \
         build-essential \
@@ -23,10 +23,10 @@ RUN apt-get -o Acquire::Check-Valid-Until=false update && apt-get install -y \
         rsyslog \
         supervisor
 
-RUN pip3 install pytest pytest_dependency pytest-html
+RUN pip3 install pytest pytest_dependency pytest-html pdbpp
 
 # Install PTF dependencies
-RUN pip3 install scapy
+RUN pip3 install scapy dpkt
 
 # Install ptf_nn_agent dependencies
 RUN apt-get install -y libffi-dev cmake wget \
@@ -46,7 +46,6 @@ RUN apt-get install -y libffi-dev cmake wget \
 RUN sed -ri '/imklog/s/^/#/' /etc/rsyslog.conf
 
 COPY configs/client/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-COPY scripts/veth-create.sh /usr/bin/veth-create.sh
 
 WORKDIR /sai-challenger/tests
 

@@ -12,7 +12,7 @@ RUN echo "deb [arch=amd64] http://debian-archive.trafficmanager.net/debian/ bust
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Install generic packages
-RUN apt-get -o Acquire::Check-Valid-Until=false update && apt-get install -y \
+RUN apt-get update && apt-get -o Acquire::Check-Valid-Until=false update && apt-get install -y \
         apt-utils \
         vim \
         curl \
@@ -91,7 +91,7 @@ RUN sed -ri 's/^# unixsocket/unixsocket/' /etc/redis/redis.conf \
 RUN sed -ri '/imklog/s/^/#/' /etc/rsyslog.conf
 
 # Setup supervisord
-COPY scripts/veth-create.sh    /usr/bin/veth-create.sh
+COPY scripts/wait-interfaces.sh /usr/bin/wait-interfaces.sh
 COPY scripts/redis_start.sh    /usr/bin/redis_start.sh
 COPY configs/server/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
