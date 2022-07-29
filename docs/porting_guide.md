@@ -1,12 +1,12 @@
 # Porting Guide
 
-SAI Challenger (SC) uses plugin-based approach to build and start a platform specific instance. So, it is expected that a new platform porting process will be as simple as adding a new entry in the `platform/` folder with very limited number of platform specific scripts and configuration files.
+SAI Challenger (SC) uses plugin-based approach to build and start a platform specific instance. So, it is expected that a new platform porting process will be as simple as adding a new entry in the `npu/` folder with very limited number of platform specific scripts and configuration files.
 
-## Platform folder
+## NPU folder
 
-Typical platform folder structure:
+Typical npu folder structure:
 ```sh
-platform/
+npu/
 ├── <VENDOR>
 │   ├── <ASIC-1>
 │   │   ├── <TARGET-1>
@@ -28,11 +28,11 @@ platform/
 │   └── sai_npu.py    (optional)
 ```
 
-The platform folder MAY contain multiple vendors. Each vendor folder MAY contain 1..n ASICs and optional vendor-specific `sai_npu` module. Each ASIC folder MAY contain 1..n targets (either HW device or simulator or emulator) and optional ASIC-specific `sai_npu` module. Each target's folder MUST contain either `Dockerfile` for standalone mode or `Dockerfile.server` for client-server mode or both. Also, the target's folder MAY contain optional `sku/` folder with JSON files that define front panel ports configuration as well as others target-specific files and folders.
+The NPU folder MAY contain multiple vendors. Each vendor folder MAY contain 1..n ASICs and optional vendor-specific `sai_npu` module. Each ASIC folder MAY contain 1..n targets (either HW device or simulator or emulator) and optional ASIC-specific `sai_npu` module. Each target's folder MUST contain either `Dockerfile` for standalone mode or `Dockerfile.server` for client-server mode or both. Also, the target's folder MAY contain optional `sku/` folder with JSON files that define front panel ports configuration as well as others target-specific files and folders.
 
 E.g.,
 ```sh
-platform/
+npu/
 ├── broadcom
 │   ├── BCM56850
 │   │   └── saivs

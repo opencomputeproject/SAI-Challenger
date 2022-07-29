@@ -51,4 +51,4 @@ def test_tofino_scenario(npu, dataplane, fname, tofino_teardown):
     if npu.name != 'tofino':
         pytest.skip("Tofino specific scenario")
 
-    npu.apply_rec(f"/sai-challenger/platform/intel/{npu.name}/{npu.target}/scenarios/{fname}")
+    npu.apply_rec(f"/sai-challenger/npu/intel/{npu.name}/{npu.target}/scenarios/{fname}")

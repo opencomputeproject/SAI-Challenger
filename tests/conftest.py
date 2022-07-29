@@ -165,7 +165,7 @@ def npu(exec_params):
         module_name = "sai_npu"
 
         try:
-            asic_dir = glob.glob("../platform/**/" + exec_params["asic"] + "/", recursive=True)
+            asic_dir = glob.glob("../npu/**/" + exec_params["asic"] + "/", recursive=True)
             asic_dir = asic_dir[0]
             exec_params["asic_dir"] = asic_dir
         except:
@@ -179,7 +179,7 @@ def npu(exec_params):
             try:
                 npu_mod = imp.load_module(module_name, *imp.find_module(module_name, [asic_dir + "../"]))
             except:
-                logging.warn("No platform specific 'sai_npu' module defined..")
+                logging.warn("No NPU specific 'sai_npu' module defined.")
 
         if npu_mod is not None:
             try:
