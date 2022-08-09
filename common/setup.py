@@ -11,5 +11,5 @@ setup(
     install_requires=[
         'ptf',
     ],
-    py_modules=['sai', 'sai_npu', 'sai_dataplane'],
+    py_modules=['sai', 'sai_npu', 'sai_dataplane', 'sai_environment', 'sai_abstractions'],
 )

@@ -1,0 +1,34 @@
+{"NPU": [
+  {
+    "alias": "vs",
+    "asic": "trident2",
+    "target": "saivs",
+    "type": "vs",
+    "sku": null,
+    "mode": "client-server",
+    "sai_server_ip": "172.17.0.3",
+    "port_groups": [{"1x10G": "Ethernet0", "init": "1x10G", "alias": 0},
+                    {"1x10G": "Ethernet1", "init": "1x10G", "alias": 1}
+                  ],
+    "sai_dataplane": "ptf_nn"
+  }
+],
+
+"DATAPLANE": [
+  {
+    "alias": "ptf",
+    "type": "ptf",
+    "mode": "eth",
+    "port_groups": [{"10G": "veth1", "init": "10G", "alias": 0},
+                    {"10G": "veth2", "init": "10G", "alias": 1}
+                   ]
+  }
+],
+
+"CONNECTIONS": {
+    "ptf->vs": [[0, 0],
+                [1, 1]
+               ]
+}
+
+}
