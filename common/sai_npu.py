@@ -1,9 +1,6 @@
 import json
-import time
-from sai import Sai
-from sai import SaiData
-from sai import SaiObjType
-from sai_dataplane import SaiDataPlane
+
+from sai import Sai, SaiData, SaiObjType
 from sai_dataplane import SaiHostifDataPlane
 
 
@@ -226,7 +223,7 @@ class SaiNpu(Sai):
             self.hostif_map[(0, int(inum))] = socket_addr
             assert self.remote_iface_is_up(iname), f"Interface {iname} must be up before dataplane init."
 
-        self.hostif_dataplane = SaiHostifDataPlane(ifaces, self.server_ip)
+        self.hostif_dataplane = SaiHostifDataPlane(self.exec_params, ifaces, self.server_ip)
         self.hostif_dataplane.init()
         return self.hostif_dataplane
 
@@ -240,12 +237,12 @@ class SaiNpu(Sai):
     def hostif_pkt_listen(self):
         assert self.hostif_map
         if self.port_map is None:
-            self.port_map = SaiDataPlane.getPortMap()
-        SaiDataPlane.setPortMap(self.hostif_map)
+            self.port_map = self.hostif_dataplane.getPortMap()
+        self.hostif_dataplane.setPortMap(self.hostif_map)
 
     def dataplane_pkt_listen(self):
         if self.hostif_map and self.port_map:
-            SaiDataPlane.setPortMap(self.port_map)
+            self.hostif_dataplane.setPortMap(self.port_map)
             self.port_map = None
 
     def set_sku_mode(self, sku):
