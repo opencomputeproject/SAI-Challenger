@@ -1,9 +1,12 @@
-from enum import Enum
-import redis
-import time
 import json
 import os
+import time
+from enum import Enum
+
 import pytest
+import redis
+
+from sai_abstractions import AbstractEntity
 
 
 class SaiObjType(Enum):
@@ -154,12 +157,15 @@ class SaiData:
         return int(self.value())
 
 
-class Sai:
+class Sai(AbstractEntity):
 
     attempts = 40
 
+    # TODO: rename exec_params to setup_dict or so
     def __init__(self, exec_params):
-        self.server_ip = exec_params["server"]
+        super().__init__(exec_params)
+        self.alias = exec_params['alias']
+        self.server_ip = exec_params["sai_server_ip"]
         self.loglevel = exec_params["loglevel"]
         self.r = redis.Redis(host=self.server_ip, port=6379, db=1)
         self.loglevel_db = redis.Redis(host=self.server_ip, port=6379, db=3)
@@ -168,7 +174,7 @@ class Sai:
 
         self.client_mode = not os.path.isfile("/usr/bin/redis-server")
         libsai = os.path.isfile("/usr/lib/libsai.so") or os.path.isfile("/usr/local/lib/libsai.so")
-        self.libsaivs = exec_params["saivs"] or (not self.client_mode and not libsai)
+        self.libsaivs = exec_params["type"] == "vs" or (not self.client_mode and not libsai)
         self.run_traffic = exec_params["traffic"] and not self.libsaivs
         self.name = exec_params["asic"]
         self.target = exec_params["target"]
