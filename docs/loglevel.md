@@ -1,6 +1,6 @@
 # Logging
 
-The SAI Challenger uses Redis DB as a North-Bound interface and as a configuration and state storage.​ The Redis DB namespace #3 (LOGLEVEL_DB) is used as a logger configuration storage for both SyncD and SAI. On SyncD start, the default SAI log levels for each SAI API are configured through [setSaiApiLogLevel()](https://github.com/Azure/sonic-sairedis/blob/bc7ccc2d5c2ddad53ebd696f81ff3d45aacbf438/syncd/Syncd.cpp#L58):
+The SAI Challenger uses Redis DB as a North-Bound interface and as a configuration and state storage.​ The Redis DB namespace #3 (LOGLEVEL_DB) is used as a logger configuration storage for both SyncD and SAI. On SyncD start, the default SAI log levels for each SAI API are configured through [setSaiApiLogLevel()](https://github.com/sonic-net/sonic-sairedis/blob/bc7ccc2d5c2ddad53ebd696f81ff3d45aacbf438/syncd/Syncd.cpp#L58):
 
 ```sh
 > redis-cli​
@@ -53,7 +53,7 @@ Examples:
 ```
 
 For more details, please refer to:
-https://github.com/Azure/sonic-swss-common/blob/master/common/loglevel.cpp
+https://github.com/sonic-net/sonic-swss-common/blob/master/common/loglevel.cpp
 
 Also, SAI Challenger has `--loglevel` pytest custom option (defaults to `NOTICE`) to set SyncD loglevel on pytest start.​
 

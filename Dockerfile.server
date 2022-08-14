@@ -12,7 +12,7 @@ RUN echo "deb [arch=amd64] http://debian-archive.trafficmanager.net/debian/ bust
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Install generic packages
-RUN apt-get update && apt-get -o Acquire::Check-Valid-Until=false update && apt-get install -y \
+RUN apt-get -o Acquire::Check-Valid-Until=false update && apt-get install -y \
         apt-utils \
         vim \
         curl \
@@ -45,11 +45,12 @@ RUN apt-get install -y \
         libnl-3-dev libnl-genl-3-dev libnl-route-3-dev libnl-nf-3-dev libzmq3-dev
 
 COPY sai.env /
-RUN git clone --recursive https://github.com/Azure/sonic-swss-common \
+RUN git clone --recursive https://github.com/sonic-net/sonic-swss-common \
         && cd sonic-swss-common \
         && . /sai.env \
         && git checkout ${SWSS_COMMON_ID} \
-        && ./autogen.sh && ./configure && dpkg-buildpackage -us -uc -b \
+        && ./autogen.sh \
+        && dpkg-buildpackage -us -uc -b --jobs=auto \
         && cd .. \
         && dpkg -i libswsscommon_1.0.0_amd64.deb \
         && dpkg -i libswsscommon-dev_1.0.0_amd64.deb \

@@ -3,7 +3,7 @@
 # Script to start syncd using supervisord
 #
 
-CMD=/usr/local/bin/syncd
+CMD=/usr/bin/syncd
 CMD_ARGS=
 # Set synchronous mode
 CMD_ARGS+=" -s"
