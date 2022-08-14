@@ -13,9 +13,7 @@ add_executable(${TARGET} generate_attrs.cpp)
 target_link_libraries(${TARGET} PUBLIC
     saimetadata)
 target_include_directories(${TARGET} PUBLIC
-    ${SAI}/inc
-    ${SAI}/meta
-    ${SAI}/experimental
+    ${SAI}
     json/single_include/nlohmann)
 
 install(TARGETS ${TARGET}
