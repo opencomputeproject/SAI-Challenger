@@ -1,0 +1,20 @@
+{
+    "name": "SAI Challenger TD2",
+    "category": "router",
+    "description": "SAI Challenger Trident2 SAIVS Server",
+    "vendor_name": "PLVision",
+    "vendor_url": "https://plvision.eu/",
+    "product_name": "SAI Challenger TD2 SAIVS",
+    "product_url": "https://github.com/opencomputeproject/SAI-Challenger",
+    "registry_version": 3,
+    "status": "experimental",
+    "maintainer": "Andriy Kokhan",
+    "maintainer_email": "andriy.kokhan@gmail.com",
+    "usage": "TBD",
+    "first_port_name": "eth1",
+    "docker": {
+        "adapters": 33,
+        "image": "sc-server-trident2-saivs",
+        "console_type": "telnet"
+    }
+}
