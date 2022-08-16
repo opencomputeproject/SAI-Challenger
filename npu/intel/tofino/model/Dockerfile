@@ -35,7 +35,7 @@ RUN git clone https://github.com/sonic-net/sonic-sairedis.git \
         && rm -rf sonic-sairedis/* \
         && mv tests sonic-sairedis/
 
-# Build attr_list_generator and generate /etc/sai/sai.json
+# Build SAI attributes metadata JSON generator and generate /etc/sai/sai.json
 RUN cd /sai/gen_attr_list \
         && mkdir build && cd build \
         && cmake .. \

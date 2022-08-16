@@ -1,10 +1,6 @@
-FROM sc-base
+FROM sc-server-base
 
 MAINTAINER andriy.kokhan@gmail.com
-
-ENV SC_PLATFORM=intel
-ENV SC_ASIC=tofino2
-ENV SC_TARGET=model
 
 WORKDIR /sai
 
@@ -47,12 +43,12 @@ RUN cd /sai/gen_attr_list \
 COPY scripts/redis_start.sh   /usr/bin/redis_start.sh
 COPY scripts/model_start.sh   /usr/bin/model_start.sh
 COPY scripts/syncd_start.sh   /usr/bin/syncd_start.sh
-COPY scripts/veth-create.sh   /usr/bin/veth-create.sh
+COPY scripts/server/veth-create.sh     /usr/bin/veth-create.sh
 COPY configs/ports.json                /usr/share/sonic/hwsku/ports.json
 COPY configs/switch-sai-cpu-veth.conf  /usr/share/sonic/hwsku/switch-tna-sai.conf
-COPY configs/supervisord.conf          /etc/supervisor/conf.d/supervisord.conf
+COPY configs/server/supervisord.conf   /etc/supervisor/conf.d/supervisord.conf
 
-WORKDIR /sai-challenger/tests
+WORKDIR /sai-challenger
 
 CMD ["/usr/bin/supervisord"]
 
