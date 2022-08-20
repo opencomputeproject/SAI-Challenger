@@ -108,7 +108,10 @@ trap print-build-options EXIT
 if [ "${IMAGE_TYPE}" = "standalone" ]; then
     docker build -f Dockerfile -t sc-base .
 elif [ "${IMAGE_TYPE}" = "server" ]; then
+    find ${ASIC_PATH}/../ -type f -name \*.py -exec install -D {} .build/{} \;
+    find ${ASIC_PATH}/../ -type f -name \*.json -exec install -D {} .build/{} \;
     docker build -f Dockerfile.server -t sc-server-base .
+    rm -rf .build/
 else
     docker build -f Dockerfile.client -t sc-client .
 fi

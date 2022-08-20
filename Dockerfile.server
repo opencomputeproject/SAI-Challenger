@@ -123,6 +123,7 @@ COPY common/sai.py       /sai-challenger/common/sai.py
 COPY common/sai_npu.py   /sai-challenger/common/sai_npu.py
 COPY common/sai_dataplane.py         /sai-challenger/common/sai_dataplane.py
 COPY topologies          /sai-challenger/topologies
+COPY .build/npu          /sai-challenger/npu
 COPY scripts/sai-cli-completion.sh   /sai-challenger/scripts/sai-cli-completion.sh
 RUN echo ". /sai-challenger/scripts/sai-cli-completion.sh" >> /root/.bashrc
 
