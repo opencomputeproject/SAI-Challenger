@@ -7,7 +7,7 @@ import imp
 
 # Setup JSON root keys
 CONNECTIONS = 'CONNECTIONS'
-SUPPORTED_SETUP_KEYS = ('DATAPLANE', 'NPU', CONNECTIONS)
+SUPPORTED_SETUP_KEYS = ('DATAPLANE', 'NPU', 'DPU', CONNECTIONS)
 
 
 def init_setup(options):
@@ -69,6 +69,37 @@ def load_npu_module(equip_type, equip):
 
     return module_name, npu_mod
 
+def load_dpu_module(equip_type, equip):
+    """Load DPU implementation module.
+    Expected folder structure is described in docs/porting_guide.md
+    """
+
+    equip["asic_dir"] = None
+    asic_name = equip.get("asic")
+    asic_dir = None
+    dpu_mod = None
+    module_name = f"sai_{equip_type.lower()}"
+
+    if asic_name:
+        try:
+            asic_dir = glob.glob(f"../{equip_type.lower()}/**/{asic_name}/", recursive=True)
+            asic_dir = asic_dir[0]
+            equip["asic_dir"] = asic_dir
+        except:
+            logging.critical(f"Failed to find {asic_name} in {equip_type} folder")
+            sys.exit(1)
+
+    try:
+        dpu_mod = imp.load_module(module_name, *imp.find_module(module_name, [asic_dir]))
+    except:
+        logging.info(f"No specific '{module_name}' module defined in {asic_dir}.")
+        logging.info(f"Looking for '{module_name}' in {os.path.abspath(asic_dir + '../')}.")
+        try:
+            dpu_mod = imp.load_module(module_name, *imp.find_module(module_name, [asic_dir + "../"]))
+        except:
+            logging.warn(f"No {equip_type} specific module {module_name} defined.")
+
+    return module_name, dpu_mod
 
 def load_dataplane_module(equip_type, equip):
     """Load DATAPLANE implementation module.
