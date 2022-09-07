@@ -16,9 +16,10 @@
 
 "DATAPLANE": [
   {
-    "alias": "ptf",
-    "type": "ptf",
-    "mode": "eth",
+    "alias": "tg",
+    "type": "snappi",
+    "mode": "ixia_c",
+    "controller": "https://127.0.0.1:443",
     "port_groups": [{"10G": "veth1", "init": "10G", "alias": 0},
                     {"10G": "veth2", "init": "10G", "alias": 1}
                    ]
@@ -26,7 +27,7 @@
 ],
 
 "CONNECTIONS": {
-    "ptf->dash": [[0, 0],
+    "tg->dash": [[0, 0],
                 [1, 1]
                ]
 }
