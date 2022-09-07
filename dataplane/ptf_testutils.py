@@ -183,19 +183,25 @@ class SnappiDataPlaneUtilsWrapper:
         pcap_bytes = tt.pcap_bts_polling(self.api.get_capture, capture_req, timeout, step)
 
         cap_dict[port_name] = []
-        for ts, pcap_pkt in dpkt.pcap.Reader(pcap_bytes):
-            if sys.version_info[0] == 2:
-                raw = [ord(b) for b in pcap_pkt]
-            else:
-                raw = list(pcap_pkt)
-            cap_dict[port_name].append(raw)
+        try:
+            for ts, pcap_pkt in dpkt.pcap.Reader(pcap_bytes):
+                if sys.version_info[0] == 2:
+                    raw = [ord(b) for b in pcap_pkt]
+                else:
+                    raw = list(pcap_pkt)
+                cap_dict[port_name].append(raw)
+        except Exception as err:
+            # Handle only error when buffer is empty.
+            if "got 0, 24 needed at least" not in str(err):
+                logging.warning(f"Error on capture buffer read: {err}")
+                raise
 
         cap_pkts = cap_dict[port_name]
 
         for cap_pkt in cap_pkts:
             indx_to_cut = len(cap_pkt) - 4
             cap_pkt = cap_pkt[:indx_to_cut]  # delete FCS
-            assert len(pkt) == len(cap_pkt), f"Expected {len(pkt)} packets, captured {len(cap_pkt)}"
+            assert len(pkt) == len(cap_pkt), f"Expected {len(pkt)}B packets, captured {len(cap_pkt)}B"
 
             brx = bytes(cap_pkt)
             rx_pkt = Ether(brx)
@@ -213,6 +219,8 @@ class SnappiDataPlaneUtilsWrapper:
                 tt.print_pkts_side_by_side(p1, p2)
 
                 assert equal, f"Packets don't match: {str(p1)} != {str(p2)}"
+        else:
+            assert cap_pkts, "No packets captured"
 
         return True
 
