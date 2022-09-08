@@ -1,7 +1,7 @@
 import logging
 
-from sai import Sai
-from sai_data import SaiObjType
+from saichallenger.common.sai import Sai
+from saichallenger.common.sai_data import SaiObjType
 
 
 class SaiDpu(Sai):

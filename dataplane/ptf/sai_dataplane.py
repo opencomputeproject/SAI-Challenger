@@ -8,7 +8,7 @@ import time
 
 import ptf.ptfutils
 from ptf import config
-from common.sai_dataplane import SaiDataplane
+from saichallenger.common.sai_dataplane import SaiDataplane
 
 
 ##@var DEBUG_LEVELS

@@ -1,6 +1,6 @@
 from functools import wraps
 
-from sai import SaiObjType
+from saichallenger.common.sai import SaiObjType
 
 
 class SaiObject:

@@ -1,4 +1,4 @@
-from sai_dpu import SaiDpu
+from saichallenger.common.sai_dpu import SaiDpu
 
 
 class SaiDpuImpl(SaiDpu):
