@@ -40,7 +40,7 @@ def get(oid, attrs):
 
     sai = SaiNpu(exec_params)
 
-    obj_type = sai.vid_to_type(oid)
+    obj_type = sai.__vid_to_type(oid)
     for attr in attrs:
         attr_type = sai.get_obj_attr_type(obj_type, attr)
         if attr_type is None:
@@ -166,7 +166,7 @@ def dump(oid):
         return False
 
     sai = SaiNpu(exec_params)
-    obj_type = sai.vid_to_type(oid)
+    obj_type = sai.__vid_to_type(oid)
     meta = sai.get_meta(obj_type)
 
     for attr in meta['attributes']:

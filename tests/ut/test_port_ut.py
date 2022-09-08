@@ -1,5 +1,5 @@
 import pytest
-from sai import SaiObjType
+from sai_data import SaiObjType
 from sai import Sai
 
 port_attrs = Sai.get_obj_attrs(SaiObjType.PORT)
