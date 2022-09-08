@@ -4,7 +4,7 @@ import sys
 import time
 
 import dpkt
-from sai_dataplane import SaiDataplane
+from saichallenger.common.sai_dataplane import SaiDataplane
 from snappi import snappi
 
 BASE_TENGINE_PORT = 5555

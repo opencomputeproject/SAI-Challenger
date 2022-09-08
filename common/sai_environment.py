@@ -1,17 +1,18 @@
 import glob
+import imp
 import json
 import logging
 import os
 import sys
-import imp
-from pathlib import Path
-sys.path.insert(0, '/sai-challenger/common')
 
 # Setup JSON root keys
 CONNECTIONS = 'CONNECTIONS'
 SUPPORTED_SETUP_KEYS = ('DATAPLANE', 'NPU', 'DPU', CONNECTIONS)
 
-file_dir = Path(__file__).parent
+SAI_CHALLENGER_PATH = os.curdir
+if os.getenv("SAI_CHALLENGER_PATH"):
+    SAI_CHALLENGER_PATH = os.path.join(os.getenv("SAI_CHALLENGER_PATH"), 'tests')
+
 
 def init_setup(options):
 
@@ -53,7 +54,7 @@ def load_npu_module(equip_type, equip):
 
     if asic_name:
         try:
-            asic_dir = glob.glob(f"../{equip_type.lower()}/**/{asic_name}/", recursive=True)
+            asic_dir = glob.glob(f"{SAI_CHALLENGER_PATH}/../{equip_type.lower()}/**/{asic_name}/", recursive=True)
             asic_dir = asic_dir[0]
             equip["asic_dir"] = asic_dir
         except:
@@ -85,7 +86,7 @@ def load_dpu_module(equip_type, equip):
 
     if asic_name:
         try:
-            asic_dir = glob.glob(f"../{equip_type.lower()}/**/{asic_name}/", recursive=True)
+            asic_dir = glob.glob(f"{SAI_CHALLENGER_PATH}/../{equip_type.lower()}/**/{asic_name}/", recursive=True)
             asic_dir = asic_dir[0]
             equip["asic_dir"] = asic_dir
         except:
@@ -114,7 +115,7 @@ def load_dataplane_module(equip_type, equip):
     module_name = f"sai_{equip_type.lower()}"
 
     try:
-        impl_dir = glob.glob(f"../{equip_type.lower()}/{dataplane_name}/", recursive=True)
+        impl_dir = glob.glob(f"{SAI_CHALLENGER_PATH}/../{equip_type.lower()}/{dataplane_name}/", recursive=True)
         impl_dir = impl_dir[0]
         equip["impl_dir"] = impl_dir
     except:

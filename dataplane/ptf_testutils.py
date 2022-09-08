@@ -5,7 +5,7 @@ import dpkt
 from scapy.layers.l2 import Ether
 
 import ptf.testutils as ptfTestutils
-import traffic_utils as tt
+import saichallenger.dataplane.traffic_utils as tt
 
 default_step = 0.2
 default_timeout = 2

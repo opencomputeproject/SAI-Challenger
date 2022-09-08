@@ -3,9 +3,9 @@ import logging
 import os
 import pytest
 
-from sai_abstractions import AbstractEntity
-from sai_client.sai_client import SaiClient
-from sai_data import SaiObjType
+from saichallenger.common.sai_abstractions import AbstractEntity
+from saichallenger.common.sai_data import SaiObjType
+from saichallenger.common.sai_client.sai_client import SaiClient
 
 
 class Sai(AbstractEntity):
