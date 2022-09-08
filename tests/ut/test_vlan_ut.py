@@ -1,5 +1,5 @@
 import pytest
-from sai import SaiObjType
+from sai_data import SaiObjType
 
 TEST_VLAN_ID = "100"
 

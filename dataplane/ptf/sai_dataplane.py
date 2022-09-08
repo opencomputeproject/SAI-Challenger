@@ -8,8 +8,7 @@ import time
 
 import ptf.ptfutils
 from ptf import config
-
-from sai_dataplane import SaiDataplane
+from common.sai_dataplane import SaiDataplane
 
 
 ##@var DEBUG_LEVELS
@@ -104,8 +103,8 @@ def logging_setup(config):
 class SaiDataplaneImpl(SaiDataplane):
 
     def __init__(self, exec_params):
-        super().__init__(exec_params)
         self.alias = exec_params['alias']
+        super().__init__(exec_params)
 
     def _build_interfaces(self):
         interfaces = []
