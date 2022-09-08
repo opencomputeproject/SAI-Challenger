@@ -1,5 +1,5 @@
 import pytest
-from sai import SaiObjType
+from sai_data import SaiObjType
 import json
 
 from ptf.testutils import simple_tcp_packet, send_packet, verify_packets, verify_no_packet_any

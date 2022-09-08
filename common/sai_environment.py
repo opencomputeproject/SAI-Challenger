@@ -4,11 +4,14 @@ import logging
 import os
 import sys
 import imp
+from pathlib import Path
+sys.path.insert(0, '/sai-challenger/common')
 
 # Setup JSON root keys
 CONNECTIONS = 'CONNECTIONS'
 SUPPORTED_SETUP_KEYS = ('DATAPLANE', 'NPU', 'DPU', CONNECTIONS)
 
+file_dir = Path(__file__).parent
 
 def init_setup(options):
 
@@ -65,7 +68,7 @@ def load_npu_module(equip_type, equip):
         try:
             npu_mod = imp.load_module(module_name, *imp.find_module(module_name, [asic_dir + "../"]))
         except:
-            logging.warn(f"No {equip_type} specific module {module_name} defined.")
+            logging.exception(f"No {equip_type} specific module {module_name} defined.", exc_info=True)
 
     return module_name, npu_mod
 
@@ -92,12 +95,12 @@ def load_dpu_module(equip_type, equip):
     try:
         dpu_mod = imp.load_module(module_name, *imp.find_module(module_name, [asic_dir]))
     except:
-        logging.info(f"No specific '{module_name}' module defined in {asic_dir}.")
-        logging.info(f"Looking for '{module_name}' in {os.path.abspath(asic_dir + '../')}.")
+        logging.exception(f"No specific '{module_name}' module defined in {asic_dir}.", exc_info=True)
+        logging.exception(f"Looking for '{module_name}' in {os.path.abspath(asic_dir + '../')}.")
         try:
             dpu_mod = imp.load_module(module_name, *imp.find_module(module_name, [asic_dir + "../"]))
         except:
-            logging.warn(f"No {equip_type} specific module {module_name} defined.")
+            logging.exception(f"No {equip_type} specific module {module_name} defined.", exc_info=True)
 
     return module_name, dpu_mod
 
@@ -119,9 +122,9 @@ def load_dataplane_module(equip_type, equip):
         sys.exit(1)
 
     try:
-        dataplane_mod = imp.load_module(module_name, *imp.find_module(module_name, [impl_dir]))
+        dataplane_mod = imp.load_module(module_name, *imp.find_module(module_name, [os.path.abspath(impl_dir)]))
     except:
-        logging.warn(f"No {equip_type} specific module {module_name} defined in {impl_dir} folder.")
+        logging.exception(f"No {equip_type} specific module {module_name} defined in {impl_dir} folder.", exc_info=True)
 
     return module_name, dataplane_mod
 
@@ -150,6 +153,8 @@ def load_implementations(setup_dict, options=None):
                 form_equip_connections(setup_dict[CONNECTIONS], equip)
 
             module_name, impl_mod = globals()[f"load_{equip_type.lower()}_module"](equip_type, equip)
+
+            logging.info(f"Loading module {module_name} with mod {impl_mod}")
 
             if impl_mod is not None:
                 try:

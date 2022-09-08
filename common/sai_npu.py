@@ -1,6 +1,7 @@
 import json
 
-from sai import Sai, SaiData, SaiObjType
+from sai_data import SaiData, SaiObjType
+from sai import Sai
 from sai_dataplane import SaiHostifDataPlane
 
 
@@ -9,11 +10,11 @@ class SaiNpu(Sai):
     def __init__(self, exec_params):
         super().__init__(exec_params)
 
-        self.oid = "oid:0x0"
-        self.dot1q_br_oid = "oid:0x0"
-        self.default_vlan_oid = "oid:0x0"
+        self.switch_oid = "0x0"
+        self.dot1q_br_oid = "0x0"
+        self.default_vlan_oid = "0x0"
         self.default_vlan_id = "0"
-        self.default_vrf_oid = "oid:0x0"
+        self.default_vrf_oid = "0x0"
         self.port_oids = []
         self.dot1q_bp_oids = []
         self.hostif_dataplane = None
@@ -21,6 +22,8 @@ class SaiNpu(Sai):
         self.hostif_map = None
         self.sku_config = None
 
+    def get_switch_id(self):
+        return self.switch_oid
     def init(self, attr):
         # Load SKU configuration if any
         if self.sku is not None:
@@ -37,38 +40,37 @@ class SaiNpu(Sai):
         sw_attr.append("SAI_SWITCH_ATTR_TYPE")
         sw_attr.append("SAI_SWITCH_TYPE_NPU")
 
-        self.oid = self.create(SaiObjType.SWITCH, sw_attr)
-        self.rec2vid[self.oid] = self.oid
+        self.switch_oid = self.create(obj_type=SaiObjType.SWITCH, attrs=sw_attr)
 
         # Default .1Q bridge
-        self.dot1q_br_oid = self.get(self.oid, ["SAI_SWITCH_ATTR_DEFAULT_1Q_BRIDGE_ID", "oid:0x0"]).oid()
-        assert (self.dot1q_br_oid != "oid:0x0")
+        self.dot1q_br_oid = self.get(oid=self.switch_oid, attrs=["SAI_SWITCH_ATTR_DEFAULT_1Q_BRIDGE_ID", "0x0"]).oid()
+        assert (self.dot1q_br_oid != "0x0")
 
         # Default VLAN
-        self.default_vlan_oid = self.get(self.oid, ["SAI_SWITCH_ATTR_DEFAULT_VLAN_ID", "oid:0x0"]).oid()
-        assert (self.default_vlan_oid != "oid:0x0")
+        self.default_vlan_oid = self.get(oid=self.switch_oid, attrs=["SAI_SWITCH_ATTR_DEFAULT_VLAN_ID", "0x0"]).oid()
+        assert (self.default_vlan_oid != "0x0")
 
-        self.default_vlan_id = self.get(self.default_vlan_oid, ["SAI_VLAN_ATTR_VLAN_ID", ""]).to_json()[1]
+        self.default_vlan_id = self.get(oid=self.default_vlan_oid, attrs=["SAI_VLAN_ATTR_VLAN_ID", ""]).to_json()[1]
         assert (self.default_vlan_id != "0")
 
         # Default VRF
-        self.default_vrf_oid = self.get(self.oid, ["SAI_SWITCH_ATTR_DEFAULT_VIRTUAL_ROUTER_ID", "oid:0x0"]).oid()
-        assert (self.default_vrf_oid != "oid:0x0")
+        self.default_vrf_oid = self.get(oid=self.switch_oid, attrs=["SAI_SWITCH_ATTR_DEFAULT_VIRTUAL_ROUTER_ID", "0x0"]).oid()
+        assert (self.default_vrf_oid != "0x0")
 
         # Ports
-        port_num = self.get(self.oid, ["SAI_SWITCH_ATTR_NUMBER_OF_ACTIVE_PORTS", ""]).uint32()
+        port_num = self.get(oid=self.switch_oid, attrs=["SAI_SWITCH_ATTR_NUMBER_OF_ACTIVE_PORTS", ""]).uint32()
         if port_num > 0:
-            self.port_oids = self.get(self.oid,
-                                     ["SAI_SWITCH_ATTR_PORT_LIST", self.make_list(port_num, "oid:0x0")]).oids()
+            self.port_oids = self.get(oid=self.switch_oid,
+                                     attrs=["SAI_SWITCH_ATTR_PORT_LIST", self._make_list(port_num, "0x0")]).oids()
 
             # .1Q bridge ports
-            status, data = self.get(self.dot1q_br_oid, ["SAI_BRIDGE_ATTR_PORT_LIST", "1:oid:0x0"], False)
+            status, data = self.get(oid=self.dot1q_br_oid, attrs=["SAI_BRIDGE_ATTR_PORT_LIST", "1:0x0"], do_assert=False)
             bport_num = data.uint32()
             assert (status == "SAI_STATUS_BUFFER_OVERFLOW")
             assert (bport_num > 0)
 
-            self.dot1q_bp_oids = self.get(self.dot1q_br_oid,
-                                         ["SAI_BRIDGE_ATTR_PORT_LIST", self.make_list(bport_num, "oid:0x0")]).oids()
+            self.dot1q_bp_oids = self.get(oid=self.dot1q_br_oid,
+                                         attrs=["SAI_BRIDGE_ATTR_PORT_LIST", self._make_list(bport_num, "0x0")]).oids()
             assert (bport_num == len(self.dot1q_bp_oids))
 
         # Update SKU
@@ -85,81 +87,30 @@ class SaiNpu(Sai):
         attr = []
         self.init(attr)
 
-    def flush_fdb_entries(self, attrs=None):
-        """
-        To flush all static entries, set SAI_FDB_FLUSH_ATTR_ENTRY_TYPE = SAI_FDB_FLUSH_ENTRY_TYPE_STATIC.
-        To flush both static and dynamic entries, then set SAI_FDB_FLUSH_ATTR_ENTRY_TYPE = SAI_FDB_FLUSH_ENTRY_TYPE_ALL.
-        The API uses AND operation when multiple attributes are specified:
-
-        1) Flush all entries in FDB table - Do not specify any attribute
-        2) Flush all entries by bridge port - Set SAI_FDB_FLUSH_ATTR_BRIDGE_PORT_ID
-        3) Flush all entries by VLAN - Set SAI_FDB_FLUSH_ATTR_BV_ID with object id as vlan object
-        4) Flush all entries by bridge port and VLAN - Set SAI_FDB_FLUSH_ATTR_BRIDGE_PORT_ID
-           and SAI_FDB_FLUSH_ATTR_BV_ID
-        5) Flush all static entries by bridge port and VLAN - Set SAI_FDB_FLUSH_ATTR_ENTRY_TYPE,
-           SAI_FDB_FLUSH_ATTR_BRIDGE_PORT_ID, and SAI_FDB_FLUSH_ATTR_BV_ID
-        """
-        if attrs is None:
-            attrs = ["SAI_FDB_FLUSH_ATTR_ENTRY_TYPE", "SAI_FDB_FLUSH_ENTRY_TYPE_ALL"]
-        if type(attrs) != str:
-            attrs = json.dumps(attrs)
-        status = self.operate("SAI_OBJECT_TYPE_SWITCH:" + self.oid, attrs, "Sflush")
-        assert status[0].decode("utf-8") == 'Sflushresponse'
-        assert status[2].decode("utf-8") == 'SAI_STATUS_SUCCESS'
-
-    def clear_stats(self, obj, attrs, do_assert = True):
-        if obj.startswith("oid:"):
-            obj = self.vid_to_type(obj) + ":" + obj
-        if type(attrs) != str:
-            attrs = json.dumps(attrs)
-        status = self.operate(obj, attrs, "Sclear_stats")
-        status[2] = status[2].decode("utf-8")
-        if do_assert:
-            assert status[2] == 'SAI_STATUS_SUCCESS'
-        return status[2]
-
-    def get_stats(self, obj, attrs, do_assert = True):
-        if obj.startswith("oid:"):
-            obj = self.vid_to_type(obj) + ":" + obj
-        if type(attrs) != str:
-            attrs = json.dumps(attrs)
-        status = self.operate(obj, attrs, "Sget_stats")
-        status[2] = status[2].decode("utf-8")
-        if do_assert:
-            assert status[2] == 'SAI_STATUS_SUCCESS'
-
-        data = SaiData(status[1].decode("utf-8"))
-        if do_assert:
-            return data
-
-        return status[2], data
-
     def create_fdb(self, vlan_oid, mac, bp_oid, action = "SAI_PACKET_ACTION_FORWARD"):
-        self.create('SAI_OBJECT_TYPE_FDB_ENTRY:' + json.dumps(
+        self.create(obj_type=SaiObjType.FDB_ENTRY, key=
                        {
                            "bvid"      : vlan_oid,
                            "mac"       : mac,
-                           "switch_id" : self.oid
-                       }
-                   ),
-                   [
+                           "switch_id" : self.switch_oid
+                       },
+                   attrs=[
                        "SAI_FDB_ENTRY_ATTR_TYPE",           "SAI_FDB_ENTRY_TYPE_STATIC",
                        "SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID", bp_oid,
                        "SAI_FDB_ENTRY_ATTR_PACKET_ACTION",  action
                    ])
 
-    def remove_fdb(self, vlan_oid, mac, do_assert = True):
-        self.remove('SAI_OBJECT_TYPE_FDB_ENTRY:' + json.dumps(
+    def remove_fdb(self, vlan_oid, mac):
+        self.remove(obj_type=SaiObjType.FDB_ENTRY, key=
                        {
                            "bvid"      : vlan_oid,
                            "mac"       : mac,
-                           "switch_id" : self.oid
-                       }),
-                    do_assert)
+                           "switch_id" : self.switch_oid
+                       })
 
     def create_vlan_member(self, vlan_oid, bp_oid, tagging_mode):
-        oid = self.create(SaiObjType.VLAN_MEMBER,
-                    [
+        oid = self.create(obj_type=SaiObjType.VLAN_MEMBER,
+                    attrs=[
                         "SAI_VLAN_MEMBER_ATTR_VLAN_ID",           vlan_oid,
                         "SAI_VLAN_MEMBER_ATTR_BRIDGE_PORT_ID",    bp_oid,
                         "SAI_VLAN_MEMBER_ATTR_VLAN_TAGGING_MODE", tagging_mode
@@ -167,22 +118,22 @@ class SaiNpu(Sai):
         return oid
 
     def remove_vlan_member(self, vlan_oid, bp_oid):
-        assert vlan_oid.startswith("oid:")
+        assert vlan_oid.startswith("0x")
 
         vlan_mbr_oids = []
-        status, data = self.get(vlan_oid, ["SAI_VLAN_ATTR_MEMBER_LIST", "1:oid:0x0"], False)
+        status, data = self.get(oid=vlan_oid, attrs=["SAI_VLAN_ATTR_MEMBER_LIST", "1:0x0"], do_assert=False)
         if status == "SAI_STATUS_SUCCESS":
             vlan_mbr_oids = data.oids()
         elif status == "SAI_STATUS_BUFFER_OVERFLOW":
-            oids = self.make_list(data.uint32(), "oid:0x0")
-            vlan_mbr_oids = self.get(vlan_oid, ["SAI_VLAN_ATTR_MEMBER_LIST", oids]).oids()
+            oids = self._make_list(data.uint32(), "0x0")
+            vlan_mbr_oids = self.get(oid=vlan_oid, attrs=["SAI_VLAN_ATTR_MEMBER_LIST", oids]).oids()
         else:
             assert status == "SAI_STATUS_SUCCESS"
 
         for vlan_mbr_oid in vlan_mbr_oids:
-            oid = self.get(vlan_mbr_oid, ["SAI_VLAN_MEMBER_ATTR_BRIDGE_PORT_ID", "oid:0x0"]).oid()
+            oid = self.get(oid=vlan_mbr_oid, attrs=["SAI_VLAN_MEMBER_ATTR_BRIDGE_PORT_ID", "0x0"]).oid()
             if oid == bp_oid:
-                self.remove(vlan_mbr_oid)
+                self.remove(oid=vlan_mbr_oid)
                 return
 
         assert False
@@ -194,22 +145,20 @@ class SaiNpu(Sai):
         if opt_attr is None:
             opt_attr = []
         attrs += opt_attr
-        self.create('SAI_OBJECT_TYPE_ROUTE_ENTRY:' + json.dumps(
+        self.create(obj_type=SaiObjType.ROUTE_ENTRY, key=
                         {
                              "dest":      dest,
-                             "switch_id": self.oid,
+                             "switch_id": self.switch_oid,
                              "vr":        vrf_oid
-                        }
-                   ), attrs)
+                        }, attrs=attrs)
 
     def remove_route(self, dest, vrf_oid):
-        self.remove('SAI_OBJECT_TYPE_ROUTE_ENTRY:' + json.dumps(
+        self.remove(obj_type=SaiObjType.ROUTE_ENTRY, key=
                        {
                            "dest":      dest,
-                           "switch_id": self.oid,
+                           "switch_id": self.switch_oid,
                            "vr":        vrf_oid
                        })
-                    )
 
     def hostif_dataplane_start(self, ifaces):
         self.hostif_map = dict()
@@ -295,8 +244,8 @@ class SaiNpu(Sai):
 
         # Create bridge ports and default VLAN members
         for port_oid in self.port_oids:
-            bp_oid = self.create(SaiObjType.BRIDGE_PORT,
-                                [
+            bp_oid = self.create(obj_type=SaiObjType.BRIDGE_PORT,
+                                attrs=[
                                     "SAI_BRIDGE_PORT_ATTR_TYPE", "SAI_BRIDGE_PORT_TYPE_PORT",
                                     "SAI_BRIDGE_PORT_ATTR_PORT_ID", port_oid,
                                     #"SAI_BRIDGE_PORT_ATTR_BRIDGE_ID", self.dot1q_br_oid,

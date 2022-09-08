@@ -1,6 +1,6 @@
 import pytest
 from sai import Sai
-from sai import SaiObjType
+from sai_data import SaiObjType
 
 switch_attrs = Sai.get_obj_attrs("SAI_OBJECT_TYPE_VIRTUAL_ROUTER")
 
