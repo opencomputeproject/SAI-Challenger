@@ -1,5 +1,5 @@
 import json
-from sai import Sai
+from saichallenger.common.sai import Sai
 
 
 class SaiPhy(Sai):

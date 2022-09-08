@@ -1,8 +1,8 @@
 import json
 
-from sai_data import SaiData, SaiObjType
-from sai import Sai
-from sai_dataplane import SaiHostifDataPlane
+from saichallenger.common.sai_data import SaiData, SaiObjType
+from saichallenger.common.sai import Sai
+from saichallenger.common.sai_dataplane import SaiHostifDataPlane
 
 
 class SaiNpu(Sai):
