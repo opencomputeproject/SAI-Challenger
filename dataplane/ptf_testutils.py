@@ -1,5 +1,6 @@
 import logging
 import sys
+from random import randint
 
 import dpkt
 from scapy.layers.l2 import Ether
@@ -74,7 +75,7 @@ class SnappiDataPlaneUtilsWrapper:
 
         port_cfg = self.configuration.ports.serialize('dict')[port_id]
 
-        stream_name = stream_name or "stream_{}_{}".format(port_id, id(packet))
+        stream_name = stream_name or "stream_{}_{}_{}".format(port_id, id(packet), randint(1, 9999))
 
         flow = self.configuration.flows.flow(name=stream_name)[-1]
         flow.tx_rx.port.tx_name = port_cfg['name']
@@ -310,7 +311,7 @@ class SnappiDataPlaneUtilsWrapper:
         WARNING: device_number is ignored so far
         """
 
-        for port_id in self.configuration.ports.serialize('dict'):
+        for pid, port in enumerate(self.configuration.ports.serialize('dict')):
             # port_name = self.configuration.ports.serialize('dict')[port_id]['name']
             # logging.info(f'Fetching capture from port {port_name}')
             # capture_req = self.api.capture_request()
@@ -321,7 +322,7 @@ class SnappiDataPlaneUtilsWrapper:
             # assert len(pcap_bytes.getvalue()) == 0, \
             #     "A packet was received on device {}, port {}:{}, but we expected no packets.".format(
             #         device_number, port_id, port_name)
-            self.verify_no_any_packet(port_id, timeout, step)
+            self.verify_no_any_packet(pid, timeout, step)
 
         return True
 
