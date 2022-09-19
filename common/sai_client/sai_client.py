@@ -4,7 +4,8 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 class SaiClient:
-    def __init__(self, driver_config):
+    """SAI client interface to wrap low level SAI calls. Is used to define own SAI wrappers"""
+    def __init__(self, client_config):
         raise NotImplementedError
 
     def cleanup(self):
@@ -15,15 +16,32 @@ class SaiClient:
 
     # CRUD
     def create(self, obj_type, *, key=None, attrs=None, do_assert=True):
+        """
+        Create SAI object of appropriate object type. Key has to be provided if object doesn't care oid.
+        if do_assert is set to False unsuccessful operation silently fails
+        """
+
         raise NotImplementedError
 
     def remove(self, *, oid=None, obj_type=None, key=None, do_assert=True):
+        """
+        Remove SAI object by oid or by key
+        if do_assert is set to False unsuccessful operation silently fails
+        """
         raise NotImplementedError
 
     def set(self, *, oid=None, obj_type=None, key=None, attr=None, do_assert=True):
+        """
+        Set attribute for SAI object.
+        if do_assert is set to False unsuccessful operation silently fails
+        """
         raise NotImplementedError
 
     def get(self, *, oid=None, obj_type=None, key=None, attrs=None, do_assert=True):
+        """
+        Get attributes for SAI object.
+        if do_assert is set to False unsuccessful operation silently fails
+        """
         raise NotImplementedError
 
     # Stats
@@ -65,6 +83,8 @@ class SaiClient:
 
     @staticmethod
     def build(params) -> 'SaiClient':
+        """Load different SAI client implementations based on parameters"""
+        # TODO move to loading different implementations by using python entrypoints mechanism
         if params["type"] == "redis":
             from sai_client.sai_redis_client.sai_redis_client import SaiRedisClient
             sai_client = SaiRedisClient(params["config"])

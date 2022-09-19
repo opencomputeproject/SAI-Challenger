@@ -17,17 +17,17 @@ sys.path.insert(0, parentparentdir)
 from sai_data import SaiObjType, SaiData
 
 class SaiRedisClient(SaiClient):
-
+    """Redis SAI client implementation to wrap low level SAI calls"""
     attempts = 40
 
-    def __init__(self, driver_config):
-        self.server_ip = driver_config["ip"]
-        self.port = driver_config["port"]
-        self.loglevel = driver_config["loglevel"]
+    def __init__(self, client_config):
+        self.server_ip = client_config["ip"]
+        self.port = client_config["port"]
+        self.loglevel = client_config["loglevel"]
 
         self.client_mode = not os.path.isfile("/usr/bin/redis-server")
         libsai = os.path.isfile("/usr/lib/libsai.so") or os.path.isfile("/usr/local/lib/libsai.so")
-        self.libsaivs = driver_config["type"] == "vs" or (not self.client_mode and not libsai)
+        self.libsaivs = client_config["type"] == "vs" or (not self.client_mode and not libsai)
 
         self.r = redis.Redis(host=self.server_ip, port=self.port, db=1)
         self.loglevel_db = redis.Redis(host=self.server_ip, port=self.port, db=3)
