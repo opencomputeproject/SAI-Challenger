@@ -1,4 +1,5 @@
 from functools import wraps
+from typing import Optional
 
 from saichallenger.common.sai import SaiObjType
 
@@ -6,40 +7,65 @@ from saichallenger.common.sai import SaiObjType
 class SaiObject:
     Type = SaiObjType
 
-    __setattr_allow_list__ = ['driver', 'obj_type', 'key', 'oid']
-
-    def __init__(self, driver, obj_type, key=None, attrs=(), _init=True):
-        self.driver = driver
-        self.obj_type = obj_type
-        self.key = key
-        self.oid = self.driver.create(obj_type=self.obj_type, key=self.key, attrs=attrs) if _init else None
+    __setattr_allow_list__ = ['sai_client', 'obj_type', 'key', 'oid']
 
     @classmethod
-    def init_by_existing_oid(cls, driver, oid, obj_type=None):
-        instance = cls(driver, obj_type=driver.get_object_type(oid, default=obj_type), _init=False)
+    def normalize_obj_type(cls, obj_type) -> Optional[SaiObjType]:
+        if isinstance(obj_type, cls.Type):
+            pass
+        elif isinstance(obj_type, str):
+            prefix = 'SAI_OBJECT_TYPE_'
+            if obj_type.startswith(prefix):
+                obj_type = obj_type[len(prefix):]
+            try:
+                obj_type = getattr(cls.Type, obj_type)
+            except AttributeError:
+                return None
+        elif isinstance(obj_type, int):
+            obj_type = cls.Type(obj_type)
+        return obj_type
+
+    @classmethod
+    def create(cls, sai_client, obj_type, key=None, attrs=(), _init=True) -> 'SaiObject':
+        obj_type = cls.normalize_obj_type(obj_type)
+        return getattr(cls, obj_type.name)(sai_client, obj_type=obj_type, key=key, attrs=attrs, _init=_init)
+
+    def __init__(self, sai_client, obj_type, key=None, attrs=(), _init=True):
+        self.sai_client = sai_client
+        self.obj_type = obj_type
+        self.key = key
+        if _init:
+            oid_or_key = self.sai_client.create(obj_type=self.obj_type, key=self.key, attrs=attrs)
+            self.oid = oid_or_key if self.key is None else None
+        else:
+            self.oid = None
+
+    @classmethod
+    def init_by_existing_oid(cls, sai_client, oid, obj_type=None) -> 'SaiObject':
+        instance = cls(sai_client, obj_type=sai_client.get_object_type(oid, default=obj_type), _init=False)
         instance.oid = oid
         return instance
 
     @classmethod
-    def init_by_existing_key(cls, driver, obj_type, key):
-        return cls(driver, obj_type=obj_type, key=key, _init=False)
+    def init_by_existing_key(cls, sai_client, obj_type, key) -> 'SaiObject':
+        return cls(sai_client, obj_type=obj_type, key=key, _init=False)
 
-    def __del__(self):
-        self.driver.remove(self, oid=self.oid, obj_type=self.obj_type, key=self.key)
+    def remove(self):
+        self.sai_client.remove(oid=self.oid, obj_type=self.obj_type, key=self.key)
 
     def __setattr__(self, key, value):
         if key in self.__setattr_allow_list__:
             super().__setattr__(key, value)
         else:
-            self.driver.set(self, oid=self.oid, obj_type=self.obj_type, key=self.key, attrs=[key, value])
+            self.sai_client.set(self, oid=self.oid, obj_type=self.obj_type, key=self.key, attrs=[key, value])
 
     def __getattr__(self, item):
-        result = self.driver.get(self, oid=self.oid, obj_type=self.obj_type, key=self.key, attrs=[item, '<empty>'])
+        result = self.sai_client.get(self, oid=self.oid, obj_type=self.obj_type, key=self.key, attrs=[item, '<empty>'])
         return result if result == '<empty>' else None
 
-    # region Placeholders for generated classes
+    # region Placeholders for generated classes (They are generated on module import, see below)
     @staticmethod
-    def _placeholder_init(driver, key=None, attrs=()) -> 'SaiObject':
+    def _placeholder_init(sai_client, key=None, attrs=()) -> 'SaiObject':
         ...
 
     PORT = _placeholder_init
@@ -143,24 +169,43 @@ class SaiObject:
     IPSEC = _placeholder_init
     IPSEC_PORT = _placeholder_init
     IPSEC_SA = _placeholder_init
+    TABLE_BITMAP_CLASSIFICATION_ENTRY = _placeholder_init
+    TABLE_BITMAP_ROUTER_ENTRY = _placeholder_init
+    TABLE_META_TUNNEL_ENTRY = _placeholder_init
+    DASH_ACL_GROUP = _placeholder_init
+    DASH_ACL_RULE = _placeholder_init
+    DIRECTION_LOOKUP_ENTRY = _placeholder_init
+    ENI_ETHER_ADDRESS_MAP_ENTRY = _placeholder_init
+    ENI = _placeholder_init
+    VIP_ENTRY = _placeholder_init
+    INBOUND_ROUTING_ENTRY = _placeholder_init
+    OUTBOUND_CA_TO_PA_ENTRY = _placeholder_init
+    OUTBOUND_ROUTING_ENTRY = _placeholder_init
+    VNET = _placeholder_init
+    PA_VALIDATION_ENTRY = _placeholder_init
+
     # endregion Placeholders for generated classes
 
 
+# Generating SaiObject types and add them to SaiObject's namespace
 for member in SaiObject.Type:
     @wraps(SaiObject.__init__)
     def __init__(*args, obj_type=member, **kwargs):
         SaiObject.__init__(*args, obj_type=obj_type, **kwargs)
 
+
     @classmethod
-    def init_by_existing_oid(cls, driver, oid):
-        instance = cls(driver, _init=False)
+    def init_by_existing_oid(cls, sai_client, oid):
+        instance = cls(sai_client, _init=False)
         instance.oid = oid
         return instance
+
 
     @classmethod
     @wraps(SaiObject.init_by_existing_key)
     def init_by_existing_key(cls, *args, obj_type=member, **kwargs):
         return cls(*args, obj_type=obj_type, **kwargs)
+
 
     setattr(
         SaiObject,
