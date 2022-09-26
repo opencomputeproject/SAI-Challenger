@@ -1,7 +1,7 @@
 from functools import wraps
 from typing import Optional
 
-from saichallenger.common.sai import SaiObjType
+from saichallenger.common.sai_data import SaiObjType
 
 
 class SaiObject:
