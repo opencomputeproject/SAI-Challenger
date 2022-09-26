@@ -114,17 +114,8 @@ COPY scripts/redis-cmd-listener.py   /sai-challenger/scripts/redis-cmd-listener.
 RUN pip3 install click==8.0 pytest
 
 # Deploy SAI Challenger CLI
-COPY setup.py            /sai-challenger/setup.py
-COPY cli/__init__.py     /sai-challenger/cli/__init__.py
-COPY cli/main.py         /sai-challenger/cli/main.py
-COPY common/setup.py     /sai-challenger/common/setup.py
-COPY common/__init__.py  /sai-challenger/common/__init__.py
-COPY common/sai.py       /sai-challenger/common/sai.py
-COPY common/sai_npu.py   /sai-challenger/common/sai_npu.py
-COPY common/sai_dataplane.py         /sai-challenger/common/sai_dataplane.py
-COPY topologies          /sai-challenger/topologies
-COPY .build/npu          /sai-challenger/npu
-COPY scripts/sai-cli-completion.sh   /sai-challenger/scripts/sai-cli-completion.sh
+ADD . /sai-challenger/
+ln -s /sai-challenger /usr/local/lib/python3.7/dist-packages/saichallenger
 RUN echo ". /sai-challenger/scripts/sai-cli-completion.sh" >> /root/.bashrc
 
 # Install SAI Challenger CLI and the remote commands listener
