@@ -25,10 +25,6 @@ class SaiRedisClient(SaiClient):
         self.port = client_config["port"]
         self.loglevel = client_config["loglevel"]
 
-        self.client_mode = not os.path.isfile("/usr/bin/redis-server")
-        libsai = os.path.isfile("/usr/lib/libsai.so") or os.path.isfile("/usr/local/lib/libsai.so")
-        self.libsaivs = client_config["type"] == "vs" or (not self.client_mode and not libsai)
-
         self.r = redis.Redis(host=self.server_ip, port=self.port, db=1)
         self.loglevel_db = redis.Redis(host=self.server_ip, port=self.port, db=3)
         self.cache = {}
@@ -88,8 +84,7 @@ class SaiRedisClient(SaiClient):
         self.loglevel_db.publish(sai_api + "_CHANNEL@3", "G")
 
     # CRUD
-    def create(self, obj_type, key, attrs):
-        assert type(obj_type) == SaiObjType
+    def create(self, obj_type, key, attrs, do_assert):
         vid = None
 
         object_id = "SAI_OBJECT_TYPE_" + obj_type.name + ":"
@@ -98,14 +93,15 @@ class SaiRedisClient(SaiClient):
         else:
             vid = self.__alloc_vid(obj_type)
             object_id = object_id + vid
-            if obj_type == SaiObjType.SWITCH:
+            if obj_type.value == SaiObjType.SWITCH.value:
                 self.switch_oid = vid
 
         if type(attrs) != str:
             attrs = json.dumps(attrs)
         status = self.__operate(object_id, attrs, "Screate")
 
-        assert status[2] == 'SAI_STATUS_SUCCESS', f"create({obj_type}, {key}, {attrs}) --> {status}"
+        if do_assert:
+            assert status[2] == 'SAI_STATUS_SUCCESS', f"create({obj_type}, {key}, {attrs}) --> {status}"
         return vid
 
     def _form_redis_style_object_id(self, oid = None, obj_type = None, key = None):
@@ -119,14 +115,15 @@ class SaiRedisClient(SaiClient):
             object_id = object_id + json.dumps(key).replace(" ", "")
         return object_id
 
-    def remove(self, oid, obj_type, key):
+    def remove(self, oid, obj_type, key, do_assert):
         object_id = self._form_redis_style_object_id(oid=oid, obj_type=obj_type, key=key)
 
         status = self.__operate(object_id, "{}", "Dremove")
 
-        assert status[2] == 'SAI_STATUS_SUCCESS', f"remove({oid}, {obj_type}, {key}) --> {status}"
+        if do_assert:
+            assert status[2] == 'SAI_STATUS_SUCCESS', f"remove({oid}, {obj_type}, {key}) --> {status}"
 
-    def set(self, oid, obj_type, key, attr):
+    def set(self, oid, obj_type, key, attr, do_assert):
         object_id = self._form_redis_style_object_id(oid=oid, obj_type=obj_type, key=key)
 
         if type(attr) != str:
@@ -134,7 +131,8 @@ class SaiRedisClient(SaiClient):
 
         status = self.__operate(object_id, attr, "Sset")
 
-        assert status[2] == 'SAI_STATUS_SUCCESS', f"set({oid}, {obj_type}, {key}, {attr}) --> {status}"
+        if do_assert:
+            assert status[2] == 'SAI_STATUS_SUCCESS', f"set({oid}, {obj_type}, {key}, {attr}) --> {status}"
 
     def get(self, oid, obj_type, key, attrs, do_assert = True):
         object_id = self._form_redis_style_object_id(oid=oid, obj_type=obj_type, key=key)
@@ -614,7 +612,7 @@ class SaiRedisClient(SaiClient):
 
     def __alloc_vid(self, obj_type):
         vid = None
-        if obj_type == SaiObjType.SWITCH:
+        if obj_type.value == SaiObjType.SWITCH.value:
             if self.r.get("VIDCOUNTER") is None:
                 self.r.set("VIDCOUNTER", 0)
                 vid = 0
@@ -767,10 +765,11 @@ class SaiRedisClient(SaiClient):
         status = []
         attempts = self.attempts
 
+        #TODO: Handle 'vs' from the config
         # Wait upto 3 mins for switch init on HW
-        if not self.libsaivs and obj.startswith("SAI_OBJECT_TYPE_SWITCH") and op == "Screate":
-            tout = 0.5
-            attempts = 240
+        #if obj.startswith("SAI_OBJECT_TYPE_SWITCH") and op == "Screate":
+            #tout = 0.5
+            #attempts = 240
 
         while len(status) < 3 and attempts > 0:
             time.sleep(tout)
@@ -779,10 +778,12 @@ class SaiRedisClient(SaiClient):
 
         self.r.delete("GETRESPONSE_KEY_VALUE_OP_QUEUE")
 
-        assert len(status) == 3, "SAI \"{}\" operation failure!".format(op)
-        status[0] = status[0].decode("utf-8")
-        status[1] = status[1].decode("utf-8").replace('oid:0x', '0x')
-        status[2] = status[2].decode("utf-8")
+        if len(status) > 0:
+            status[0] = status[0].decode("utf-8")
+        if len(status) > 1:
+            status[1] = status[1].decode("utf-8").replace('oid:0x', '0x')
+        if len(status) > 2:
+            status[2] = status[2].decode("utf-8")
         return status
 
     @staticmethod

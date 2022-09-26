@@ -47,6 +47,8 @@ RUN sed -ri '/imklog/s/^/#/' /etc/rsyslog.conf
 
 COPY configs/client/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
+ADD . /sai-challenger/
+RUN ln -s /sai-challenger /usr/local/lib/python3.7/dist-packages/saichallenger
 WORKDIR /sai-challenger/tests
 
 CMD ["/usr/bin/supervisord"]
