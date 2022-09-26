@@ -3,7 +3,7 @@ import time
 from sai import Sai
 from sai import SaiData
 from sai import SaiObjType
-from sai_dataplane import SaiDataPlane
+from sai_dataplane import SaiPtfDataPlane
 from sai_dataplane import SaiHostifDataPlane
 
 
@@ -240,12 +240,12 @@ class SaiNpu(Sai):
     def hostif_pkt_listen(self):
         assert self.hostif_map
         if self.port_map is None:
-            self.port_map = SaiDataPlane.getPortMap()
-        SaiDataPlane.setPortMap(self.hostif_map)
+            self.port_map = SaiPtfDataPlane.getPortMap()
+        SaiPtfDataPlane.setPortMap(self.hostif_map)
 
     def dataplane_pkt_listen(self):
         if self.hostif_map and self.port_map:
-            SaiDataPlane.setPortMap(self.port_map)
+            SaiPtfDataPlane.setPortMap(self.port_map)
             self.port_map = None
 
     def set_sku_mode(self, sku):

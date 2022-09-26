@@ -159,7 +159,7 @@ class Sai:
     attempts = 40
 
     def __init__(self, exec_params):
-        self.server_ip = exec_params["server"]
+        self.server_ip = exec_params["mgmt_ip"]
         self.loglevel = exec_params["loglevel"]
         self.r = redis.Redis(host=self.server_ip, port=6379, db=1)
         self.loglevel_db = redis.Redis(host=self.server_ip, port=6379, db=3)

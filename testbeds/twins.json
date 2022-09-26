@@ -1,0 +1,31 @@
+{
+    "name": "twins",
+    "discription": "Two DUTs not connected to each other",
+    "duts": [
+        "s0", "s1"
+    ],
+    "dataplanes": [
+        "dataplane"
+    ],
+    "dataplane": {
+        "type": "ptf",
+        "interfaces": {
+            "0": "veth1",
+            "1": "veth2",
+            "2": "veth3",
+            "3": "veth4"
+        }
+    },
+    "s0": {
+        "type": "npu",
+        "asic": "trident2",
+        "target": "saivs",
+        "mgmt_ip": "172.17.0.4"
+    },
+    "s1": {
+        "type": "npu",
+        "asic": "trident2",
+        "target": "saivs",
+        "mgmt_ip": "172.17.0.5"
+    }
+}

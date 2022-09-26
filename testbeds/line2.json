@@ -1,0 +1,43 @@
+{
+    "name": "line2",
+    "discription": "Line topology with 2 DUTs",
+    "duts": [
+        "s0", "s1"
+    ],
+    "dataplanes": [
+        "dataplane"
+    ],
+    "dataplane": {
+        "type": "ptf",
+        "interfaces": {
+            "0": "veth1",
+            "1": "veth2",
+            "2": "veth3",
+            "3": "veth4"
+        }
+    },
+    "s0": {
+        "type": "npu",
+        "asic": "trident2",
+        "target": "saivs",
+        "mgmt_ip": "10.0.0.1",
+        "sku": "32x100g"
+    },
+    "s1": {
+        "type": "npu",
+        "asic": "trident2",
+        "target": "saivs",
+        "mgmt_ip": "10.0.0.2",
+        "sku": {
+            "port": {
+                "1": {"lanes": "25,26,27,28"},
+                "2": {"lanes": "29,30,31,32"},
+                "3": {"lanes": "33,34,35,36"},
+                "4": {"lanes": "37,38,39,40"}
+            },
+            "autoneg": "off",
+            "speed":   "40000",
+            "fec":     "none"
+        }
+    }
+}
