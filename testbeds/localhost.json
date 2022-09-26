@@ -1,0 +1,37 @@
+{
+    "name": "localhost",
+    "discription": "Standalone DUT",
+    "duts": [
+        "s0"
+    ],
+    "dataplanes": [
+        "dataplane"
+    ],
+    "s0": {
+        "type": "npu",
+        "asic": "trident2",
+        "target": "saivs",
+        "mgmt_ip": "localhost"
+    },
+    "dataplane": {
+        "type": "ptf",
+        "interfaces": {
+            "0": "veth1",
+            "1": "veth2",
+            "2": "veth3",
+            "3": "veth4",
+            "4": "veth5",
+            "5": "veth6",
+            "6": "veth7",
+            "7": "veth8",
+            "8": "veth9",
+            "9": "veth10",
+            "10": "veth11",
+            "11": "veth12",
+            "12": "veth13",
+            "13": "veth14",
+            "14": "veth15",
+            "15": "veth16"
+        }
+    }
+}

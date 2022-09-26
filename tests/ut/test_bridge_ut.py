@@ -2,6 +2,13 @@ import pytest
 from sai import SaiObjType
 
 
+@pytest.fixture(scope="module", autouse=True)
+def skip_all(testbed_instance):
+    testbed = testbed_instance
+    if testbed is not None and len(testbed.dut) > 1:
+        pytest.skip("invalid for \"{}\" testbed".format(testbed.meta.name))
+
+
 bport_attrs = [
     ("SAI_BRIDGE_PORT_ATTR_TYPE",                                           "sai_bridge_port_type_t"),
     ("SAI_BRIDGE_PORT_ATTR_PORT_ID",                                        "sai_object_id_t"),

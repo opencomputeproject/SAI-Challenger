@@ -5,6 +5,13 @@ from sai import SaiObjType
 from ptf.testutils import simple_tcp_packet, send_packet, verify_packets, verify_packet, verify_no_packet_any, verify_no_packet, verify_any_packet_any_port
 
 
+@pytest.fixture(scope="module", autouse=True)
+def skip_all(testbed_instance):
+    testbed = testbed_instance
+    if testbed is not None and len(testbed.dut) > 1:
+        pytest.skip("invalid for \"{}\" testbed".format(testbed.meta.name))
+
+
 def test_l2_access_to_access_vlan(npu, dataplane):
     """
     Description:

@@ -3,6 +3,14 @@ from sai import SaiObjType
 
 TEST_VLAN_ID = "100"
 
+
+@pytest.fixture(scope="module", autouse=True)
+def skip_all(testbed_instance):
+    testbed = testbed_instance
+    if testbed is not None and len(testbed.dut) > 1:
+        pytest.skip("invalid for \"{}\" testbed".format(testbed.meta.name))
+
+
 @pytest.fixture(scope="module")
 def sai_vlan_obj(npu):
     vlan_oid = npu.create(SaiObjType.VLAN, ["SAI_VLAN_ATTR_VLAN_ID", TEST_VLAN_ID])

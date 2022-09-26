@@ -3,6 +3,13 @@ from sai import SaiObjType
 from ptf.testutils import simple_tcp_packet, send_packet, verify_packets
 
 
+@pytest.fixture(scope="module", autouse=True)
+def skip_all(testbed_instance):
+    testbed = testbed_instance
+    if testbed is not None and len(testbed.dut) > 1:
+        pytest.skip("invalid for \"{}\" testbed".format(testbed.meta.name))
+
+
 @pytest.fixture(scope="module")
 def sai_hostif_obj(npu):
     hostif_oid = npu.create(SaiObjType.HOSTIF,
