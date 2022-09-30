@@ -115,7 +115,7 @@ RUN pip3 install click==8.0 pytest
 
 # Deploy SAI Challenger CLI
 ADD . /sai-challenger/
-ln -s /sai-challenger /usr/local/lib/python3.7/dist-packages/saichallenger
+RUN ln -s /sai-challenger /usr/local/lib/python3.7/dist-packages/saichallenger
 RUN echo ". /sai-challenger/scripts/sai-cli-completion.sh" >> /root/.bashrc
 
 # Install SAI Challenger CLI and the remote commands listener
