@@ -6,7 +6,7 @@ from ptf.testutils import simple_tcp_packet, send_packet, verify_packets
 @pytest.fixture(scope="module")
 def sai_hostif_obj(npu):
     hostif_oid = npu.create(SaiObjType.HOSTIF,
-                            [
+                            attrs = [
                                 "SAI_HOSTIF_ATTR_TYPE",        "SAI_HOSTIF_TYPE_NETDEV",
                                 "SAI_HOSTIF_ATTR_NAME",        "Ethernet0",
                                 "SAI_HOSTIF_ATTR_OBJ_ID",      npu.port_oids[0],
@@ -56,5 +56,6 @@ def test_netdev_pkt(npu, dataplane, sai_hostif_obj, hostif_dataplane):
 
 @pytest.mark.dependency(depends=['test_netdev_create'])
 def test_netdev_remove(npu, sai_hostif_obj):
-    npu.remove(sai_hostif_obj)
+    npu.remove(oid=sai_hostif_obj)
     assert npu.remote_iface_exists("Ethernet0") == False
+
