@@ -1,5 +1,5 @@
 import time
-from sai_npu import SaiNpu
+from saichallenger.common.sai_npu import SaiNpu
 
 
 class SaiNpuImpl(SaiNpu):

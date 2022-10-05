@@ -168,11 +168,11 @@ class SaiNpu(Sai):
             return None
 
         for inum, iname in ifaces.items():
-            socket_addr = 'tcp://{}:10001'.format(self.server_ip)
+            socket_addr = 'tcp://{}:10001'.format(self.sai_client.server_ip)
             self.hostif_map[(0, int(inum))] = socket_addr
             assert self.remote_iface_is_up(iname), f"Interface {iname} must be up before dataplane init."
 
-        self.hostif_dataplane = SaiHostifDataPlane(self.exec_params, ifaces, self.server_ip)
+        self.hostif_dataplane = SaiHostifDataPlane(self.exec_params, ifaces, self.sai_client.server_ip)
         self.hostif_dataplane.init()
         return self.hostif_dataplane
 
