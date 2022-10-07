@@ -1,6 +1,4 @@
-
 import logging
-import sys
 import time
 
 import dpkt
@@ -8,57 +6,6 @@ from saichallenger.common.sai_dataplane import SaiDataplane
 from snappi import snappi
 
 BASE_TENGINE_PORT = 5555
-DEFAULT_STEP = 0.2
-DEFAULT_TIMEOUT = 2
-DEFAULT_N_TIMEOUT = 2
-
-
-def seconds_elapsed(start_seconds):
-    return int(round(time.time() - start_seconds))
-
-
-def timed_out(start_seconds, timeout):
-    return seconds_elapsed(start_seconds) > timeout
-
-
-def wait_for(func, condition_str, interval_seconds=None, timeout_seconds=None):
-    """
-    Keeps calling the `func` until it returns true or `timeout_seconds` occurs
-    every `interval_seconds`. `condition_str` should be a constant string
-    implying the actual condition being tested.
-    Usage
-    -----
-    If we wanted to poll for current seconds to be divisible by `n`, we would
-    implement something similar to following:
-    ```
-    import time
-    def wait_for_seconds(n, **kwargs):
-        condition_str = 'seconds to be divisible by %d' % n
-        def condition_satisfied():
-            return int(time.time()) % n == 0
-        poll_until(condition_satisfied, condition_str, **kwargs)
-    ```
-    """
-    if interval_seconds is None:
-        interval_seconds = DEFAULT_STEP
-    if timeout_seconds is None:
-        timeout_seconds = DEFAULT_TIMEOUT
-    start_seconds = int(time.time())
-
-    print("\n\nWaiting for %s ..." % condition_str)
-    while True:
-        res = func()
-        if res:
-            print("Done waiting for %s" % condition_str)
-            break
-        if res is None:
-            raise Exception("Wait aborted for %s" % condition_str)
-        if timed_out(start_seconds, timeout_seconds):
-            msg = "Time out occurred while waiting for %s" % condition_str
-            raise Exception(msg)
-
-        time.sleep(interval_seconds)
-
 
 class SaiDataplaneImpl(SaiDataplane):
 
@@ -66,6 +13,7 @@ class SaiDataplaneImpl(SaiDataplane):
         self.alias = exec_params['alias']
         self.mode = exec_params['mode']
         super().__init__(exec_params)
+        self.flows = []
 
     def init(self):
         # Configure a new API instance where the location points to controller
@@ -109,6 +57,7 @@ class SaiDataplaneImpl(SaiDataplane):
         super().tearDown()
         self.stop_capture()
         self.configuration.flows.clear()
+        self.flows.clear()
 
     @staticmethod
     def api_results_ok(results):
@@ -178,10 +127,7 @@ class SaiDataplaneImpl(SaiDataplane):
 
             cap_dict[name] = []
             for ts, pkt in dpkt.pcap.Reader(pcap_bytes):
-                if sys.version_info[0] == 2:
-                    cap_dict[name].append([ord(b) for b in pkt])
-                else:
-                    cap_dict[name].append(list(pkt))
+                cap_dict[name].append(list(pkt))
 
         return cap_dict
 
@@ -203,6 +149,7 @@ class SaiDataplaneImpl(SaiDataplane):
         res = self.api.set_transmit_state(ts)
         assert self.api_results_ok(res), res
 
+    # PAUSE api not supported by Ixia-C
     def pause_traffic(self):
         """ Pause traffic flow(s) which are already configured.
         """
@@ -254,3 +201,134 @@ class SaiDataplaneImpl(SaiDataplane):
 
         flow_rx = sum([f.frames_rx for f in flow_stats])
         return flow_rx == packets
+
+    def add_flow(self,
+                 name,
+                 packet_count=1,
+                 seconds_count=0,
+                 pps=10,
+                 force_pps=False
+                 ):
+
+        name = name or f"flow_{time.time()}"
+        flow = self.configuration.flows.flow(name=name)[-1]
+
+        flow.tx_rx.port.tx_name = self.configuration.ports[0].name
+        flow.tx_rx.port.rx_name = self.configuration.ports[0].name
+
+        if (seconds_count > 0):
+            flow.duration.fixed_seconds.seconds = seconds_count
+        else:
+            flow.duration.fixed_packets.packets = packet_count
+
+        flow.size.fixed = 128
+        flow.metrics.enable = True
+
+        # if (bmv2):
+        #     dont change pps
+        # else if (force_pps == True):
+        #     change
+        flow.rate.pps = pps
+
+        self.flows.append(flow)
+        return flow
+
+    def set_increment(self, field, choice, count, start, step):
+        if choice == 'increment':
+            field.choice = choice
+            field.increment.count = count
+            field.increment.start = start
+            field.increment.step = step
+
+    def add_ethernet_header(self,
+                            flow: snappi.Flow,
+                            dst_mac="FF:FF:FF:FF:FF:FF",
+                            src_mac="00:01:02:03:04:05",
+                            eth_type=0x0800,
+                            dst_choice=snappi.PatternFlowEthernetDst.VALUE,
+                            dst_count=1,
+                            dst_step="00:00:00:00:00:01",
+                            src_choice=snappi.PatternFlowEthernetSrc.VALUE,
+                            src_count=1,
+                            src_step="00:00:00:00:00:01"
+                            ):
+        if flow == None:
+            return None
+
+        ether = flow.packet.add().ethernet
+        ether.dst.value = dst_mac
+        ether.src.value = src_mac
+        ether.ether_type.value = eth_type
+
+        # Setup increment
+        self.set_increment(ether.dst, dst_choice, dst_count, dst_mac, dst_step)
+        self.set_increment(ether.src, src_choice, src_count, src_mac, src_step)
+
+        return ether
+
+    # TODO: add other fields
+    def add_ipv4_header(self,
+                        flow: snappi.Flow,
+                        dst_ip="192.168.0.1",
+                        src_ip="192.168.0.2",
+                        dst_choice=snappi.PatternFlowIpv4Dst.VALUE,
+                        dst_count=1,
+                        dst_step="0.0.0.1",
+                        src_choice=snappi.PatternFlowIpv4Src.VALUE,
+                        src_count=1,
+                        src_step="0.0.0.1"
+                        ):
+        if flow == None:
+            return None
+
+        ipv4 = flow.packet.add().ipv4
+        ipv4.dst.value = dst_ip
+        ipv4.src.value = src_ip
+
+        # Setup increment
+        self.set_increment(ipv4.dst, dst_choice, dst_count, dst_ip, dst_step)
+        self.set_increment(ipv4.src, src_choice, src_count, src_ip, src_step)
+
+        return ipv4
+
+    def add_udp_header(self,
+                        flow: snappi.Flow,
+                        dst_port=80,
+                        src_port=1234,
+                        dst_choice=snappi.PatternFlowUdpDstPort.VALUE,
+                        dst_count=1,
+                        dst_step=1,
+                        src_choice=snappi.PatternFlowUdpSrcPort.VALUE,
+                        src_count=1,
+                        src_step=1
+                        ):
+        if flow == None:
+            return None
+
+        udp = flow.packet.add().udp
+        udp.dst_port.value = dst_port
+        udp.src_port.value = src_port
+
+        # Setup increment
+        self.set_increment(udp.dst_port, dst_choice, dst_count, dst_port, dst_step)
+        self.set_increment(udp.src_port, src_choice, src_count, src_port, src_step)
+
+        return udp
+
+    def add_vxlan_header(self,
+                        flow: snappi.Flow,
+                        vni=100,
+                        vni_choice=snappi.PatternFlowVxlanVni.VALUE,
+                        vni_count=1,
+                        vni_step=1
+                        ):
+        if flow == None:
+            return None
+
+        vxlan = flow.packet.add().vxlan
+        vxlan.vni.value = vni
+
+        # Setup increment
+        self.set_increment(vxlan.vni, vni_choice, vni_count, vni, vni_step)
+
+        return vxlan
