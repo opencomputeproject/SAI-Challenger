@@ -364,7 +364,7 @@ class SaiThriftClient(SaiClient):
         def _():
             for item, value in key.items():
                 if item == 'destination':
-                    yield item, sai_ipaddress(value)
+                    yield item, sai_ip_interface(value)
                 else:
                     yield item, value
 
