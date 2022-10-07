@@ -1,9 +1,10 @@
 import time
+import ipaddress
+import macaddress
 
 default_step = 0.2
 default_timeout = 2
 default_n_timeout = 2
-
 
 def pcap_bts_polling(func, func_arg, timeout=None, step=None):
     if timeout is None:
@@ -101,3 +102,25 @@ def compare_pkts2(pkt1, pkt2):
             return False, "Mismatched", p1, p2
 
     return True, "", p1, p2
+
+
+# number - count of iterations to add step to ip
+def get_next_ip(ip="192.168.0.1", step="0.0.0.1", number=1) -> str:
+    if ip == None:
+        ip = "192.168.0.1"
+    if step == None:
+        step = "0.0.0.1"
+    if number == 0:
+        return str(ipaddress.IPv4Address(ip))
+    return str(ipaddress.IPv4Address(int(ipaddress.IPv4Address(ip)) + number * int(ipaddress.IPv4Address(step))))
+
+
+# number - count of iterations to add step to mac
+def get_next_mac(mac="00:00:00:AA:BB:01", step="00:00:00:00:00:01", number=1) -> str:
+    if mac == None:
+        mac = "00:00:00:AA:BB:01"
+    if step == None:
+        step = "00:00:00:00:00:01"
+    if number == 0:
+        return str(macaddress.MAC(mac)).replace('-', ':')
+    return str(macaddress.MAC(int(macaddress.MAC(mac)) + number * int(macaddress.MAC(step)))).replace('-', ':')
