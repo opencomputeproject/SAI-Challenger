@@ -17,7 +17,7 @@ class SaiClient:
     # CRUD
     def create(self, obj_type, *, key=None, attrs=None, do_assert=True):
         """
-        Create SAI object of appropriate object type. Key has to be provided if object doesn't care oid.
+        Create SAI object of appropriate object type.
         if do_assert is set to False unsuccessful operation silently fails
         """
 

@@ -2,19 +2,8 @@ import json
 import redis
 import time
 
-# Lifehack to import from parent directory
-import os
-import sys
-import inspect
-currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-parentdir = os.path.dirname(currentdir)
-sys.path.insert(0, parentdir)
-from sai_client.sai_client import SaiClient
-
-parentparentdir = os.path.dirname(parentdir)
-sys.path.insert(0, parentparentdir)
-
-from sai_data import SaiObjType, SaiData
+from saichallenger.common.sai_client.sai_client import SaiClient
+from saichallenger.common.sai_data import SaiObjType, SaiData
 
 class SaiRedisClient(SaiClient):
     """Redis SAI client implementation to wrap low level SAI calls"""
@@ -93,7 +82,7 @@ class SaiRedisClient(SaiClient):
         else:
             vid = self.__alloc_vid(obj_type)
             object_id = object_id + vid
-            if obj_type.value == SaiObjType.SWITCH.value:
+            if obj_type == SaiObjType.SWITCH:
                 self.switch_oid = vid
 
         if type(attrs) != str:
@@ -612,7 +601,7 @@ class SaiRedisClient(SaiClient):
 
     def __alloc_vid(self, obj_type):
         vid = None
-        if obj_type.value == SaiObjType.SWITCH.value:
+        if obj_type == SaiObjType.SWITCH:
             if self.r.get("VIDCOUNTER") is None:
                 self.r.set("VIDCOUNTER", 0)
                 vid = 0

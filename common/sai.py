@@ -6,7 +6,6 @@ import pytest
 from saichallenger.common.sai_abstractions import AbstractEntity
 from saichallenger.common.sai_client.sai_client import SaiClient
 from saichallenger.common.sai_data import SaiObjType
-from saichallenger.common.sai_object import SaiObject
 
 
 class Sai(AbstractEntity):
@@ -157,9 +156,6 @@ class Sai(AbstractEntity):
         self.sku = exec_params["sku"]
         self.asic_dir = exec_params["asic_dir"]
         self._switch_oid = None
-
-    def create_object(self, obj_type, key=None, attrs=()):
-        return SaiObject.create(self.sai_client, obj_type, key=key, attrs=attrs)
 
     @property
     def switch_oid(self):

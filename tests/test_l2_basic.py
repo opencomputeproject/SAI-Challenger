@@ -1,7 +1,7 @@
 import ipaddress
 import pytest
 import time
-from sai_data import SaiObjType
+from saichallenger.common.sai_data import SaiObjType
 from ptf.testutils import simple_tcp_packet, send_packet, verify_packets, verify_packet, verify_no_packet_any, verify_no_packet, verify_any_packet_any_port
 
 
