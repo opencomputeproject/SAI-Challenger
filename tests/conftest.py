@@ -2,7 +2,7 @@ import logging
 import os
 import sys
 import pytest
-from sai_environment import init_setup
+from saichallenger.common.sai_environment import init_setup
 
 curdir = os.path.dirname(os.path.realpath(__file__))
 commondir = os.path.join(curdir, '../common')
