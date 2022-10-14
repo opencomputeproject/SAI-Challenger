@@ -1,6 +1,6 @@
 import pytest
-from sai_data import SaiObjType
-from ptf.testutils import simple_tcp_packet, send_packet, verify_packets
+from saichallenger.common.sai_data import SaiObjType
+from saichallenger.dataplane.ptf_testutils import simple_tcp_packet, send_packet, verify_packets
 
 
 @pytest.fixture(scope="module")
@@ -8,22 +8,23 @@ def sai_hostif_obj(npu):
     hostif_oid = npu.create(SaiObjType.HOSTIF,
                             attrs = [
                                 "SAI_HOSTIF_ATTR_TYPE",        "SAI_HOSTIF_TYPE_NETDEV",
-                                "SAI_HOSTIF_ATTR_NAME",        "Ethernet0",
+                                "SAI_HOSTIF_ATTR_NAME",        npu.ports[0],
                                 "SAI_HOSTIF_ATTR_OBJ_ID",      npu.port_oids[0],
                                 "SAI_HOSTIF_ATTR_OPER_STATUS", "true"
                             ])
     if npu.libsaivs:
         # BUG: After hostif creation on saivs, both created netdev
         #      and related FP port are in admin down state.
-        npu.remote_iface_status_set("eth1", True)
-        npu.remote_iface_status_set("Ethernet0", True)
+        eth_index = int(npu.ports[0][-1:]) + 1
+        npu.remote_iface_status_set(f"eth{eth_index}", True)
+        npu.remote_iface_status_set(npu.ports[0], True)
     return hostif_oid
 
 
 @pytest.fixture(scope="function")
 def hostif_dataplane(npu):
     hostifs = {
-        "100": "Ethernet0"
+        "100": npu.ports[0]
     }
     hostif_dataplane = npu.hostif_dataplane_start(hostifs)
     yield hostif_dataplane
@@ -32,7 +33,7 @@ def hostif_dataplane(npu):
 
 @pytest.mark.dependency()
 def test_netdev_create(npu, sai_hostif_obj):
-    assert npu.remote_iface_exists("Ethernet0") == True
+    assert npu.remote_iface_exists(npu.ports[0]) == True
 
 
 @pytest.mark.dependency(depends=['test_netdev_create'])
@@ -57,5 +58,5 @@ def test_netdev_pkt(npu, dataplane, sai_hostif_obj, hostif_dataplane):
 @pytest.mark.dependency(depends=['test_netdev_create'])
 def test_netdev_remove(npu, sai_hostif_obj):
     npu.remove(oid=sai_hostif_obj)
-    assert npu.remote_iface_exists("Ethernet0") == False
+    assert npu.remote_iface_exists(npu.ports[0]) == False
 
