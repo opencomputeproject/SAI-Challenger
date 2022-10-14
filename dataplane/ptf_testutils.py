@@ -1,12 +1,11 @@
 import logging
 import sys
-from random import randint
 
 import dpkt
+import saichallenger.dataplane.traffic_utils as tt
 from scapy.layers.l2 import Ether
 
 import ptf.testutils as ptfTestutils
-import saichallenger.dataplane.traffic_utils as tt
 
 default_step = 0.2
 default_timeout = 2
@@ -19,6 +18,7 @@ class SnappiDataPlaneUtilsWrapper:
 
     def __init__(self, dataplane):
         self._dataplane = dataplane
+        self._flow_name_counter = 0
 
     def __getattr__(self, v):
         if v not in self.__dict__:
@@ -35,13 +35,13 @@ class SnappiDataPlaneUtilsWrapper:
             cls._instances[id_d] = object.__new__(cls)
             return cls._instances[id_d]
 
-    def add_tcp_stream(self, packet, port_id, packets_count=1, stream_name=None):
+    def add_tcp_flow(self, packet, port_id, packets_count=1, flow_name=None):
 
         port_cfg = self.configuration.ports.serialize('dict')[port_id]
 
-        stream_name = stream_name or "stream_{}_{}".format(port_id, id(packet))
+        flow_name = flow_name or self.create_default_flow_name(port_id, id(packet))
 
-        flow = self.configuration.flows.flow(name=stream_name)[-1]
+        flow = self.configuration.flows.flow(name=flow_name)[-1]
         flow.tx_rx.port.tx_name = port_cfg['name']
 
         flow.size.fixed = len(packet)
@@ -71,13 +71,17 @@ class SnappiDataPlaneUtilsWrapper:
 
         self.set_config()
 
-    def add_raw_stream(self, packet, port_id, packets_count=1, stream_name=None):
+    def create_default_flow_name(self, port_id, packet_id):
+        self._flow_name_counter += 1
+        return "flow_{}_{}_{}".format(port_id, packet_id, self._flow_name_counter)
+
+    def add_raw_flow(self, packet, port_id, packets_count=1, flow_name=None):
 
         port_cfg = self.configuration.ports.serialize('dict')[port_id]
 
-        stream_name = stream_name or "stream_{}_{}_{}".format(port_id, id(packet), randint(1, 9999))
+        flow_name = flow_name or self.create_default_flow_name(port_id, id(packet))
 
-        flow = self.configuration.flows.flow(name=stream_name)[-1]
+        flow = self.configuration.flows.flow(name=flow_name)[-1]
         flow.tx_rx.port.tx_name = port_cfg['name']
 
         flow.size.fixed = len(packet)
@@ -98,8 +102,23 @@ class SnappiDataPlaneUtilsWrapper:
 
     def send_packet(self, port_id, pkt, count=1):
         """ptf.testutils.send_packet"""
-        self.add_raw_stream(pkt, port_id, packets_count=count)
+        self.add_raw_flow(pkt, port_id, packets_count=count)
         self.start_traffic()
+
+    def get_capture_function_and_request(self, port_name):
+        capture_request = self.api.capture_request()
+        capture_request.port_name = port_name
+        capture_function = self.api.get_capture
+        return capture_function, capture_request
+
+    def get_pcap_bytes_by_polling(self, port_name, timeout, step):
+        logging.info(f'Fetching capture from port {port_name}')
+        capture_func, capture_req = self.get_capture_function_and_request(port_name)
+        pcap_bytes = tt.pcap_bts_polling(self.api.get_capture, capture_req, timeout, step)
+        # Restart capture.
+        # Default PTF behavior is to have running capture during the test case.
+        self.start_capture()
+        return pcap_bytes
 
     def verify_captures_on_port(self, exp_pkts, port_id):
         """ Returns true if all packets captured on specified port matches list of exp_packets
@@ -111,9 +130,9 @@ class SnappiDataPlaneUtilsWrapper:
         port_name = port_cfg['name']
         cap_dict = {}
         logging.info(f'Fetching capture from port {port_name}')
-        capture_req = self.api.capture_request()
-        capture_req.port_name = port_name
-        pcap_bytes = self.api.get_capture(capture_req)
+        capture_func, capture_req = self.get_capture_function_and_request(port_name)
+        pcap_bytes = capture_func(capture_req)
+        self.start_capture()
 
         cap_dict[port_name] = []
         for ts, pkt in dpkt.pcap.Reader(pcap_bytes):
@@ -157,11 +176,7 @@ class SnappiDataPlaneUtilsWrapper:
         port_cfg = self.configuration.ports.serialize('dict')[port_id]
         port_name = port_cfg['name']
 
-        logging.info(f'Fetching capture from port {port_name}')
-        capture_req = self.api.capture_request()
-        capture_req.port_name = port_name
-
-        pcap_bytes = tt.pcap_bts_polling(self.api.get_capture, capture_req, timeout, step)
+        pcap_bytes = self.get_pcap_bytes_by_polling(port_name, timeout, step)
 
         logging.info(f'Verifying empty capture from port {port_name}')
         assert not any(pcap_bytes), f"A packet was received on device 0, port {port_id}:{port_name}, but we expected no packets."
@@ -177,11 +192,8 @@ class SnappiDataPlaneUtilsWrapper:
         port_cfg = self.configuration.ports.serialize('dict')[port_id]
         port_name = port_cfg['name']
         cap_dict = {}
-        logging.info(f'Fetching capture from port {port_name}')
-        capture_req = self.api.capture_request()
-        capture_req.port_name = port_name
 
-        pcap_bytes = tt.pcap_bts_polling(self.api.get_capture, capture_req, timeout, step)
+        pcap_bytes = self.get_pcap_bytes_by_polling(port_name, timeout, step)
 
         cap_dict[port_name] = []
         try:
@@ -259,11 +271,8 @@ class SnappiDataPlaneUtilsWrapper:
         port_cfg = self.configuration.ports.serialize('dict')[port_id]
         port_name = port_cfg['name']
         cap_dict = {}
-        logging.info(f'Fetching capture from port {port_name}')
-        capture_req = self.api.capture_request()
-        capture_req.port_name = port_name
 
-        pcap_bytes = tt.pcap_bts_polling(self.api.get_capture, capture_req, timeout, step)
+        pcap_bytes = self.get_pcap_bytes_by_polling(port_name, timeout, step)
 
         cap_dict[port_name] = []
 
@@ -349,10 +358,9 @@ class SnappiDataPlaneUtilsWrapper:
             if port_id not in ports:
                 continue
             port_name = self.configuration.ports.serialize('dict')[port_id]['name']
-            logging.info(f'Fetching capture from port {port_name}')
-            capture_req = self.api.capture_request()
-            capture_req.port_name = port_name
-            pcap_bytes = tt.pcap_bts_polling(self.api.get_capture, capture_req, timeout)
+
+            pcap_bytes = self.get_pcap_bytes_by_polling(port_name, timeout, step)
+
             cap_dict[port_name] = pcap_bytes
             timeout = 0  # Reduce timeout
 
