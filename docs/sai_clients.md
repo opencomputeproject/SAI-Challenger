@@ -26,7 +26,7 @@ But it is possible to add any custom SAI client.
 
 ### Class diagram
 
-<a href="url"><img src="../img/SAI-Challenger class diagram.svg" align="center" width="800" ></a>
+<a href="url"><img src="../img/class_diagram.svg" align="center" width="800" ></a>
 
 ### Files/Folders
 
