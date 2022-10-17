@@ -2,6 +2,7 @@
 
 import click
 import json
+import os
 
 from sai import SaiObjType
 from sai_npu import SaiNpu
@@ -24,6 +25,45 @@ exec_params = {
 @click.group()
 def cli():
     pass
+
+
+# 'init' command
+@cli.command()
+@click.argument('sku', metavar='[<SKU>]', required=False, type=str)
+def init(sku):
+    """Initialize SAI switch"""
+
+    click.echo()
+
+    platform = os.getenv('SC_PLATFORM')
+    asic = os.getenv('SC_ASIC')
+    target = os.getenv('SC_TARGET')
+    asic_dir = "/sai-challenger/npu/{}/{}/".format(platform, asic)
+
+    params = {
+        "server": "localhost",
+        "traffic": False,
+        "saivs": False,
+        "loglevel": "NOTICE",
+        "sku": sku,
+        "asic": asic,
+        "asic_dir": asic_dir,
+        "target": target
+    }
+
+    npu_mod = None
+    module_name = "sai_npu"
+    try:
+        npu_mod = imp.load_module(module_name, *imp.find_module(module_name, [asic_dir]))
+    except:
+        try:
+            npu_mod = imp.load_module(module_name, *imp.find_module(module_name, [asic_dir + "../"]))
+        except:
+            pass
+
+    npu = npu_mod.SaiNpuImpl(params) if npu_mod is not None else SaiNpu(params)
+    npu.reset()
+    click.echo("Initialized {} {}\n".format(asic, target))
 
 
 # 'get' command

@@ -1,0 +1,20 @@
+{
+    "name": "TD2-SAIVS",
+    "category": "router",
+    "description": "Broadcom Trident2 SAIVS is base on SAI Challenger server and allows user to run SONiC SAIVS as a virtual SAI switch.",
+    "vendor_name": "PLVision",
+    "vendor_url": "https://plvision.eu/",
+    "product_name": "SAI Challenger",
+    "product_url": "https://github.com/opencomputeproject/SAI-Challenger",
+    "registry_version": 3,
+    "status": "experimental",
+    "maintainer": "Andriy Kokhan",
+    "maintainer_email": "andriy.kokhan@gmail.com",
+    "usage": "There is no default configuration present. To create SAI switch object, in the auxiliary console execute 'sai init' command",
+    "first_port_name": "eth1",
+    "docker": {
+        "adapters": 33,
+        "image": "sc-server-trident2-saivs",
+        "console_type": "telnet"
+    }
+}

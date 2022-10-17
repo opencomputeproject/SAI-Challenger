@@ -8,7 +8,7 @@ ENV SC_TARGET=saivs
 
 WORKDIR /sai
 
-RUN git clone https://github.com/Azure/sonic-sairedis.git \
+RUN git clone https://github.com/sonic-net/sonic-sairedis.git \
         && cd sonic-sairedis \
         && . /sai.env \
         && git checkout ${SAIREDIS_ID} \
@@ -17,24 +17,29 @@ RUN git clone https://github.com/Azure/sonic-sairedis.git \
         && git checkout ${SAI_ID} \
         && git submodule update --init --recursive \
         && cd .. \
-        && ./autogen.sh && ./configure --with-sai=vs && make -j4 \
-        && make install && ldconfig \
-        && mkdir -p /usr/include/sai \
-        && mv SAI/experimental  /usr/include/sai/experimental \
-        && mv SAI/inc  /usr/include/sai/inc \
-        && mkdir -p /usr/include/sai/meta \
-        && cp SAI/meta/*.h  /usr/include/sai/meta/ \   
-        && mv tests .. && rm -rf * && mv ../tests .
+        && ./autogen.sh \
+        && dpkg-buildpackage -us -uc -b --target=binary-syncd-vs --jobs=auto \
+        && cd .. \
+        && dpkg -i libsaimetadata_1.0.0_amd64.deb \
+        && dpkg -i libsaimetadata-dev_1.0.0_amd64.deb \
+        && dpkg -i libsairedis_1.0.0_amd64.deb \
+        && dpkg -i libsairedis-dev_1.0.0_amd64.deb \
+        && dpkg -i libsaivs_1.0.0_amd64.deb \
+        && dpkg -i libsaivs-dev_1.0.0_amd64.deb \
+        && dpkg -i syncd-vs_1.0.0_amd64.deb \
+        && mv sonic-sairedis/tests . \
+        && rm -f *.deb \
+        && rm -rf sonic-sairedis/* \
+        && mv tests sonic-sairedis/
 
-
-# Build attr_list_generator and generate /etc/sai/sai.json
+# Build SAI attributes metadata JSON generator and generate /etc/sai/sai.json
 RUN cd /sai/gen_attr_list \
         && mkdir build && cd build \
         && cmake .. \
         && make -j$(nproc) \
         && mkdir -p /etc/sai \
         && ./attr_list_generator > /etc/sai/sai.json
-        
+
 # Setup supervisord
 COPY configs/sai.profile       /etc/sai.d/sai.profile
 COPY configs/lanemap.ini       /usr/share/sonic/hwsku/lanemap.ini
