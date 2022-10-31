@@ -69,7 +69,7 @@ def test_get_before_set_attr(npu, dataplane, sai_bport_obj, attr, attr_type):
     ],
 )
 def test_set_attr(npu, dataplane, sai_bport_obj, attr, attr_value):
-    status = npu.set(sai_bport_obj, [attr, attr_value], False)
+    status = npu.set(oid=sai_bport_obj, attr=[attr, attr_value], do_assert=False)
     npu.assert_status_success(status)
 
     if status == "SAI_STATUS_SUCCESS":

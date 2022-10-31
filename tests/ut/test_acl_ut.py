@@ -34,7 +34,7 @@ class TestIngressACL:
             "SAI_ACL_TABLE_ATTR_FIELD_ACL_RANGE_TYPE",
                     "2:SAI_ACL_RANGE_TYPE_L4_DST_PORT_RANGE,SAI_ACL_RANGE_TYPE_L4_SRC_PORT_RANGE",
         ]
-        acl_state["table_oid"] = npu.create(SaiObjType.ACL_TABLE, attrs)
+        acl_state["table_oid"] = npu.create(obj_type=SaiObjType.ACL_TABLE, attrs=attrs)
         assert acl_state["table_oid"] != "oid:0x0"
 
 
@@ -82,7 +82,7 @@ class TestIngressACL:
             "SAI_ACL_COUNTER_ATTR_ENABLE_BYTE_COUNT",   "true",
             "SAI_ACL_COUNTER_ATTR_ENABLE_PACKET_COUNT", "true",
         ]
-        counter_oid = npu.create(SaiObjType.ACL_COUNTER, counter_attrs)
+        counter_oid = npu.create(obj_type=SaiObjType.ACL_COUNTER, attrs=counter_attrs)
 
         # Create ACL entry
         entry_attrs = [
@@ -103,9 +103,9 @@ class TestIngressACL:
         entry_attrs.append("SAI_ACL_ENTRY_ATTR_ACTION_COUNTER")
         entry_attrs.append(counter_oid)
 
-        status, entry_oid = npu.create(SaiObjType.ACL_ENTRY, entry_attrs, do_assert=False)
+        status, entry_oid = npu.create(obj_type=SaiObjType.ACL_ENTRY, attrs=entry_attrs, do_assert=False)
         if status != "SAI_STATUS_SUCCESS":
-            npu.remove(counter_oid)
+            npu.remove(oid=counter_oid)
         assert status == "SAI_STATUS_SUCCESS"
 
         # Cache OIDs
@@ -118,10 +118,10 @@ class TestIngressACL:
         if len(acl_state["entries"]) == 0:
             pytest.skip("no ACL entries to remove")
         for oid in acl_state["entries"]:
-            npu.remove(oid)
+            npu.remove(oid=oid)
 
 
     @pytest.mark.dependency(depends=['TestIngressACL::test_create_table'])
     def test_remove_table(self, npu, acl_state):
         assert acl_state["table_oid"] != "oid:0x0"
-        npu.remove(acl_state["table_oid"])
+        npu.remove(oid=acl_state["table_oid"])

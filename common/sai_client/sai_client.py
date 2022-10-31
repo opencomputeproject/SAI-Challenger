@@ -45,10 +45,10 @@ class SaiClient:
         raise NotImplementedError
 
     # Stats
-    def get_stats(self, oid=None, obj_type=None, key=None, attrs=None):
+    def get_stats(self, *, oid=None, obj_type=None, key=None, attrs=None):
         raise NotImplementedError
 
-    def clear_stats(self, oid=None, obj_type=None, key=None, attrs=None):
+    def clear_stats(self, *, oid=None, obj_type=None, key=None, attrs=None):
         raise NotImplementedError
 
     # Flush FDB

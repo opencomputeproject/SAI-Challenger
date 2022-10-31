@@ -12,7 +12,7 @@ def config(npu):
 
     # Create Loopback RIF
     lo_rif_oid = npu.create(SaiObjType.ROUTER_INTERFACE,
-                            [
+                            attrs = [
                                 "SAI_ROUTER_INTERFACE_ATTR_VIRTUAL_ROUTER_ID", npu.default_vrf_oid,
                                 "SAI_ROUTER_INTERFACE_ATTR_TYPE", "SAI_ROUTER_INTERFACE_TYPE_LOOPBACK",
                                 "SAI_ROUTER_INTERFACE_ATTR_MTU", "9100"
@@ -20,24 +20,24 @@ def config(npu):
     topo_cfg["lo_rif_oid"] = lo_rif_oid
 
     # Get CPU port
-    cpu_port_oid = npu.get(npu.oid, ["SAI_SWITCH_ATTR_CPU_PORT", "oid:0x0"]).oid()
+    cpu_port_oid = npu.get(oid=npu.switch_oid, attrs = ["SAI_SWITCH_ATTR_CPU_PORT", "oid:0x0"]).oid()
     topo_cfg["cpu_port_oid"] = cpu_port_oid
 
     # Get port HW lanes
     for oid in npu.port_oids:
-        port_lanes = npu.get(oid, ["SAI_PORT_ATTR_HW_LANE_LIST", "8:0,0,0,0,0,0,0,0"]).to_list()
+        port_lanes = npu.get(oid=oid, attrs = ["SAI_PORT_ATTR_HW_LANE_LIST", "8:0,0,0,0,0,0,0,0"]).to_list()
 
     # Remove default VLAN members
     vlan_mbr_oids = npu.get_list(npu.default_vlan_oid, "SAI_VLAN_ATTR_MEMBER_LIST", "oid:0x0")
     for oid in vlan_mbr_oids:
-        npu.remove(oid)
+        npu.remove(oid=oid)
 
     # Remove default 1Q bridge members
     dot1q_mbr_oids = npu.get_list(npu.dot1q_br_oid, "SAI_BRIDGE_ATTR_PORT_LIST", "oid:0x0")
     for oid in dot1q_mbr_oids:
-        bp_type = npu.get(oid, ["SAI_BRIDGE_PORT_ATTR_TYPE", "SAI_BRIDGE_PORT_TYPE_PORT"]).value()
+        bp_type = npu.get(oid=oid, attrs=["SAI_BRIDGE_PORT_ATTR_TYPE", "SAI_BRIDGE_PORT_TYPE_PORT"]).value()
         if bp_type == "SAI_BRIDGE_PORT_TYPE_PORT":
-            npu.remove(oid)
+            npu.remove(oid=oid)
     npu.dot1q_bp_oids.clear()
 
     # Create default routes
@@ -65,7 +65,7 @@ def config(npu):
     # Create default 1Q bridge members
     for oid in npu.port_oids:
         bp_oid = npu.create(SaiObjType.BRIDGE_PORT,
-                            [
+                            attrs = [
                                 "SAI_BRIDGE_PORT_ATTR_TYPE", "SAI_BRIDGE_PORT_TYPE_PORT",
                                 "SAI_BRIDGE_PORT_ATTR_PORT_ID", oid,
                                 # "SAI_BRIDGE_PORT_ATTR_BRIDGE_ID", dot1q_br.oid(),
@@ -76,8 +76,8 @@ def config(npu):
     # Create default VLAN members and set PVID
     for idx, oid in enumerate(npu.port_oids):
         npu.create_vlan_member(npu.default_vlan_oid, npu.dot1q_bp_oids[idx], "SAI_VLAN_TAGGING_MODE_UNTAGGED")
-        npu.set(oid, ["SAI_PORT_ATTR_PORT_VLAN_ID", npu.default_vlan_id])
+        npu.set(oid=oid, attr=["SAI_PORT_ATTR_PORT_VLAN_ID", npu.default_vlan_id])
 
     # Remove Loopback RIF
-    npu.remove(lo_rif_oid)
+    npu.remove(oid=lo_rif_oid)
 

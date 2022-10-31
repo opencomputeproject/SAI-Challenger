@@ -23,7 +23,7 @@ def vrf_state():
 
 @pytest.mark.dependency()
 def test_vrf_create(npu, vrf_state):
-    vrf_state["vrf_oid"] = npu.create(SaiObjType.VIRTUAL_ROUTER, [])
+    vrf_state["vrf_oid"] = npu.create(obj_type=SaiObjType.VIRTUAL_ROUTER, attrs=[])
     assert vrf_state["vrf_oid"] != "oid:0x0"
 
 @pytest.mark.parametrize(
@@ -38,4 +38,4 @@ def test_vrf_get_attr(npu, dataplane, vrf_state, attr, attr_type):
 @pytest.mark.dependency(depends=['test_vrf_create'])
 def test_vrf_remove(npu, vrf_state):
         assert vrf_state["vrf_oid"] != "oid:0x0"
-        npu.remove(vrf_state["vrf_oid"])
+        npu.remove(oid=vrf_state["vrf_oid"])

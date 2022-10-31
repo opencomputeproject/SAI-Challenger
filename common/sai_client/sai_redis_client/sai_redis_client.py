@@ -91,7 +91,9 @@ class SaiRedisClient(SaiClient):
 
         if do_assert:
             assert status[2] == 'SAI_STATUS_SUCCESS', f"create({obj_type}, {key}, {attrs}) --> {status}"
-        return vid
+            return vid
+
+        return status[2], vid
 
     def _form_redis_style_object_id(self, oid = None, obj_type = None, key = None):
         object_id = None
@@ -122,6 +124,8 @@ class SaiRedisClient(SaiClient):
 
         if do_assert:
             assert status[2] == 'SAI_STATUS_SUCCESS', f"set({oid}, {obj_type}, {key}, {attr}) --> {status}"
+        else:
+            return status[2]
 
     def get(self, oid, obj_type, key, attrs, do_assert = True):
         object_id = self._form_redis_style_object_id(oid=oid, obj_type=obj_type, key=key)
@@ -349,25 +353,25 @@ class SaiRedisClient(SaiClient):
         return status[2], entry_status
 
     # Stats
-    def get_stats(self, oid, obj_type, attrs):
+    def get_stats(self, *, oid, obj_type, key, attrs):
         object_id = self._form_redis_style_object_id(oid=oid, obj_type=obj_type, key=key)
 
         if type(attrs) != str:
             attrs = json.dumps(attrs)
 
-        status = self.__operate(obj, attrs, "Sget_stats")
+        status = self.__operate(object_id, attrs, "Sget_stats")
 
         assert status[2] == 'SAI_STATUS_SUCCESS'
 
         return SaiData(status[1])
 
-    def clear_stats(self, obj, attrs, do_assert = True):
+    def clear_stats(self, *, oid, obj_type, key, attrs):
         object_id = self._form_redis_style_object_id(oid=oid, obj_type=obj_type, key=key)
 
         if type(attrs) != str:
             attrs = json.dumps(attrs)
 
-        status = self.__operate(obj, attrs, "Sclear_stats")
+        status = self.__operate(object_id, attrs, "Sclear_stats")
 
         assert status[2] == 'SAI_STATUS_SUCCESS'
 
@@ -745,8 +749,17 @@ class SaiRedisClient(SaiClient):
         # Make redis-style OIDs
         obj = obj.replace('oid:0x', '0x')
         obj = obj.replace('0x', 'oid:0x')
-        attrs = attrs.replace('oid:0x', '0x')
+
+        # The following logic adds a prefix "oid:" to odject ID it attrs
+        # if there are no this prefix. And there is a workaround
+        # for cases when the inserts "oid:" incorrectly.
+        # There must be an issue on github to replace it with
+        # a normal logic
+        attrs = attrs.replace('oid:0x', 'OID_HERE')
+        attrs = attrs.replace('mask:0x', 'MASK_HERE')
         attrs = attrs.replace('0x', 'oid:0x')
+        attrs = attrs.replace('OID_HERE', 'oid:0x')
+        attrs = attrs.replace('MASK_HERE', 'mask:0x')
 
         self.r.lpush("ASIC_STATE_KEY_VALUE_OP_QUEUE", obj, attrs, op)
         self.r.publish("ASIC_STATE_CHANNEL@1", "G")
