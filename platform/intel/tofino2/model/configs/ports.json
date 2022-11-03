@@ -1,0 +1,138 @@
+{
+    "PortToIf": [
+        {
+            "device_port":8,
+            "if": "veth1"
+        },
+        {
+            "device_port":9,
+            "if": "veth2"
+        },
+        {
+            "device_port":10,
+            "if": "veth3"
+        },
+        {
+            "device_port":11,
+            "if": "veth4"
+        },
+        {
+            "device_port":12,
+            "if": "veth5"
+        },
+        {
+            "device_port":13,
+            "if": "veth6"
+        },
+        {
+            "device_port":14,
+            "if": "veth7"
+        },
+        {
+            "device_port":15,
+            "if": "veth8"
+        },
+        {
+            "device_port":16,
+            "if": "veth9"
+        },
+        {
+            "device_port":17,
+            "if": "veth10"
+        },
+        {
+            "device_port":18,
+            "if": "veth11"
+        },
+        {
+            "device_port":19,
+            "if": "veth12"
+        },
+        {
+            "device_port":20,
+            "if": "veth13"
+        },
+        {
+            "device_port":21,
+            "if": "veth14"
+        },
+        {
+            "device_port":22,
+            "if": "veth15"
+        },
+        {
+            "device_port":23,
+            "if": "veth16"
+        },
+        {
+            "device_port":24,
+            "if": "veth17"
+        },
+        {
+            "device_port":25,
+            "if": "veth18"
+        },
+        {
+            "device_port":26,
+            "if": "veth19"
+        },
+        {
+            "device_port":27,
+            "if": "veth20"
+        },
+        {
+            "device_port":28,
+            "if": "veth21"
+        },
+        {
+            "device_port":29,
+            "if": "veth22"
+        },
+        {
+            "device_port":30,
+            "if": "veth23"
+        },
+        {
+            "device_port":31,
+            "if": "veth24"
+        },
+        {
+            "device_port":32,
+            "if": "veth25"
+        },
+        {
+            "device_port":33,
+            "if": "veth26"
+        },
+        {
+            "device_port":34,
+            "if": "veth27"
+        },
+        {
+            "device_port":35,
+            "if": "veth28"
+        },
+        {
+            "device_port":36,
+            "if": "veth29"
+        },
+        {
+            "device_port":37,
+            "if": "veth30"
+        },
+        {
+            "device_port":38,
+            "if": "veth31"
+        },
+        {
+            "device_port":39,
+            "if": "veth32"
+        },
+        {
+            "_comment": "Map ethernet CPU port 2 to veth133",
+            "device_port":2,
+            "if": "veth133"
+        }
+    ]
+}
+
