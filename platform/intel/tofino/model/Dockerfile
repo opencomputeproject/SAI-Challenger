@@ -8,7 +8,7 @@ ENV SC_TARGET=model
 
 WORKDIR /sai
 
-RUN apt-get install -y libgoogle-perftools4
+RUN apt-get install -y libgoogle-perftools4 libc-ares2
 
 COPY *.deb /sai/
 RUN dpkg -i *.deb
