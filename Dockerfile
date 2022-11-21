@@ -14,34 +14,62 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Install generic packages
 RUN apt-get -o Acquire::Check-Valid-Until=false update && apt-get install -y \
         apt-utils \
-        vim \
-        curl \
-        wget \
-        iproute2 \
-        unzip \
-        git \
         procps \
         build-essential \
+        python3 \
+        python3-pip \
+        python3-redis \
+        iproute2 \
+        rsyslog \
+        wget \
+        cmake \
+        supervisor
+
+# Disable kernel logging support
+RUN sed -ri '/imklog/s/^/#/' /etc/rsyslog.conf
+
+RUN pip3 install pytest pytest_dependency pytest-html pdbpp
+
+# Install PTF dependencies
+RUN pip3 install scapy dpkt
+
+# Install ptf_nn_agent dependencies
+RUN apt-get -o Acquire::Check-Valid-Until=false update && apt-get install -y libffi-dev \
+        && wget https://github.com/nanomsg/nanomsg/archive/1.0.0.tar.gz \
+        && tar xvfz 1.0.0.tar.gz \
+        && cd nanomsg-1.0.0 \
+        && mkdir -p build \
+        && cd build \
+        && cmake .. \
+        && make install \
+        && ldconfig \
+        && cd ../.. \
+        && rm -rf 1.0.0.tar.gz nanomsg-1.0.0 \
+        && pip3 install nnpy
+
+# Install generic packages #2
+RUN apt-get -o Acquire::Check-Valid-Until=false update && apt-get install -y \
+        vim \
+        curl \
+        unzip \
+        git \
         graphviz \
         doxygen \
-        aspell \
-        python3-pip \
-        rsyslog \
-        supervisor
+        aspell
 
 # Add support for supervisord to handle startup dependencies
 RUN pip3 install supervisord-dependent-startup==1.4.0
 
 # Install dependencies
-RUN apt-get install -y redis-server libhiredis0.14 python3-redis libc-ares2
+RUN apt-get -o Acquire::Check-Valid-Until=false update && apt-get install -y redis-server libhiredis0.14 python3-redis libc-ares2
 
 # Install sonic-swss-common & sonic-sairedis building dependencies
-RUN apt-get install -y \
+RUN apt-get -o Acquire::Check-Valid-Until=false update && apt-get install -y \
         make libtool m4 autoconf dh-exec debhelper automake cmake pkg-config \
         libhiredis-dev libnl-3-dev libnl-genl-3-dev libnl-route-3-dev swig3.0 \
         libpython2.7-dev libgtest-dev libgmock-dev libboost-dev autoconf-archive
 
-RUN apt-get install -y \
+RUN apt-get -o Acquire::Check-Valid-Until=false update && apt-get install -y \
         libnl-3-dev libnl-genl-3-dev libnl-route-3-dev libnl-nf-3-dev libzmq3-dev
 
 COPY sai.env /
@@ -61,21 +89,7 @@ WORKDIR /sai
 
 # Install SAI attributes metadata JSON generator
 COPY scripts/gen_attr_list /sai/gen_attr_list
-RUN apt-get install -y nlohmann-json-dev
-
-# Install ptf_nn_agent dependencies
-RUN apt-get install -y libffi-dev \
-        && wget https://github.com/nanomsg/nanomsg/archive/1.0.0.tar.gz \
-        && tar xvfz 1.0.0.tar.gz \
-        && cd nanomsg-1.0.0 \
-        && mkdir -p build \
-        && cd build \
-        && cmake .. \
-        && make install \
-        && ldconfig \
-        && cd ../.. \
-        && rm -rf 1.0.0.tar.gz nanomsg-1.0.0 \
-        && pip3 install nnpy
+RUN apt-get -o Acquire::Check-Valid-Until=false update && apt-get install -y nlohmann-json-dev
 
 # Update Redis configuration:
 # - Enable keyspace notifications as per sonic-swss-common/README.md
@@ -87,17 +101,6 @@ RUN sed -ri 's/^# unixsocket/unixsocket/' /etc/redis/redis.conf \
         && sed -ri 's/notify-keyspace-events ""/notify-keyspace-events AKE/' /etc/redis/redis.conf \
         && sed -ri 's/^daemonize yes/daemonize no/' /etc/redis/redis.conf \
         && sed -ri 's/^save/# save/' /etc/redis/redis.conf
-
-# Disable kernel logging support
-RUN sed -ri '/imklog/s/^/#/' /etc/rsyslog.conf
-
-# Setup supervisord
-COPY scripts/veth-create.sh    /usr/bin/veth-create.sh
-COPY scripts/redis_start.sh    /usr/bin/redis_start.sh
-COPY configs/supervisord.conf  /etc/supervisor/conf.d/supervisord.conf
-
-# Install PTF dependencies
-RUN pip3 install scapy
 
 # Install ptf_nn_agent and PTF helpers (required by sai_dataplane.py)
 COPY ptf/ptf_nn/ptf_nn_agent.py      /ptf/ptf_nn/ptf_nn_agent.py
@@ -112,9 +115,13 @@ RUN echo "#mock" > /ptf/ptf \
 
 # Install SAI Challenger CLI dependencies
 RUN pip3 install click==8.0
-RUN echo ". /sai-challenger/scripts/sai-cli-completion.sh" >> /root/.bashrc
 
-RUN pip3 install pytest pytest_dependency pytest-html
+# Setup supervisord
+COPY scripts/veth-create.sh    /usr/bin/veth-create.sh
+COPY scripts/redis_start.sh    /usr/bin/redis_start.sh
+COPY configs/supervisord.conf  /etc/supervisor/conf.d/supervisord.conf
+
+RUN echo ". /sai-challenger/scripts/sai-cli-completion.sh" >> /root/.bashrc
 
 WORKDIR /sai-challenger/tests
 

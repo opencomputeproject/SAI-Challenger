@@ -21,7 +21,12 @@ RUN apt-get -o Acquire::Check-Valid-Until=false update && apt-get install -y \
         python3-redis \
         iproute2 \
         rsyslog \
+        wget \
+        cmake \
         supervisor
+
+# Disable kernel logging support
+RUN sed -ri '/imklog/s/^/#/' /etc/rsyslog.conf
 
 RUN pip3 install pytest pytest_dependency pytest-html pdbpp
 
@@ -29,7 +34,7 @@ RUN pip3 install pytest pytest_dependency pytest-html pdbpp
 RUN pip3 install scapy dpkt
 
 # Install ptf_nn_agent dependencies
-RUN apt-get install -y libffi-dev cmake wget \
+RUN apt-get -o Acquire::Check-Valid-Until=false update && apt-get install -y libffi-dev \
         && wget https://github.com/nanomsg/nanomsg/archive/1.0.0.tar.gz \
         && tar xvfz 1.0.0.tar.gz \
         && cd nanomsg-1.0.0 \
@@ -41,9 +46,6 @@ RUN apt-get install -y libffi-dev cmake wget \
         && cd ../.. \
         && rm -rf 1.0.0.tar.gz nanomsg-1.0.0 \
         && pip3 install nnpy
-
-# Disable kernel logging support
-RUN sed -ri '/imklog/s/^/#/' /etc/rsyslog.conf
 
 COPY configs/client/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 

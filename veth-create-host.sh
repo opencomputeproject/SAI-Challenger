@@ -16,6 +16,10 @@ if [ -z $DOCKER1 ]; then
     exit 1
 fi
 
+if [ ! -d /var/run/netns ]; then
+    mkdir -p /var/run/netns
+fi
+
 PID=$(docker inspect --format '{{ .State.Pid }}' $DOCKER1)
 DOCKER1_NETNS="$DOCKER1_$PID"
 ln -s /proc/$PID/ns/net /var/run/netns/$DOCKER1_NETNS

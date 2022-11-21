@@ -26,13 +26,13 @@ Start SAI Challenger server:
 
 Create veth links between client and server dockers:
 ```sh
-bash -c ./veth-create-host.sh sc-server-run sc-client-run
+sudo ./veth-create-host.sh sc-server-trident2-saivs-run sc-client-run
 ```
 Where: _sc-server-run_ and _sc-client-run_ are docker names of SAI-Challenger server and client respectively.
 
 Alternatively, you can run the whole client-server environment on the same host with a single script:
 ```sh
-./run_client_server.sh start -a trident2 -t saivs
+./run_client_server.sh -a trident2 -t saivs start
 ./run_client_server.sh start
 ```
 
@@ -45,12 +45,12 @@ And then shut it down:
 
 Run SAI Challenger testcases:
 ```sh
-./exec.sh -i client pytest --asic trident2 --target saivs --sai-server=172.17.0.4 -v -k "test_l2_basic"
+./exec.sh -i client pytest --asic trident2 --target saivs --sai-server=172.17.0.3 -v -k "test_l2_basic"
 ```
 
 Run SAI Challenger testcases and generate HTML report:
 ```sh
-./exec.sh -i client pytest --asic trident2 --target saivs --sai-server=172.17.0.4 -v -k "test_l2_basic" --html=report.html --self-contained-html
+./exec.sh -i client pytest --asic trident2 --target saivs --sai-server=172.17.0.3 -v -k "test_l2_basic" --html=report.html --self-contained-html
 ```
 
 **NOTE:** The option `--traffic` will be ignored when running on `saivs` target.
