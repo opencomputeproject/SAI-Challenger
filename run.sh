@@ -29,6 +29,7 @@ print-help() {
     echo "  -c [start|stop]"
     echo "     Start or stop docker. Default (start)"
     echo "  -p Run Docker in --privileged mode"
+    echo "  -n Run Docker with host networking namespace"
     echo "  -r Remove Docker after run"
     echo
     exit 0
@@ -58,6 +59,9 @@ while [[ $# -gt 0 ]]; do
         ;;
         "-r")
             OPTS="$OPTS --rm"
+        ;;
+        "-n")
+            OPTS="$OPTS --network host"
         ;;
         "-c")
             COMMAND="$2"
