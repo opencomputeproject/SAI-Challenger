@@ -1,5 +1,5 @@
+import datetime
 import logging
-import time
 
 import dpkt
 from saichallenger.common.sai_dataplane import SaiDataplane
@@ -26,7 +26,7 @@ class SaiDataplaneImpl(SaiDataplane):
             self.api = snappi.api(location=self.exec_params['controller'], verify=False, ext='trex')
         else:
             self.api = snappi.api(location=self.exec_params['controller'], verify=False)
-        logging.info("%s Starting connection to controller... " % time.strftime("%s"))
+        logging.info(f"{datetime.datetime.now().strftime('%s')} Starting connection to controller... ")
 
         # Create an empty configuration to be pushed to controller
         self.configuration = self.api.config()
@@ -79,23 +79,25 @@ class SaiDataplaneImpl(SaiDataplane):
         """
         names = []
         for cap in cfg.captures:
-            if cap._properties.get("port_names"):
+            if cap.port_names:
                 for name in cap.port_names:
                     if name not in names:
                         names.append(name)
         return names
 
     def set_config(self, return_time=False):
-        start_time = time.time()
-        logging.info('Setting config ...')
-        res = self.api.set_config(self.configuration)
-        assert self.api_results_ok(res), res
-        if len(res.warnings) > 0:
-            logging.info('Warnings in set_config : {}'.format(res.warnings))
-        end_time = time.time()
-        operation_time = (end_time - start_time) * 1000
+        start = datetime.datetime.now()
+        try:
+            logging.info("Setting config ...")
+            res = self.api.set_config(self.configuration)
+            if res and res.warnings:
+                for warn in res.warnings:
+                    logging.warning(f"Warning in set_config: {warn}")
+        finally:
+            elapsed = (datetime.datetime.now() - start).microseconds * 1000
+            logging.info("Elapsed duration %s: %d ms", "set_config", elapsed)
         if return_time:
-            return operation_time
+            return elapsed
 
     def start_capture(self):
         """ Start a capture which was already configured.
@@ -174,8 +176,7 @@ class SaiDataplaneImpl(SaiDataplane):
         """
         print("Fetching all port stats ...")
         request = self.api.metrics_request()
-        request.choice = request.PORT
-        request.port
+        request.port.port_names = []
         port_results = self.api.get_metrics(request).port_metrics
         if port_results is None:
             port_results = []
@@ -210,7 +211,7 @@ class SaiDataplaneImpl(SaiDataplane):
                  force_pps=False
                  ):
 
-        name = name or f"flow_{time.time()}"
+        name = name or f"flow_{datetime.datetime.now().timestamp()}"
         flow = self.configuration.flows.flow(name=name)[-1]
 
         flow.tx_rx.port.tx_name = self.configuration.ports[0].name
@@ -224,10 +225,6 @@ class SaiDataplaneImpl(SaiDataplane):
         flow.size.fixed = 128
         flow.metrics.enable = True
 
-        # if (bmv2):
-        #     dont change pps
-        # else if (force_pps == True):
-        #     change
         flow.rate.pps = pps
 
         self.flows.append(flow)
@@ -256,13 +253,19 @@ class SaiDataplaneImpl(SaiDataplane):
             return None
 
         ether = flow.packet.add().ethernet
-        ether.dst.value = dst_mac
-        ether.src.value = src_mac
+        if dst_count == 1:
+            # Setup fixed value
+            ether.dst.value = dst_mac
+        else:
+            # Setup increment
+            self.set_increment(ether.dst, dst_choice, dst_count, dst_mac, dst_step)
+        if src_count == 1:
+            # Setup fixed value
+            ether.src.value = src_mac
+        else:
+            # Setup increment
+            self.set_increment(ether.src, src_choice, src_count, src_mac, src_step)
         ether.ether_type.value = eth_type
-
-        # Setup increment
-        self.set_increment(ether.dst, dst_choice, dst_count, dst_mac, dst_step)
-        self.set_increment(ether.src, src_choice, src_count, src_mac, src_step)
 
         return ether
 
