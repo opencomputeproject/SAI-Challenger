@@ -136,9 +136,14 @@ class Sai(AbstractEntity):
                     if store_name is not None:  # remove from the DB
                         del self.objects_registry[store_name]
 
-            elif operation in {"get", "set"}:
+            elif operation == "get":
                 return getattr(self.sai, operation)(
                     obj_type=obj_type, **{"key" if isinstance(obj_key, dict) else "oid": obj_key}, attrs=attrs
+                )
+
+            elif operation == "set":
+                return getattr(self.sai, operation)(
+                    obj_type=obj_type, **{"key" if isinstance(obj_key, dict) else "oid": obj_key}, attr=attrs
                 )
 
     def __init__(self, exec_params):
