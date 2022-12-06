@@ -9,6 +9,7 @@ trap 'last_command=$current_command; current_command=$BASH_COMMAND' DEBUG
 trap 'echo ERROR: "\"${last_command}\" command filed with exit code $?."' ERR
 
 IMAGE_TYPE="standalone"
+CONTAINER=""
 ASIC_TYPE=""
 ASIC_PATH=""
 TARGET=""
@@ -22,6 +23,8 @@ print-help() {
     echo "  -h Print script usage"
     echo "  -i [standalone|client|server]"
     echo "     Image type to be started"
+    echo "  --name CONTAINER"
+    echo "     Use CONTAINER name instead of a standard name"
     echo "  -a ASIC"
     echo "     ASIC to be tested"
     echo "  -t TARGET"
@@ -52,6 +55,10 @@ while [[ $# -gt 0 ]]; do
         ;;
         "-t"|"--target")
             TARGET="$2"
+            shift
+        ;;
+        "--name")
+            CONTAINER="$2"
             shift
         ;;
         "-p")
@@ -107,18 +114,29 @@ if [[ "${IMAGE_TYPE}" != "client" ]]; then
     fi
 fi
 
+if [ -z "${CONTAINER}" ]; then
+    if [ "${IMAGE_TYPE}" = "standalone" ]; then
+        CONTAINER=sc-${ASIC_TYPE}-${TARGET}-run
+    elif [ "${IMAGE_TYPE}" = "server" ]; then
+        CONTAINER=sc-server-${ASIC_TYPE}-${TARGET}-run
+    else
+        CONTAINER=sc-client-run
+    fi
+fi
+
 print-start-options() {
     echo
-    echo "==========================================="
-    echo "     SAI Challenger ${COMMAND} options"
-    echo "==========================================="
+    echo "==================================================="
+    echo "         SAI Challenger ${COMMAND} options"
+    echo "==================================================="
     echo
-    echo " Docker image type  : ${IMAGE_TYPE}"
-    echo " ASIC name          : ${ASIC_TYPE}"
-    echo " ASIC target        : ${TARGET}"
-    echo " Platform path      : ${ASIC_PATH}"
+    echo " Docker image type      : ${IMAGE_TYPE}"
+    echo " Docker container name  : ${CONTAINER}"
+    echo " ASIC name              : ${ASIC_TYPE}"
+    echo " ASIC target            : ${TARGET}"
+    echo " Platform path          : ${ASIC_PATH}"
     echo
-    echo "==========================================="
+    echo "==================================================="
     echo
 }
 
@@ -137,20 +155,20 @@ if [ "${COMMAND}" = "start" ]; then
 
     # Start Docker container
     if [ "${IMAGE_TYPE}" = "standalone" ]; then
-        docker run --name sc-${ASIC_TYPE}-${TARGET}-run \
+        docker run --name ${CONTAINER} \
         -v $(pwd):/sai-challenger \
         --cap-add=NET_ADMIN \
         ${OPTS} \
         --device /dev/net/tun:/dev/net/tun \
         -d sc-${ASIC_TYPE}-${TARGET}
     elif [ "${IMAGE_TYPE}" = "server" ]; then
-        docker run --name sc-server-${ASIC_TYPE}-${TARGET}-run \
+        docker run --name ${CONTAINER} \
         --cap-add=NET_ADMIN \
         ${OPTS} \
         --device /dev/net/tun:/dev/net/tun \
         -d sc-server-${ASIC_TYPE}-${TARGET}
     else
-        docker run --name sc-client-run \
+        docker run --name ${CONTAINER} \
         -v $(pwd):/sai-challenger \
         --cap-add=NET_ADMIN \
         --device /dev/net/tun:/dev/net/tun \
@@ -162,11 +180,11 @@ elif [ "${COMMAND}" = "stop" ]; then
 
     # Stop Docker container
     if [ "${IMAGE_TYPE}" = "standalone" ]; then
-        stop_docker_container sc-${ASIC_TYPE}-${TARGET}-run
+        stop_docker_container ${CONTAINER}
     elif [ "${IMAGE_TYPE}" = "server" ]; then
-        stop_docker_container sc-server-${ASIC_TYPE}-${TARGET}-run
+        stop_docker_container ${CONTAINER}
     else
-        stop_docker_container sc-client-run
+        stop_docker_container ${CONTAINER}
     fi
 
 else

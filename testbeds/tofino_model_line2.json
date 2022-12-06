@@ -1,0 +1,33 @@
+{
+    "name": "tofino_model_line2",
+    "discription": "Line topology with 2 Tofino Model DUTs",
+    "duts": [
+        "s0", "s1"
+    ],
+    "dataplanes": [
+        "dataplane"
+    ],
+    "dataplane": {
+        "type": "ptf",
+        "interfaces": {
+            "0": "veth1",
+            "1": "veth2",
+            "2": "veth3",
+            "3": "veth4"
+        }
+    },
+    "s0": {
+        "type": "npu",
+        "asic": "tofino",
+        "target": "model",
+        "mgmt_ip": "172.17.0.2",
+        "sku": "32x25g"
+    },
+    "s1": {
+        "type": "npu",
+        "asic": "tofino",
+        "target": "model",
+        "mgmt_ip": "172.17.0.3",
+        "sku": "32x25g"
+    }
+}
