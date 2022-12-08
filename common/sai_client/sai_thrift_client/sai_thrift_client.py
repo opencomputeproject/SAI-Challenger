@@ -112,7 +112,11 @@ class SaiThriftClient(SaiClient):
 
         for attr, value in ThriftConverter.convert_attributes_to_thrift(attrs):
             thrift_attr_value = sai_thrift_function(self.thrift_client, **object_key, **{attr: value})
-            result.extend(ThriftConverter.convert_attributes_from_thrift(thrift_attr_value))
+            if operation == 'set':
+                # No need to have a list here, since set always takes only one attribute at a time
+                result = ThriftConverter.convert_to_sai_status_str(thrift_attr_value)
+            else:
+                result.extend(ThriftConverter.convert_attributes_from_thrift(thrift_attr_value))
 
         return result
 
