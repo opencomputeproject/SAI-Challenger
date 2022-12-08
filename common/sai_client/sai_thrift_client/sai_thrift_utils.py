@@ -1,12 +1,12 @@
 import re
-import enum
 from itertools import zip_longest
 from sai_thrift import sai_headers
 from sai_thrift.ttypes import *
 from sai_thrift import ttypes
 from sai_thrift.sai_headers import *
 from saichallenger.common.sai_client.sai_thrift_client.sai_thrift_metadata import SaiMetadata
-from saichallenger.common.sai_data import SaiObjType
+from saichallenger.common.sai_data import SaiObjType, SaiStatus
+
 
 class ThriftConverter():
     def convert_attributes_to_thrift(attributes):
@@ -266,3 +266,19 @@ class ThriftConverter():
                 return None
         elif isinstance(obj_type, int):
             return SaiObjType(obj_type)
+
+    @staticmethod
+    def convert_to_sai_status_str(status):
+        """
+        15                        => "SAI_STATUS_NOT_IMPLEMENTED"
+        "15"                      => "SAI_STATUS_NOT_IMPLEMENTED"
+        SaiStatus.NOT_IMPLEMENTED => "SAI_STATUS_NOT_IMPLEMENTED"
+        """
+        name = None
+        if isinstance(status, SaiStatus):
+            name = status.name
+        elif isinstance(status, str):
+            name = SaiStatus(int(status)).name
+        elif isinstance(status, int):
+            name = SaiStatus(status).name
+        return 'SAI_STATUS_' + name
