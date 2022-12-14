@@ -15,7 +15,7 @@ class SaiClient:
         raise NotImplementedError
 
     # CRUD
-    def create(self, obj_type, *, key=None, attrs=None, do_assert=True):
+    def create(self, obj, attrs, do_assert=True):
         """
         Create SAI object of appropriate object type.
         if do_assert is set to False unsuccessful operation silently fails
@@ -23,21 +23,21 @@ class SaiClient:
 
         raise NotImplementedError
 
-    def remove(self, *, oid=None, obj_type=None, key=None, do_assert=True):
+    def remove(self, obj, do_assert=True):
         """
         Remove SAI object by oid or by key
         if do_assert is set to False unsuccessful operation silently fails
         """
         raise NotImplementedError
 
-    def set(self, *, oid=None, obj_type=None, key=None, attr=None, do_assert=True):
+    def set(self, obj, attr, do_assert=True):
         """
         Set attribute for SAI object.
         if do_assert is set to False unsuccessful operation silently fails
         """
         raise NotImplementedError
 
-    def get(self, *, oid=None, obj_type=None, key=None, attrs=None, do_assert=True):
+    def get(self, obj, attrs, do_assert=True):
         """
         Get attributes for SAI object.
         if do_assert is set to False unsuccessful operation silently fails
@@ -45,10 +45,10 @@ class SaiClient:
         raise NotImplementedError
 
     # Stats
-    def get_stats(self, oid=None, obj_type=None, key=None, attrs=None):
+    def get_stats(self, obj, attrs, do_assert=True):
         raise NotImplementedError
 
-    def clear_stats(self, oid=None, obj_type=None, key=None, attrs=None):
+    def clear_stats(self, obj, attrs, do_assert=True):
         raise NotImplementedError
 
     # Flush FDB
@@ -56,13 +56,13 @@ class SaiClient:
         raise NotImplementedError
 
     # BULK
-    def bulk_create(self, obj_type, keys=None, attrs=None):
+    def bulk_create(self, obj, keys, attrs, do_assert=True):
         raise NotImplementedError
 
-    def bulk_remove(self, oids=None, obj_type=None, keys=None):
+    def bulk_remove(self, obj, keys, do_assert=True):
         raise NotImplementedError
 
-    def bulk_set(self, oids=None, obj_type=None, keys=None, attrs=None):
+    def bulk_set(self, obj, keys, attrs, do_assert=True):
         raise NotImplementedError
 
     # Host interface

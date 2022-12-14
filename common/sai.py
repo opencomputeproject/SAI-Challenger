@@ -92,7 +92,7 @@ class Sai(AbstractEntity):
             Command examples:
                 {
                     "OP" : "create",
-                    "type" : "OBJECT_TYPE_VIP_ENTRY",
+                    "type" : "SAI_OBJECT_TYPE_VIP_ENTRY",
                     "key" : {
                         "switch_id" : "$SWITCH_ID",
                         "vip" : "192.168.0.1"
@@ -115,8 +115,18 @@ class Sai(AbstractEntity):
             obj_type = command.get("type")
             obj_key = command.get("key")
 
+            if obj_key is None:
+                obj_id = obj_type
+            elif type(obj_key) == dict:
+                obj_key = json.dumps(obj_key)
+                obj_id = obj_type + ":" + obj_key
+            elif type(obj_key) == int:
+                obj_id = obj_key
+            else:
+                assert False, f"Failed to process: {obj_type}, {obj_key}, {operation}"
+
             if operation == "create":
-                obj = self.sai.create(obj_type=obj_type, key=obj_key, attrs=attrs)
+                obj = self.sai.create(obj_id, attrs)
                 if isinstance(store_name, str):  # Store to the DB
                     self.objects_registry[store_name] = {
                         "type": obj_type,
@@ -126,25 +136,21 @@ class Sai(AbstractEntity):
 
             elif operation == "remove":
                 try:
-                    return self.sai.remove(
-                        obj_type=obj_type, **{"key" if isinstance(obj_key, dict) else "oid": obj_key}
-                    )
+                    return self.sai.remove(obj_id)
                 except Exception:
-                    logging.exception('Sai object removal failed', exc_info=True)
+                    logging.exception('SAI object removal failed', exc_info=True)
                     raise
                 finally:
                     if store_name is not None:  # remove from the DB
                         del self.objects_registry[store_name]
 
             elif operation == "get":
-                return getattr(self.sai, operation)(
-                    obj_type=obj_type, **{"key" if isinstance(obj_key, dict) else "oid": obj_key}, attrs=attrs
-                )
+                return self.sai.get(obj_id, attrs)
 
             elif operation == "set":
-                return getattr(self.sai, operation)(
-                    obj_type=obj_type, **{"key" if isinstance(obj_key, dict) else "oid": obj_key}, attr=attrs
-                )
+                return self.sai.set(obj_id, attrs)
+            else:
+                assert False, f"Unsupported operation: {operation}"
 
     def __init__(self, exec_params):
         super().__init__(exec_params)
@@ -181,17 +187,17 @@ class Sai(AbstractEntity):
         return self.sai_client.set_loglevel(sai_api, loglevel)
 
     # CRUD
-    def create(self, obj_type, *, key=None, attrs=None, do_assert=True):
-        return self.sai_client.create(obj_type, key=key, attrs=attrs, do_assert=do_assert)
+    def create(self, obj, attrs, do_assert=True):
+        return self.sai_client.create(obj, attrs, do_assert)
 
-    def remove(self, *, oid=None, obj_type=None, key=None, do_assert=True):
-        return self.sai_client.remove(oid=oid, obj_type=obj_type, key=key, do_assert=do_assert)
+    def remove(self, obj, do_assert=True):
+        return self.sai_client.remove(obj, do_assert)
 
-    def set(self, *, oid=None, obj_type=None, key=None, attr=None, do_assert=True):
-        return self.sai_client.set(oid=oid, obj_type=obj_type, key=key, attr=attr, do_assert=do_assert)
+    def set(self, obj, attr, do_assert=True):
+        return self.sai_client.set(obj, attr, do_assert)
 
-    def get(self, *, oid=None, obj_type=None, key=None, attrs=None, do_assert=True):
-        return self.sai_client.get(oid=oid, obj_type=obj_type, key=key, attrs=attrs, do_assert=do_assert)
+    def get(self, obj, attrs, do_assert=True):
+        return self.sai_client.get(obj, attrs, do_assert)
 
     # BULK (TODO remove do_assert, "oid:" and handle oid
     def bulk_create(self, obj, keys, attrs, do_assert=True):
@@ -204,11 +210,11 @@ class Sai(AbstractEntity):
         return self.sai_client.bulk_set(obj, keys, attrs, do_assert)
 
     # Stats
-    def get_stats(self, oid=None, obj_type=None, key=None, attrs=None):
-        return self.sai_client.get_stats(oid, obj_type, key, attrs)
+    def get_stats(self, obj, attrs, do_assert=True):
+        return self.sai_client.get_stats(obj, attrs, do_assert)
 
-    def clear_stats(self, oid=None, obj_type=None, key=None, attrs=None):
-        return self.sai_client.clear_stats(oid, obj_type, key, attrs)
+    def clear_stats(self, obj, attrs, do_assert=True):
+        return self.sai_client.clear_stats(obj, attrs, do_assert)
 
     # Flush FDB
     def flush_fdb_entries(self, attrs=None):
