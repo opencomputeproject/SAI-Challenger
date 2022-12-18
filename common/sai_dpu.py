@@ -31,7 +31,7 @@ class SaiDpu(Sai):
         port_num = self.get(self.switch_oid, ["SAI_SWITCH_ATTR_NUMBER_OF_ACTIVE_PORTS", 0]).uint32()
         if port_num > 0:
             self.port_oids = self.get(self.switch_oid,
-                                      ["SAI_SWITCH_ATTR_PORT_LIST", self._make_list(port_num, "0x0")]).oids()
+                                      ["SAI_SWITCH_ATTR_PORT_LIST", self.make_list(port_num, "0x0")]).oids()
 
             self.dot1q_br_oid = self.get(self.switch_oid,
                                          ["SAI_SWITCH_ATTR_DEFAULT_1Q_BRIDGE_ID", "0x0"]).oid()

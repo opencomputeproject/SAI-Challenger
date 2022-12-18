@@ -170,28 +170,46 @@ class SaiData:
     def to_json(self):
         return json.loads(self.data)
 
-    def oid(self, idx=1):
+#    def oid(self, idx=1):
+#        value = self.to_json()[idx]
+#        if isinstance(value, int):
+#            return hex(value)
+#        if "oid:" in value:
+#            return value[4:]
+#        if "0x" in value:
+#            return value
+#        return "0x0"
+
+    def oid(self, idx = 1):
         value = self.to_json()[idx]
-        if isinstance(value, int):
-            return hex(value)
         if "oid:" in value:
-            return value[4:]
-        if "0x" in value:
             return value
-        return "0x0"
+        return "oid:0x0"
 
-    def to_list(self, idx=1):
+#    def to_list(self, idx=1):
+#        value = self.to_json()[idx]
+#        idx = value.index(":") + 1
+#        return value[idx:].split(",")
+
+    def to_list(self, idx = 1):
         value = self.to_json()[idx]
-        idx = value.index(":") + 1
-        return value[idx:].split(",")
+        n_items, _, items = value.partition(':')
+        return items.split(",") if int(n_items) > 0 else []
 
-    def oids(self, idx=1):
+#    def oids(self, idx=1):
+#        value = self.to_list(idx)
+#        if len(value) > 0:
+#            for idx, val in enumerate(value):
+#                if "oid:" in val:
+#                    value[idx] = val[4:]
+#            return value
+#        return []
+
+    def oids(self, idx = 1):
         value = self.to_list(idx)
         if len(value) > 0:
-            for idx, val in enumerate(value):
-                if "oid:" in val:
-                    value[idx] = val[4:]
-            return value
+            if "oid:" in value[0]:
+                return value
         return []
 
     def counters(self):

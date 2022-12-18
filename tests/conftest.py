@@ -19,6 +19,7 @@ def pytest_addoption(parser):
 def exec_params(request):
     config_param = {}
     config_param["setup"] = init_setup(request.config)
+    config_param["server"] = "localhost"
     config_param["traffic"] = request.config.getoption("--traffic")
     config_param["loglevel"] = request.config.getoption("--loglevel")
     logging.getLogger().setLevel(getattr(logging, config_param["loglevel"].upper(), "INFO"))

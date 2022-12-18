@@ -8,5 +8,5 @@ switch_attrs = Sai.get_obj_attrs("SAI_OBJECT_TYPE_SWITCH")
     switch_attrs
 )
 def test_get_attr(npu, dataplane, attr, attr_type):
-    status, data = npu.get_by_type(npu.oid, attr, attr_type, do_assert = False)
+    status, data = npu.get_by_type(npu.switch_oid, attr, attr_type, do_assert = False)
     npu.assert_status_success(status)

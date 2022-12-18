@@ -4,7 +4,7 @@ import time
 @pytest.fixture(scope="module")
 def bcm56850_teardown(npu):
     yield
-    if npu.name == "BCM56850":
+    if npu.name in ["BCM56850", "trident2"]:
         npu.reset()
 
 
@@ -30,13 +30,13 @@ def tofino_teardown(npu):
     ],
 )
 def test_apply_sairec(npu, exec_params, dataplane, fname, bcm56850_teardown):
-    if npu.name != "BCM56850":
+    if npu.name not in ["BCM56850", "trident2"]:
         pytest.skip("VS specific scenario")
 
     if exec_params["server"] != 'localhost':
         pytest.skip("Currently not supported in client-server mode")
 
-    npu.apply_rec("/sai/sonic-sairedis/tests/" + fname)
+    npu.sai_client.apply_rec("/sai/sonic-sairedis/tests/" + fname)
 
 
 @pytest.mark.parametrize(

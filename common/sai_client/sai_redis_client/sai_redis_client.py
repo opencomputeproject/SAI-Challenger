@@ -1,6 +1,7 @@
 import json
 import redis
 import time
+import os
 
 from saichallenger.common.sai_client.sai_client import SaiClient
 from saichallenger.common.sai_data import SaiObjType, SaiData
@@ -11,15 +12,20 @@ class SaiRedisClient(SaiClient):
 
     def __init__(self, client_config):
         self.server_ip = client_config["ip"]
-        self.port = client_config["port"]
         self.loglevel = client_config["loglevel"]
+        self.port = client_config["port"]
 
         self.r = redis.Redis(host=self.server_ip, port=self.port, db=1)
         self.loglevel_db = redis.Redis(host=self.server_ip, port=self.port, db=3)
         self.cache = {}
         self.rec2vid = {}
 
-        self.switch_oid = "0x0"
+        self.client_mode = not os.path.isfile("/usr/bin/redis-server")
+        libsai = os.path.isfile("/usr/lib/libsai.so") or os.path.isfile("/usr/local/lib/libsai.so")
+        self.libsaivs = client_config["type"] == "vs" or (not self.client_mode and not libsai)
+        self.run_traffic = False#client_config["traffic"] and not self.libsaivs
+
+        self.switch_oid = "oid:0x21000000000000"
 
     def cleanup(self):
         '''
@@ -72,76 +78,128 @@ class SaiRedisClient(SaiClient):
         self.loglevel_db.hset("_" + sai_api + ":" + sai_api, "LOGLEVEL", loglevel)
         self.loglevel_db.publish(sai_api + "_CHANNEL@3", "G")
 
-    # CRUD
-    def create(self, obj_type, key, attrs, do_assert):
-        vid = None
+    def operate(self, obj, attrs, op):
+        self.r.delete("GETRESPONSE_KEY_VALUE_OP_QUEUE")
 
-        object_id = "SAI_OBJECT_TYPE_" + obj_type.name + ":"
-        if key is not None:
-            object_id = object_id + json.dumps(key).replace(" ", "")
+        tout = 0.03
+        attempts = self.attempts
+        while len(self.r.lrange("GETRESPONSE_KEY_VALUE_OP_QUEUE", 0, -1)) > 0 and attempts > 0:
+            time.sleep(0.01)
+            attempts -= 1
+
+        if attempts == 0:
+            return []
+
+        # Remove spaces from the key string.
+        # Required by sai_serialize_route_entry() in sairedis.
+        obj = obj.replace(' ', '')
+
+        self.r.lpush("ASIC_STATE_KEY_VALUE_OP_QUEUE", obj, attrs, op)
+        self.r.publish("ASIC_STATE_CHANNEL@1", "G")
+
+        status = []
+        attempts = self.attempts
+
+        # Wait upto 3 mins for switch init on HW
+        if not self.libsaivs and obj.startswith("SAI_OBJECT_TYPE_SWITCH") and op == "Screate":
+            tout = 0.5
+            attempts = 240
+
+        while len(status) < 3 and attempts > 0:
+            time.sleep(tout)
+            attempts -= 1
+            status = self.r.lrange("GETRESPONSE_KEY_VALUE_OP_QUEUE", 0, -1)
+
+        self.r.delete("GETRESPONSE_KEY_VALUE_OP_QUEUE")
+
+        assert len(status) == 3, "SAI \"{}\" operation failure!".format(op)
+        return status
+
+    def create(self, obj, attrs, do_assert=True):
+        vid = None
+        if type(obj) == SaiObjType:
+            vid = self.alloc_vid(obj)
+            obj = "SAI_OBJECT_TYPE_" + obj.name + ":" + vid
         else:
-            vid = self.__alloc_vid(obj_type)
-            object_id = object_id + vid
-            if obj_type == SaiObjType.SWITCH:
-                self.switch_oid = vid
+            # NOTE: The sai_deserialize_route_entry() from sonic-sairedis does not tolerate
+            # spaces in the route entry key:
+            # {"dest":"0.0.0.0/0","switch_id":"oid:0x21000000000000","vr":"oid:0x3000000000022"}
+            # For more details, please refer to sai_deserialize_route_entry() implementation.
+            obj = obj.replace(" ", "")
 
         if type(attrs) != str:
             attrs = json.dumps(attrs)
-        status = self.__operate(object_id, attrs, "Screate")
-
+        status = self.operate(obj, attrs, "Screate")
+        status[2] = status[2].decode("utf-8")
         if do_assert:
-            assert status[2] == 'SAI_STATUS_SUCCESS', f"create({obj_type}, {key}, {attrs}) --> {status}"
-        return vid
+            assert status[2] == 'SAI_STATUS_SUCCESS', f"create({obj}, {attrs}) --> {status}"
+            return vid
+
+        return status[2], vid
 
     def _form_redis_style_object_id(self, oid = None, obj_type = None, key = None):
         object_id = None
         if oid is not None:
-            assert self.__vid_to_rid(oid), f"Unable to retrieve RID by VID {oid}"
-            object_id = self.__vid_to_type(oid) + ":oid:" + oid
+            assert self.vid_to_rid(oid), f"Unable to retrieve RID by VID {oid}"
+            object_id = self.vid_to_type(oid) + ":oid:" + oid
         elif obj_type is not None:
             object_id = "SAI_OBJECT_TYPE_" + obj_type.name + ":"
         if key is not None:
             object_id = object_id + json.dumps(key).replace(" ", "")
         return object_id
 
-    def remove(self, oid, obj_type, key, do_assert):
-        object_id = self._form_redis_style_object_id(oid=oid, obj_type=obj_type, key=key)
+    def remove(self, obj, do_assert=True):
+        if obj.startswith("oid:"):
+            assert self.vid_to_rid(obj), f"Unable to retrieve RID by VID {obj}"
+            obj = self.vid_to_type(obj) + ":" + obj
+        assert obj.startswith("SAI_OBJECT_TYPE_")
+        obj = obj.replace(" ", "")
 
-        status = self.__operate(object_id, "{}", "Dremove")
-
+        status = self.operate(obj, "{}", "Dremove")
+        status[2] = status[2].decode("utf-8")
         if do_assert:
-            assert status[2] == 'SAI_STATUS_SUCCESS', f"remove({oid}, {obj_type}, {key}) --> {status}"
+            assert status[2] == 'SAI_STATUS_SUCCESS', f"remove({obj}) --> {status}"
+        return status[2]
 
-    def set(self, oid, obj_type, key, attr, do_assert):
-        object_id = self._form_redis_style_object_id(oid=oid, obj_type=obj_type, key=key)
+    def set(self, obj, attr, do_assert=True):
+        if obj.startswith("oid:"):
+            assert self.vid_to_rid(obj), f"Unable to retrieve RID by VID {obj}"
+            obj = self.vid_to_type(obj) + ":" + obj
+        assert obj.startswith("SAI_OBJECT_TYPE_")
+        obj = obj.replace(" ", "")
 
         if type(attr) != str:
             attr = json.dumps(attr)
-
-        status = self.__operate(object_id, attr, "Sset")
-
+        status = self.operate(obj, attr, "Sset")
+        status[2] = status[2].decode("utf-8")
         if do_assert:
-            assert status[2] == 'SAI_STATUS_SUCCESS', f"set({oid}, {obj_type}, {key}, {attr}) --> {status}"
+            assert status[2] == 'SAI_STATUS_SUCCESS', f"set({obj}, {attr}) --> {status}"
+        return status[2]
 
-    def get(self, oid, obj_type, key, attrs, do_assert = True):
-        object_id = self._form_redis_style_object_id(oid=oid, obj_type=obj_type, key=key)
+    def get(self, obj, attrs, do_assert=True):
+        if obj.startswith("oid:"):
+            assert self.vid_to_rid(obj), f"Unable to retrieve RID by VID {obj}"
+            obj = self.vid_to_type(obj) + ":" + obj
+        assert obj.startswith("SAI_OBJECT_TYPE_")
+        obj = obj.replace(" ", "")
 
         if type(attrs) != str:
             attrs = json.dumps(attrs)
-
-        status = self.__operate(object_id, attrs, "Sget")
+        status = self.operate(obj, attrs, "Sget")
+        status[2] = status[2].decode("utf-8")
 
         if do_assert:
-            assert status[2] == 'SAI_STATUS_SUCCESS', f"get({oid}, {obj_type}, {key}, {attrs}) --> {status}"
-            return SaiData(status[1])
+            assert status[2] == 'SAI_STATUS_SUCCESS', f"get({obj}, {attrs}) --> {status}"
 
-        return status[2], SaiData(status[1])
+        data = SaiData(status[1].decode("utf-8"))
+        if do_assert:
+            return data
 
-    # BULK
+        return status[2], data
+
     def bulk_create(self, obj, keys, attrs, do_assert = True):
         '''
         Bulk create objects
-
         Parameters:
             obj (SaiObjType): The type of objects to be created
             keys (list): The list of objects to be created.
@@ -166,13 +224,10 @@ class SaiRedisClient(SaiClient):
                         [...]
                     ]
             do_assert (bool): Assert that the bulk create operation succeeded.
-
         Usage example:
             bulk_create(SaiObjType.FDB_ENTRY, [key1, key2, ...], [attrs1, attrs2, ...])
             bulk_create(SaiObjType.FDB_ENTRY, [key1, key2, ...], [attrs])
-
             where, attrsN = [attr1, val1, attr2, val2, ...]
-
         Returns:
             The tuple with two elements.
             The first element contains bulk create operation status:
@@ -201,13 +256,16 @@ class SaiRedisClient(SaiClient):
                 str_attr = self.__bulk_attr_serialize(attrs[i])
             values.append(str_attr)
 
-        status = self.__operate(key, json.dumps(values), "Sbulkcreate")
+        status = self.operate(key, json.dumps(values), "Sbulkcreate")
 
+        status[1] = status[1].decode("utf-8")
         status[1] = json.loads(status[1])
         entry_status = []
         for i, v in enumerate(status[1]):
             if i % 2 == 0:
                 entry_status.append(v)
+
+        status[2] = status[2].decode("utf-8")
 
         if do_assert:
             print(entry_status)
@@ -219,7 +277,6 @@ class SaiRedisClient(SaiClient):
     def bulk_remove(self, obj, keys, do_assert = True):
         '''
         Bulk remove objects
-
         Parameters:
             obj (SaiObjType): The type of objects to be removed
             keys (list): The list of objects to be removed.
@@ -233,11 +290,9 @@ class SaiRedisClient(SaiClient):
                         {...}
                     ]
             do_assert (bool): Assert that the bulk remove operation succeeded.
-
         Usage example:
             bulk_remove(SaiObjType.FDB_ENTRY, [key1, key2, ...])
             bulk_remove(SaiObjType.FDB_ENTRY, [key1, key2, ...], False)
-
         Returns:
             The tuple with two elements.
             The first element contains bulk remove operation status:
@@ -259,13 +314,16 @@ class SaiRedisClient(SaiClient):
             values.append(k)
             values.append("")
 
-        status = self.__operate(key, json.dumps(values), "Dbulkremove")
+        status = self.operate(key, json.dumps(values), "Dbulkremove")
 
+        status[1] = status[1].decode("utf-8")
         status[1] = json.loads(status[1])
         entry_status = []
         for i, v in enumerate(status[1]):
             if i % 2 == 0:
                 entry_status.append(v)
+
+        status[2] = status[2].decode("utf-8")
 
         if do_assert:
             print(entry_status)
@@ -277,7 +335,6 @@ class SaiRedisClient(SaiClient):
     def bulk_set(self, obj, keys, attrs, do_assert = True):
         '''
         Bulk set objects attribute
-
         Parameters:
             obj (SaiObjType): The type of objects to be updated
             keys (list): The list of objects to be updated.
@@ -300,11 +357,9 @@ class SaiRedisClient(SaiClient):
                         ...
                     ]
             do_assert (bool): Assert that the bulk set operation succeeded.
-
         Usage example:
             bulk_set(SaiObjType.FDB_ENTRY, [key1, key2, ...], [attr1, attr2, ...])
             bulk_set(SaiObjType.FDB_ENTRY, [key1, key2, ...], [attr])
-
         Returns:
             The tuple with two elements.
             The first element contains bulk set operation status:
@@ -333,13 +388,16 @@ class SaiRedisClient(SaiClient):
                 str_attr = self.__bulk_attr_serialize(attrs[i])
             values.append(str_attr)
 
-        status = self.__operate(key, json.dumps(values), "Sbulkset")
+        status = self.operate(key, json.dumps(values), "Sbulkset")
 
+        status[1] = status[1].decode("utf-8")
         status[1] = json.loads(status[1])
         entry_status = []
         for i, v in enumerate(status[1]):
             if i % 2 == 0:
                 entry_status.append(v)
+
+        status[2] = status[2].decode("utf-8")
 
         if do_assert:
             print(entry_status)
@@ -348,36 +406,38 @@ class SaiRedisClient(SaiClient):
 
         return status[2], entry_status
 
-    # Stats
-    def get_stats(self, oid, obj_type, attrs):
-        object_id = self._form_redis_style_object_id(oid=oid, obj_type=obj_type, key=key)
-
+    def get_stats(self, obj, attrs, do_assert=True):
+        if obj.startswith("oid:"):
+            obj = self.vid_to_type(obj) + ":" + obj
         if type(attrs) != str:
             attrs = json.dumps(attrs)
+        status = self.operate(obj, attrs, "Sget_stats")
+        status[2] = status[2].decode("utf-8")
+        if do_assert:
+            assert status[2] == 'SAI_STATUS_SUCCESS'
 
-        status = self.__operate(obj, attrs, "Sget_stats")
+        data = SaiData(status[1].decode("utf-8"))
+        if do_assert:
+            return data
 
-        assert status[2] == 'SAI_STATUS_SUCCESS'
+        return status[2], data
 
-        return SaiData(status[1])
-
-    def clear_stats(self, obj, attrs, do_assert = True):
-        object_id = self._form_redis_style_object_id(oid=oid, obj_type=obj_type, key=key)
-
+    def clear_stats(self, obj, attrs, do_assert=True):
+        if obj.startswith("oid:"):
+            obj = self.vid_to_type(obj) + ":" + obj
         if type(attrs) != str:
             attrs = json.dumps(attrs)
+        status = self.operate(obj, attrs, "Sclear_stats")
+        status[2] = status[2].decode("utf-8")
+        if do_assert:
+            assert status[2] == 'SAI_STATUS_SUCCESS'
+        return status[2]
 
-        status = self.__operate(obj, attrs, "Sclear_stats")
-
-        assert status[2] == 'SAI_STATUS_SUCCESS'
-
-    # Flush FDB
     def flush_fdb_entries(self, attrs=None):
         """
         To flush all static entries, set SAI_FDB_FLUSH_ATTR_ENTRY_TYPE = SAI_FDB_FLUSH_ENTRY_TYPE_STATIC.
         To flush both static and dynamic entries, then set SAI_FDB_FLUSH_ATTR_ENTRY_TYPE = SAI_FDB_FLUSH_ENTRY_TYPE_ALL.
         The API uses AND operation when multiple attributes are specified:
-
         1) Flush all entries in FDB table - Do not specify any attribute
         2) Flush all entries by bridge port - Set SAI_FDB_FLUSH_ATTR_BRIDGE_PORT_ID
         3) Flush all entries by VLAN - Set SAI_FDB_FLUSH_ATTR_BV_ID with object id as vlan object
@@ -390,9 +450,9 @@ class SaiRedisClient(SaiClient):
             attrs = ["SAI_FDB_FLUSH_ATTR_ENTRY_TYPE", "SAI_FDB_FLUSH_ENTRY_TYPE_ALL"]
         if type(attrs) != str:
             attrs = json.dumps(attrs)
-        status = self.__operate("SAI_OBJECT_TYPE_SWITCH:oid:" + self.switch_oid, attrs, "Sflush")
-        assert status[0] == 'Sflushresponse'
-        assert status[2] == 'SAI_STATUS_SUCCESS'
+        status = self.operate("SAI_OBJECT_TYPE_SWITCH:" + self.switch_oid, attrs, "Sflush")
+        assert status[0].decode("utf-8") == 'Sflushresponse'
+        assert status[2].decode("utf-8") == 'SAI_STATUS_SUCCESS'
 
     # Host interface
     def remote_iface_exists(self, iface):
@@ -415,7 +475,6 @@ class SaiRedisClient(SaiClient):
     def remote_iface_agent_stop(self):
         return self.__remote_cmd_operate("stop_nn_agent") == "ok"
 
-    # Used in tests
     def get_oids(self, obj_type=None):
         oids = []
         all_oids = []
@@ -442,7 +501,6 @@ class SaiRedisClient(SaiClient):
         oids_by_type[obj_type.name] = oids
         return oids_by_type
 
-    # Redis-specific
     def apply_rec(self, fname):
         # Since it's expected that sairedis.rec file contains a full configuration,
         # we must flush both Redis and NPU state before we start.
@@ -584,8 +642,7 @@ class SaiRedisClient(SaiClient):
 
         print("Current SAI objects: {}".format(self.rec2vid))
 
-    # Internal
-    def __get_vid(self, obj_type, value=None):
+    def get_vid(self, obj_type, value=None):
         if obj_type.name not in self.cache:
             self.cache[obj_type.name] = {}
 
@@ -595,11 +652,11 @@ class SaiRedisClient(SaiClient):
         if value in self.cache[obj_type.name]:
             return self.cache[obj_type.name][value]
 
-        oid = self.__alloc_vid(obj_type)
+        oid = self.alloc_vid(obj_type)
         self.cache[obj_type.name][value] = oid
         return oid
 
-    def __alloc_vid(self, obj_type):
+    def alloc_vid(self, obj_type):
         vid = None
         if obj_type == SaiObjType.SWITCH:
             if self.r.get("VIDCOUNTER") is None:
@@ -607,14 +664,14 @@ class SaiRedisClient(SaiClient):
                 vid = 0
         if vid is None:
             vid = self.r.incr("VIDCOUNTER")
-        return hex((obj_type.value << 48) | vid)
+        return "oid:" + hex((obj_type.value << 48) | vid)
 
-    def __vid_to_rid(self, vid):
-        assert vid.startswith("0x"), f"Invalid VID format {vid}"
-        rid = self.r.hget("VIDTORID", "oid:" + vid)
+    def vid_to_rid(self, vid):
+        assert vid.startswith("oid:"), f"Invalid VID format {vid}"
+        rid = self.r.hget("VIDTORID", vid)
         if rid is not None:
-            rid = rid.decode("utf-8")[len("oid:"):]
-            assert rid.startswith("0x"), f"Invalid RID format {rid}"
+            rid = rid.decode("utf-8")
+            assert rid.startswith("oid:"), f"Invalid RID format {vid}"
         return rid
 
     def __asser_syncd_running(self, tout=30):
@@ -633,7 +690,7 @@ class SaiRedisClient(SaiClient):
             # Convert object type from string to enum format
             obj_type = SaiObjType[key_list[0][len("SAI_OBJECT_TYPE_"):]]
             # Allocate new VID and add it to the map
-            vid = self.__get_vid(obj_type, key_list[1])
+            vid = self.get_vid(obj_type, key_list[1])
             self.rec2vid[key_list[1]] = vid
         elif action == "g" or action == "s" or action == "S":
             vid = self.rec2vid[key_list[1]]
@@ -659,7 +716,6 @@ class SaiRedisClient(SaiClient):
             return self.__update_entry_key_oids(key)
         else:
             return self.__update_oid_key(action, key)
-
 
     def __parse_rec(self, fname):
         '''
@@ -726,56 +782,7 @@ class SaiRedisClient(SaiClient):
                 data += v
         return data
 
-    def __operate(self, obj, attrs, op):
-        self.r.delete("GETRESPONSE_KEY_VALUE_OP_QUEUE")
-
-        tout = 0.03
-        attempts = self.attempts
-        while len(self.r.lrange("GETRESPONSE_KEY_VALUE_OP_QUEUE", 0, -1)) > 0 and attempts > 0:
-            time.sleep(0.01)
-            attempts -= 1
-
-        if attempts == 0:
-            return []
-
-        # Remove spaces from the key string.
-        # Required by sai_serialize_route_entry() in sairedis.
-        obj = obj.replace(' ', '')
-
-        # Make redis-style OIDs
-        obj = obj.replace('oid:0x', '0x')
-        obj = obj.replace('0x', 'oid:0x')
-        attrs = attrs.replace('oid:0x', '0x')
-        attrs = attrs.replace('0x', 'oid:0x')
-
-        self.r.lpush("ASIC_STATE_KEY_VALUE_OP_QUEUE", obj, attrs, op)
-        self.r.publish("ASIC_STATE_CHANNEL@1", "G")
-
-        status = []
-        attempts = self.attempts
-
-        #TODO: Handle 'vs' from the config
-        # Wait upto 3 mins for switch init on HW
-        #if obj.startswith("SAI_OBJECT_TYPE_SWITCH") and op == "Screate":
-            #tout = 0.5
-            #attempts = 240
-
-        while len(status) < 3 and attempts > 0:
-            time.sleep(tout)
-            attempts -= 1
-            status = self.r.lrange("GETRESPONSE_KEY_VALUE_OP_QUEUE", 0, -1)
-
-        self.r.delete("GETRESPONSE_KEY_VALUE_OP_QUEUE")
-
-        if len(status) > 0:
-            status[0] = status[0].decode("utf-8")
-        if len(status) > 1:
-            status[1] = status[1].decode("utf-8").replace('oid:0x', '0x')
-        if len(status) > 2:
-            status[2] = status[2].decode("utf-8")
-        return status
-
     @staticmethod
-    def __vid_to_type(vid):
-        obj_type = int(vid, 16) >> 48
+    def vid_to_type(vid):
+        obj_type = int(vid[4:], 16) >> 48
         return "SAI_OBJECT_TYPE_" + SaiObjType(obj_type).name

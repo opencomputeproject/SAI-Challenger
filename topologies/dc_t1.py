@@ -1,6 +1,7 @@
 from contextlib import contextmanager
 import pytest
-from sai_data import SaiObjType
+#from sai_data import SaiObjType
+from saichallenger.common.sai_data import SaiData, SaiObjType
 
 
 @contextmanager
@@ -20,7 +21,7 @@ def config(npu):
     topo_cfg["lo_rif_oid"] = lo_rif_oid
 
     # Get CPU port
-    cpu_port_oid = npu.get(npu.oid, ["SAI_SWITCH_ATTR_CPU_PORT", "oid:0x0"]).oid()
+    cpu_port_oid = npu.get(npu.switch_oid, ["SAI_SWITCH_ATTR_CPU_PORT", "oid:0x0"]).oid()
     topo_cfg["cpu_port_oid"] = cpu_port_oid
 
     # Get port HW lanes

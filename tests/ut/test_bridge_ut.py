@@ -1,5 +1,5 @@
 import pytest
-from sai_data import SaiObjType
+from saichallenger.common.sai_data import SaiObjType
 
 
 bport_attrs = [

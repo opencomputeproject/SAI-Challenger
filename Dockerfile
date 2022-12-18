@@ -111,7 +111,7 @@ RUN echo "#mock" > /ptf/ptf \
         && pip3 install /ptf
 
 # Install SAI Challenger CLI dependencies
-RUN pip3 install click==8.0
+RUN pip3 install click==8.0 dpkt macaddress
 RUN echo ". /sai-challenger/scripts/sai-cli-completion.sh" >> /root/.bashrc
 
 RUN pip3 install pytest pytest_dependency pytest-html
@@ -120,7 +120,6 @@ RUN pip3 install pytest pytest_dependency pytest-html
 # Deploy SAI Challenger CLI
 ADD . /sai-challenger/
 RUN ln -s /sai-challenger /usr/local/lib/python3.7/dist-packages/saichallenger
-RUN echo ". /sai-challenger/scripts/sai-cli-completion.sh" >> /root/.bashrc
 
 # Install SAI Challenger CLI and the remote commands listener
 RUN pip3 install --editable /sai-challenger/common /sai-challenger
