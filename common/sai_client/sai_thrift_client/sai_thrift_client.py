@@ -49,18 +49,20 @@ class SaiThriftClient(SaiClient):
         obj_type = None
         oid = None
         key = None
-        if type(obj) == str:
+        if type(obj) == str and obj.startswith("oid:0x"):
+            oid = obj
+        elif type(obj) == str:
             obj = obj.split(":", 1)
             obj_type = obj[0]
             if len(obj) > 1:
-                if obj[1].startswith("0x"):
+                if obj[1].startswith("oid:0x"):
                     oid = obj[1]
                 else:
                     key = json.loads(obj[1])
-        elif type(obj) == int:
-            oid = obj
-        else:
+        elif type(obj) == SaiObjType:
             obj_type = obj
+        else:
+            assert False, "Unsupported OID format type {}".format(type(obj))
 
         return obj_type, oid, key
 
@@ -72,7 +74,7 @@ class SaiThriftClient(SaiClient):
             if type(obj_type) == str:
                 obj_type = SaiObjType[obj_type.replace("SAI_OBJECT_TYPE_", "")]
             self.sai_type_map[oid_or_status] = obj_type
-        return oid_or_status if key is None else key
+        return ("oid:" + hex(oid_or_status)) if key is None else key
 
     @assert_status
     def remove(self, obj, do_assert=True):
@@ -114,7 +116,7 @@ class SaiThriftClient(SaiClient):
 
     def _operate(self, operation, attrs=(), oid=None, obj_type=None, key=None):
         if oid is not None and key is not None:
-            raise ValueError('Both oid and key are specified')
+            raise ValueError('Both OID and key are specified')
 
         if oid is not None:
             oid = ThriftConverter.object_id(oid)

@@ -120,7 +120,7 @@ class Sai(AbstractEntity):
             elif type(obj_key) == dict:
                 obj_key = json.dumps(obj_key)
                 obj_id = obj_type + ":" + obj_key
-            elif type(obj_key) == int:
+            elif type(obj_key) == str and obj_key.startswith("oid:0x"):
                 obj_id = obj_key
             else:
                 assert False, f"Failed to process: {obj_type}, {obj_key}, {operation}"

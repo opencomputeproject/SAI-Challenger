@@ -137,17 +137,6 @@ class SaiRedisClient(SaiClient):
 
         return status[2], vid
 
-    def _form_redis_style_object_id(self, oid = None, obj_type = None, key = None):
-        object_id = None
-        if oid is not None:
-            assert self.vid_to_rid(oid), f"Unable to retrieve RID by VID {oid}"
-            object_id = self.vid_to_type(oid) + ":oid:" + oid
-        elif obj_type is not None:
-            object_id = "SAI_OBJECT_TYPE_" + obj_type.name + ":"
-        if key is not None:
-            object_id = object_id + json.dumps(key).replace(" ", "")
-        return object_id
-
     def remove(self, obj, do_assert=True):
         if obj.startswith("oid:"):
             assert self.vid_to_rid(obj), f"Unable to retrieve RID by VID {obj}"

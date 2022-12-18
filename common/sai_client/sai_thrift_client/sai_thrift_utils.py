@@ -11,7 +11,7 @@ from saichallenger.common.sai_data import SaiObjType, SaiStatus
 class ThriftConverter():
     def convert_attributes_to_thrift(attributes):
         """
-        [ "SAI_SWITCH_ATTR_PORT_LIST", "2:0x0,0x0" ] => { "port_list": sai_thrift_object_list_t(count=2, idlist=[0x0, 0x0]) }
+        [ "SAI_SWITCH_ATTR_PORT_LIST", "2:oid:0x0,oid:0x0" ] => { "port_list": sai_thrift_object_list_t(count=2, idlist=[0x0, 0x0]) }
         """
         for name, value in ThriftConverter.chunks(attributes, 2):
             yield ThriftConverter.convert_attribute_name_to_thrift(name), ThriftConverter.convert_value_to_thrift(value, ThriftConverter.get_attribute_type(name))
@@ -19,7 +19,7 @@ class ThriftConverter():
     def convert_key_to_thrift(object_type, key = None):
         """
         Converts dictionary 'key' to the thrift key entry according to 'object_type':
-        "vip_entry", { "switch_id": 0x0, "vip": "192.168.0.1" } => { "vip_entry": sai_thrift_vip_entry_t(switch_id = 0x0, vip = sai_ip_address_t("192.168.0.1"...)) }
+        "vip_entry", { "switch_id": oid:0x0, "vip": "192.168.0.1" } => { "vip_entry": sai_thrift_vip_entry_t(switch_id = 0x0, vip = sai_ip_address_t("192.168.0.1"...)) }
         """
         if key is None:
             return {}
@@ -84,7 +84,7 @@ class ThriftConverter():
     @staticmethod
     def convert_key_values_to_thrift(object_type, key):
         """
-        "vip_entry", { "switch_id": "0x0", "vip": "192.186.0.1" } => { "switch_id": 0, "vip": sai_thrift_ip_address_t('192.168.0.1'...) }
+        "vip_entry", { "switch_id": "oid:0x0", "vip": "192.186.0.1" } => { "switch_id": 0, "vip": sai_thrift_ip_address_t('192.168.0.1'...) }
         """
         key_spec = getattr(ttypes, f'sai_thrift_{object_type}_t').thrift_spec
 
@@ -105,9 +105,9 @@ class ThriftConverter():
     @staticmethod
     def sai_object_list(object_list):
         """
-        "2:0x1,0x2" => sai_thrift_object_list_t(count=2, idlist=[1,2])
+        "2:oid:0x1,oid:0x2" => sai_thrift_object_list_t(count=2, idlist=[1,2])
         """
-        splitted = object_list.split(':')
+        splitted = object_list.split(':', 1)
         count = int(splitted[0])
         idlist = [ ThriftConverter.object_id(item) for item in splitted[1].split(',') ]
         return sai_thrift_object_list_t(count=count,
@@ -157,14 +157,19 @@ class ThriftConverter():
     @staticmethod
     def object_id(oid):
         """
-        None   => 0
-        10     => 10
-        "0x10" => 16
+        None       => 0
+        16         => 16
+        "16"       => 16
+        "oid:0x10" => 16
         """
         if oid == None:
             return 0
-        if isinstance(oid, str) and oid.startswith('0x'):
-            return int(oid, 16)
+        if isinstance(oid, str) and oid.startswith('oid:0x'):
+            return int(oid[4:], 16)
+
+        # FIXME: The OID always must be in "oid:0x0" format.
+        #        We need this temporary workaround to handle the issue
+        #        described in get_value_type_by_thrift_spec()
         return int(oid)
 
     # CONVERT FROM THRIFT
@@ -174,6 +179,9 @@ class ThriftConverter():
         """
         sai_thrfit_ip_address_t => "ipaddr"
         """
+        # FIXME: Sometimes, thrift_spec returns "None" for both "oid" and "int"
+        #        E.g., For SAI_OBJECT_TYPE_DIRECTION_LOOKUP_ENTRY, thrift_spec will be
+        #        (1, 10, 'switch_id', None, None), (2, 8, 'vni', None, None)
         if thrift_spec == None:
             return "oid"
 
@@ -199,11 +207,11 @@ class ThriftConverter():
     @staticmethod
     def from_sai_object_list(object_list):
         """
-        sai_thrift_object_list_t(count=2, idlist=[1,2]) => "2:0x1,0x2"
+        sai_thrift_object_list_t(count=2, idlist=[1,2]) => "2:oid:0x1,oid:0x2"
         """
         result = f'{object_list.count}:'
         for ii in range(object_list.count):
-            result += str(hex(object_list.idlist[ii]))
+            result += "oid:" + hex(object_list.idlist[ii])
             result += ","
         return result[:-1]
 
