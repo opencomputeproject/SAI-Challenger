@@ -1,5 +1,6 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
+print(find_packages(''))
 setup(
     name="sai-challenger",
     version='0.1',
@@ -11,5 +12,13 @@ setup(
     install_requires=[
         'ptf',
     ],
-    py_modules=['sai', 'sai_npu', 'sai_dataplane', 'sai_environment', 'sai_abstractions', 'sai_dpu', 'sai_data', 'sai_object'],
+    packages=[
+        'saichallenger.common',
+        'saichallenger.common.sai_client',
+        'saichallenger.common.sai_client.sai_redis_client',
+        'saichallenger.common.sai_client.sai_thrift_client',
+    ],
+    package_dir={
+        'saichallenger.common': '',
+    },
 )

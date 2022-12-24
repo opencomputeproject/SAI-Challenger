@@ -11,6 +11,7 @@
         "config": {
             "ip": "172.17.0.3",
             "port": "6379",
+            "type": "vs",
             "loglevel": "DEBUG"
         }
     },

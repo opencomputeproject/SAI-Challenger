@@ -4,12 +4,13 @@ import click
 import json
 import os
 
-from sai import SaiObjType
-from sai_npu import SaiNpu
+from saichallenger.common.sai_data import SaiObjType
+from saichallenger.common.sai_npu import SaiNpu
 
 VERSION = '0.1'
 
 exec_params = {
+    "alias": "any",
     "server": "localhost",
     "traffic": False,
     "saivs": False,
@@ -17,6 +18,16 @@ exec_params = {
     "sku": None,
     "asic": None,
     "asic_dir": None,
+    "type": "vs",
+    "client": {
+        "type": "redis",
+        "config": {
+            "type": "vs",
+            "ip": "localhost",
+            "port": 6379,
+            "loglevel": "NOTICE",
+        },
+    },
     "target": None
 }
 
@@ -41,6 +52,7 @@ def init(sku):
     asic_dir = "/sai-challenger/npu/{}/{}/".format(platform, asic)
 
     params = {
+        "alias": "any",
         "server": "localhost",
         "traffic": False,
         "saivs": False,
@@ -48,6 +60,16 @@ def init(sku):
         "sku": sku,
         "asic": asic,
         "asic_dir": asic_dir,
+        "type": "vs",
+        "client": {
+            "type": "redis",
+            "config": {
+                "type": "vs",
+                "ip": "localhost",
+                "port": 6379,
+                "loglevel": "NOTICE",
+            },
+        },
         "target": target
     }
 

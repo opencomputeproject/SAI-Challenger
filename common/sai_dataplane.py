@@ -6,7 +6,7 @@ import ptf
 import ptf.dataplane
 from ptf import config
 
-from sai_abstractions import AbstractEntity
+from saichallenger.common.sai_abstractions import AbstractEntity
 
 # TODO: Get rid of this
 # The default configuration dictionary for PTF_NN
