@@ -3,170 +3,167 @@ import logging
 import os
 import pytest
 
-from saichallenger.common.sai_abstractions import AbstractEntity
 from saichallenger.common.sai_client.sai_client import SaiClient
 from saichallenger.common.sai_data import SaiObjType
 
 
-class Sai(AbstractEntity):
-    class CommandProcessor:
-        """
-        Allow setup scaled configurations with referenced objects.
-        Contain reference object cache.
-        When objects are referenced they are regenerating missing keys/oids from object cache
-        """
+class CommandProcessor:
+    """
+    Allow setup scaled configurations with referenced objects.
+    Contain reference object cache.
+    When objects are referenced they are regenerating missing keys/oids from object cache
+    """
 
-        class SubstitutionError(RuntimeError):
-            ...
+    class SubstitutionError(RuntimeError):
+        ...
 
-        def __init__(self, sai: 'Sai'):
-            self.objects_registry = {}
-            self.sai = sai
+    def __init__(self, sai: 'Sai'):
+        self.objects_registry = {}
+        self.sai = sai
 
-        def _substitute_from_object_registry(self, obj, *args, **kwargs):
-            if isinstance(obj, str) and obj.startswith('$'):
-                store_name = obj[1:]
+    def _substitute_from_object_registry(self, obj, *args, **kwargs):
+        if isinstance(obj, str) and obj.startswith('$'):
+            store_name = obj[1:]
+            try:
+                return self.objects_registry[store_name]
+            except KeyError as e:
                 try:
-                    return self.objects_registry[store_name]
-                except KeyError as e:
-                    try:
-                        return args[0] if args else kwargs['default']
-                    except KeyError:
-                        raise self.SubstitutionError from e
-            else:
-                raise self.SubstitutionError
+                    return args[0] if args else kwargs['default']
+                except KeyError:
+                    raise self.SubstitutionError from e
+        else:
+            raise self.SubstitutionError
 
-        def substitute_command_from_object_registry(self, command):
-            substituted_command = {}
-            store_name = command.get("name")
+    def substitute_command_from_object_registry(self, command):
+        substituted_command = {}
+        store_name = command.get("name")
 
-            substituted_command['type'] = command.get(
-                "type",
-                self.objects_registry.get(store_name, dict(type=None))["type"]
-            )
+        substituted_command['type'] = command.get(
+            "type",
+            self.objects_registry.get(store_name, dict(type=None))["type"]
+        )
+        substituted_command['key'] = command.get(
+            "key",
+            self.objects_registry.get(store_name, dict(key=None))["key"]
+        )
+
+        if substituted_command['key'] is None:
             substituted_command['key'] = command.get(
                 "key",
-                self.objects_registry.get(store_name, dict(key=None))["key"]
+                self.objects_registry.get(store_name, dict(oid=None))["oid"]
             )
 
-            if substituted_command['key'] is None:
-                substituted_command['key'] = command.get(
-                    "key",
-                    self.objects_registry.get(store_name, dict(oid=None))["oid"]
-                )
-
-            # Substitute key
-            key = substituted_command['key']
-            if key is not None:
-                substituted_key = key
-                if isinstance(key, dict):
-                    substituted_key = {}
-                    for key_name, key_value in key.items():
-                        try:
-                            obj = self._substitute_from_object_registry(key_value)
-                            substituted_key[key_name] = obj['oid'] if obj['oid'] is not None else obj['key']
-                        except self.SubstitutionError:
-                            substituted_key[key_name] = key_value
-                elif isinstance(key, int):
-                    substituted_key = key
-                substituted_command["key"] = substituted_key
-
-            # Substitute attrs
-            attributes = command.get("attributes", [])
-            if attributes:
-                substituted_command["attributes"] = []
-                for attr in attributes:
+        # Substitute key
+        key = substituted_command['key']
+        if key is not None:
+            substituted_key = key
+            if isinstance(key, dict):
+                substituted_key = {}
+                for key_name, key_value in key.items():
                     try:
-                        obj = self._substitute_from_object_registry(attr)
-                        substituted_key = obj['oid'] if obj['oid'] is not None else obj['key']
+                        obj = self._substitute_from_object_registry(key_value)
+                        substituted_key[key_name] = obj['oid'] if obj['oid'] is not None else obj['key']
                     except self.SubstitutionError:
-                        substituted_key = attr
-                    substituted_command["attributes"].append(substituted_key)
+                        substituted_key[key_name] = key_value
+            elif isinstance(key, int):
+                substituted_key = key
+            substituted_command["key"] = substituted_key
 
-            for key in set(command.keys()) - {"key", "attributes"}:
-                substituted_command[key] = command[key]
-            return substituted_command
-
-        def process_command(self, command):
-            '''
-            Command examples:
-                {
-                    "OP" : "create",
-                    "type" : "SAI_OBJECT_TYPE_VIP_ENTRY",
-                    "key" : {
-                        "switch_id" : "$SWITCH_ID",
-                        "vip" : "192.168.0.1"
-                    },
-                    "attributes" : [ "SAI_VIP_ENTRY_ATTR_ACTION", "SAI_VIP_ENTRY_ACTION_ACCEPT" ]
-                }
-
-                {
-                    "OP" : "create",
-                    "type" : "SAI_OBJECT_TYPE_DASH_ACL_GROUP",
-                    "key": "$acl_in_1",
-                    "attributes" : [ "SAI_DASH_ACL_GROUP_ATTR_IP_ADDR_FAMILY", "SAI_IP_ADDR_FAMILY_IPV4" ]
-                },
-            '''
-            command = self.substitute_command_from_object_registry(command)
-
-            store_name = command.get("name")
-            operation = command.get("op", 'create')
-            attrs = command.get("attributes", [])
-            obj_type = command.get("type")
-            obj_key = command.get("key")
-
-            if obj_key is None:
-                obj_id = obj_type
-            elif type(obj_key) == dict:
-                obj_key = json.dumps(obj_key)
-                obj_id = obj_type + ":" + obj_key
-            elif type(obj_key) == str and obj_key.startswith("oid:0x"):
-                obj_id = obj_key
-            else:
-                assert False, f"Failed to process: {obj_type}, {obj_key}, {operation}"
-
-            if operation == "create":
-                obj = self.sai.create(obj_id, attrs)
-                if isinstance(store_name, str):  # Store to the DB
-                    self.objects_registry[store_name] = {
-                        "type": obj_type,
-                        **(dict(oid=obj, key=None) if obj_key is None else dict(oid=None, key=obj))
-                    }
-                return obj
-
-            elif operation == "remove":
+        # Substitute attrs
+        attributes = command.get("attributes", [])
+        if attributes:
+            substituted_command["attributes"] = []
+            for attr in attributes:
                 try:
-                    return self.sai.remove(obj_id)
-                except Exception:
-                    logging.exception('SAI object removal failed', exc_info=True)
-                    raise
-                finally:
-                    if store_name is not None:  # remove from the DB
-                        del self.objects_registry[store_name]
+                    obj = self._substitute_from_object_registry(attr)
+                    substituted_key = obj['oid'] if obj['oid'] is not None else obj['key']
+                except self.SubstitutionError:
+                    substituted_key = attr
+                substituted_command["attributes"].append(substituted_key)
 
-            elif operation == "get":
-                return self.sai.get(obj_id, attrs)
+        for key in set(command.keys()) - {"key", "attributes"}:
+            substituted_command[key] = command[key]
+        return substituted_command
 
-            elif operation == "set":
-                return self.sai.set(obj_id, attrs)
-            else:
-                assert False, f"Unsupported operation: {operation}"
+    def process_command(self, command):
+        '''
+        Command examples:
+            {
+                "OP" : "create",
+                "type" : "SAI_OBJECT_TYPE_VIP_ENTRY",
+                "key" : {
+                    "switch_id" : "$SWITCH_ID",
+                    "vip" : "192.168.0.1"
+                },
+                "attributes" : [ "SAI_VIP_ENTRY_ATTR_ACTION", "SAI_VIP_ENTRY_ACTION_ACCEPT" ]
+            }
 
+            {
+                "OP" : "create",
+                "type" : "SAI_OBJECT_TYPE_DASH_ACL_GROUP",
+                "key": "$acl_in_1",
+                "attributes" : [ "SAI_DASH_ACL_GROUP_ATTR_IP_ADDR_FAMILY", "SAI_IP_ADDR_FAMILY_IPV4" ]
+            },
+        '''
+        command = self.substitute_command_from_object_registry(command)
+
+        store_name = command.get("name")
+        operation = command.get("op", 'create')
+        attrs = command.get("attributes", [])
+        obj_type = command.get("type")
+        obj_key = command.get("key")
+
+        if obj_key is None:
+            obj_id = obj_type
+        elif type(obj_key) == dict:
+            obj_key = json.dumps(obj_key)
+            obj_id = obj_type + ":" + obj_key
+        elif type(obj_key) == str and obj_key.startswith("oid:0x"):
+            obj_id = obj_key
+        else:
+            assert False, f"Failed to process: {obj_type}, {obj_key}, {operation}"
+
+        if operation == "create":
+            obj = self.sai.create(obj_id, attrs)
+            if isinstance(store_name, str):  # Store to the DB
+                self.objects_registry[store_name] = {
+                    "type": obj_type,
+                    **(dict(oid=obj, key=None) if obj_key is None else dict(oid=None, key=obj))
+                }
+            return obj
+
+        elif operation == "remove":
+            try:
+                return self.sai.remove(obj_id)
+            except Exception:
+                logging.exception('SAI object removal failed', exc_info=True)
+                raise
+            finally:
+                if store_name is not None:  # remove from the DB
+                    del self.objects_registry[store_name]
+
+        elif operation == "get":
+            return self.sai.get(obj_id, attrs)
+
+        elif operation == "set":
+            return self.sai.set(obj_id, attrs)
+        else:
+            assert False, f"Unsupported operation: {operation}"
+
+
+class Sai():
     def __init__(self, exec_params):
-        super().__init__(exec_params)
-        self.sai_client = SaiClient.build(exec_params["client"])
-        self.command_processor = self.CommandProcessor(self)
-        # what is it?
-        self.alias = exec_params['alias']
-        self.client_mode = not os.path.isfile("/usr/bin/redis-server")
-        libsai = os.path.isfile("/usr/lib/libsai.so") or os.path.isfile("/usr/local/lib/libsai.so")
-        self.libsaivs = exec_params["type"] == "vs" or (not self.client_mode and not libsai)
+        self.command_processor = CommandProcessor(self)
+        self.libsaivs = exec_params["target"] == "saivs"
         self.run_traffic = exec_params["traffic"] and not self.libsaivs
         self.name = exec_params["asic"]
         self.target = exec_params["target"]
         self.sku = exec_params["sku"]
         self.asic_dir = exec_params["asic_dir"]
         self._switch_oid = None
+
+        exec_params["client"]["config"]["saivs"] = self.libsaivs
+        self.sai_client = SaiClient.spawn(exec_params["client"])
 
     @property
     def switch_oid(self):

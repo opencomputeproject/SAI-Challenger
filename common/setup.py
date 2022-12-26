@@ -17,6 +17,10 @@ setup(
         'saichallenger.common.sai_client',
         'saichallenger.common.sai_client.sai_redis_client',
         'saichallenger.common.sai_client.sai_thrift_client',
+        'saichallenger.common.sai_dataplane',
+        'saichallenger.common.sai_dataplane.utils',
+        'saichallenger.common.sai_dataplane.ptf',
+        'saichallenger.common.sai_dataplane.snappi',
     ],
     package_dir={
         'saichallenger.common': '',

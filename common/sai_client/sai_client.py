@@ -82,7 +82,7 @@ class SaiClient:
         raise NotImplementedError
 
     @staticmethod
-    def build(params) -> 'SaiClient':
+    def spawn(params) -> 'SaiClient':
         """Load different SAI client implementations based on parameters"""
         # TODO move to loading different implementations by using python entrypoints mechanism
         if params["type"] == "redis":

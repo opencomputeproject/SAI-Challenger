@@ -7,7 +7,7 @@ from snappi import snappi
 
 BASE_TENGINE_PORT = 5555
 
-class SaiDataplaneImpl(SaiDataplane):
+class SaiDataplaneImpl(SaiDataPlane):
 
     def __init__(self, exec_params):
         self.alias = exec_params['alias']
@@ -37,7 +37,7 @@ class SaiDataplaneImpl(SaiDataplane):
         # TRex:         port.location = "localhost:5555"
         for pid, port in enumerate(self.exec_params['port_groups']):
             location = port.get('location', f"localhost:{BASE_TENGINE_PORT+pid}")
-            self.configuration.ports.port(name=port[port['init']], location=location)
+            self.configuration.ports.port(name=port["name"], location=location)
 
         cap = self.configuration.captures.capture(name="c1")[-1]
         cap.port_names = [p.name for p in self.configuration.ports]
@@ -45,19 +45,19 @@ class SaiDataplaneImpl(SaiDataplane):
 
         self.dataplane = self
 
-    def remove(self):
+    def deinit(self):
         pass
 
-    def setUp(self):
-        super().setUp()
+    def setup(self):
+        self.setUp()
         self.set_config()
         self.start_capture()
 
-    def tearDown(self):
-        super().tearDown()
+    def teardown(self):
         self.stop_capture()
         self.configuration.flows.clear()
         self.flows.clear()
+        self().tearDown()
 
     @staticmethod
     def api_results_ok(results):

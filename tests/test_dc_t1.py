@@ -4,9 +4,16 @@ from saichallenger.common.sai_data import SaiData, SaiObjType
 import saichallenger.topologies.dc_t1
 
 
+@pytest.fixture(scope="module", autouse=True)
+def skip_all(testbed_instance):
+    testbed = testbed_instance
+    if testbed is not None and len(testbed.npu) != 1:
+        pytest.skip("invalid for \"{}\" testbed".format(testbed.meta.name))
+
+
 @pytest.fixture(scope="module")
 def dc_t1_topology(npu):
-    with topologies.dc_t1.config(npu) as result:
+    with saichallenger.topologies.dc_t1.config(npu) as result:
         yield result
 
 

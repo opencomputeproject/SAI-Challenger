@@ -1,6 +1,14 @@
 import pytest
 import time
 
+
+@pytest.fixture(scope="module", autouse=True)
+def skip_all(testbed_instance):
+    testbed = testbed_instance
+    if testbed is not None and len(testbed.npu) != 1:
+        pytest.skip("invalid for \"{}\" testbed".format(testbed.meta.name))
+
+
 @pytest.fixture(scope="module")
 def bcm56850_teardown(npu):
     yield
@@ -33,7 +41,7 @@ def test_apply_sairec(npu, exec_params, dataplane, fname, bcm56850_teardown):
     if npu.name not in ["BCM56850", "trident2"]:
         pytest.skip("VS specific scenario")
 
-    if exec_params["server"] != 'localhost':
+    if exec_params["client"]["config"]["ip"] != 'localhost':
         pytest.skip("Currently not supported in client-server mode")
 
     npu.sai_client.apply_rec("/sai/sonic-sairedis/tests/" + fname)

@@ -14,14 +14,10 @@ setup(
     packages=[
         'saichallenger.cli',
         'saichallenger.topologies',
-        'saichallenger.dataplane',
-        'saichallenger.dataplane.ptf',
-        'saichallenger.dataplane.snappi',
     ],
     package_dir={
         'saichallenger.cli': 'cli',
         'saichallenger.topologies': 'topologies',
-        'saichallenger.dataplane': 'dataplane',
     },
     scripts=[
         'scripts/redis-cmd-listener.py'

@@ -2,7 +2,7 @@ import logging
 import sys
 
 import dpkt
-import saichallenger.dataplane.traffic_utils as tt
+import saichallenger.common.sai_dataplane.utils.traffic_utils as tt
 from scapy.layers.l2 import Ether
 
 import ptf.testutils as ptfTestutils

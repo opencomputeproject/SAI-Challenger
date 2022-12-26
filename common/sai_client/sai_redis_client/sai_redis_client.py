@@ -14,16 +14,12 @@ class SaiRedisClient(SaiClient):
         self.server_ip = client_config["ip"]
         self.loglevel = client_config["loglevel"]
         self.port = client_config["port"]
+        self.libsaivs = client_config["saivs"]
 
         self.r = redis.Redis(host=self.server_ip, port=self.port, db=1)
         self.loglevel_db = redis.Redis(host=self.server_ip, port=self.port, db=3)
         self.cache = {}
         self.rec2vid = {}
-
-        self.client_mode = not os.path.isfile("/usr/bin/redis-server")
-        libsai = os.path.isfile("/usr/lib/libsai.so") or os.path.isfile("/usr/local/lib/libsai.so")
-        self.libsaivs = client_config["type"] == "vs" or (not self.client_mode and not libsai)
-        self.run_traffic = False#client_config["traffic"] and not self.libsaivs
 
         self.switch_oid = "oid:0x21000000000000"
 

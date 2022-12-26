@@ -1,8 +1,8 @@
 import json
 
-from saichallenger.common.sai_data import SaiData, SaiObjType
 from saichallenger.common.sai import Sai
-from saichallenger.common.sai_dataplane import SaiHostifDataPlane
+from saichallenger.common.sai_data import SaiData, SaiObjType
+from saichallenger.common.sai_dataplane.sai_hostif_dataplane import SaiHostifDataPlane
 
 
 class SaiNpu(Sai):
@@ -178,7 +178,7 @@ class SaiNpu(Sai):
             self.hostif_map[(0, int(inum))] = socket_addr
             assert self.remote_iface_is_up(iname), f"Interface {iname} must be up before dataplane init."
 
-        self.hostif_dataplane = SaiHostifDataPlane(self.exec_params, ifaces, self.sai_client.server_ip)
+        self.hostif_dataplane = SaiHostifDataPlane(ifaces, self.sai_client.server_ip)
         self.hostif_dataplane.init()
         return self.hostif_dataplane
 
@@ -211,31 +211,31 @@ class SaiNpu(Sai):
         self.dot1q_bp_oids.clear()
 
         # Create ports as per SKU
-        for fp_port in sorted(sku["port"], key=int):
+        for port in sku["port_groups"]:
             port_attr = [
                 "SAI_PORT_ATTR_ADMIN_STATE",   "true",
                 "SAI_PORT_ATTR_PORT_VLAN_ID",  self.default_vlan_id,
             ]
 
             # Lanes
-            lanes = sku["port"][fp_port]["lanes"]
+            lanes = port["lanes"]
             lanes = str(lanes.count(',') + 1) + ":" + lanes
             port_attr.append("SAI_PORT_ATTR_HW_LANE_LIST")
             port_attr.append(lanes)
 
             # Speed
-            speed = sku["port"][fp_port]["speed"] if "speed" in sku["port"][fp_port] else sku["speed"]
+            speed = port["speed"] if "speed" in port else sku["speed"]
             port_attr.append("SAI_PORT_ATTR_SPEED")
             port_attr.append(speed)
 
             # Autoneg
-            autoneg = sku["port"][fp_port]["autoneg"] if "autoneg" in sku["port"][fp_port] else sku["autoneg"]
+            autoneg = port["autoneg"] if "autoneg" in port else sku["autoneg"]
             autoneg = "true" if autoneg == "on" else "false"
             port_attr.append("SAI_PORT_ATTR_AUTO_NEG_MODE")
             port_attr.append(autoneg)
 
             # FEC
-            fec = sku["port"][fp_port]["fec"] if "fec" in sku["port"][fp_port] else sku["fec"]
+            fec = port["fec"] if "fec" in port else sku["fec"]
             if fec == "rs":
                 fec = "SAI_PORT_FEC_MODE_RS"
             elif fec == "fc":
