@@ -2,17 +2,17 @@ import datetime
 import logging
 
 import dpkt
-from saichallenger.common.sai_dataplane import SaiDataplane
+from saichallenger.common.sai_dataplane.sai_dataplane import SaiDataPlane
 from snappi import snappi
 
 BASE_TENGINE_PORT = 5555
 
-class SaiDataplaneImpl(SaiDataPlane):
+class SaiSnappiDataPlane(SaiDataPlane):
 
-    def __init__(self, exec_params):
-        self.alias = exec_params['alias']
-        self.mode = exec_params['mode']
-        super().__init__(exec_params)
+    def __init__(self, cfg):
+        self.alias = cfg['alias']
+        self.mode = cfg['mode']
+        super().__init__(cfg)
         self.flows = []
 
     def init(self):
@@ -21,11 +21,11 @@ class SaiDataplaneImpl(SaiDataPlane):
         # IxNetwork:    location = "https://<tgen-ip>:<port>", ext="ixnetwork"
         # TRex:         location =         "<tgen-ip>:<port>", ext="trex"
         if self.mode == 'ixnet':
-            self.api = snappi.api(location=self.exec_params['controller'], verify=False, ext='ixnetwork')
+            self.api = snappi.api(location=self.config['controller'], verify=False, ext='ixnetwork')
         elif self.mode == 'trex':
-            self.api = snappi.api(location=self.exec_params['controller'], verify=False, ext='trex')
+            self.api = snappi.api(location=self.config['controller'], verify=False, ext='trex')
         else:
-            self.api = snappi.api(location=self.exec_params['controller'], verify=False)
+            self.api = snappi.api(location=self.config['controller'], verify=False)
         logging.info(f"{datetime.datetime.now().strftime('%s')} Starting connection to controller... ")
 
         # Create an empty configuration to be pushed to controller
@@ -35,7 +35,7 @@ class SaiDataplaneImpl(SaiDataPlane):
         # Ixia-C:       port.location = "localhost:5555"
         # IxNetwork:    port.location = "<chassisip>;card;port"
         # TRex:         port.location = "localhost:5555"
-        for pid, port in enumerate(self.exec_params['port_groups']):
+        for pid, port in enumerate(self.config['port_groups']):
             location = port.get('location', f"localhost:{BASE_TENGINE_PORT+pid}")
             self.configuration.ports.port(name=port["name"], location=location)
 
@@ -49,7 +49,6 @@ class SaiDataplaneImpl(SaiDataPlane):
         pass
 
     def setup(self):
-        self.setUp()
         self.set_config()
         self.start_capture()
 
@@ -57,7 +56,6 @@ class SaiDataplaneImpl(SaiDataPlane):
         self.stop_capture()
         self.configuration.flows.clear()
         self.flows.clear()
-        self().tearDown()
 
     @staticmethod
     def api_results_ok(results):

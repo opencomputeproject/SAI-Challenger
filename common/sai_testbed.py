@@ -12,9 +12,9 @@ from saichallenger.common.sai_dataplane.sai_dataplane import SaiDataPlane
 class SaiTestbedMeta():
 
     def __init__(self, base_dir, name):
-        self.name = name
         try:
-            f = open(f"{base_dir}/testbeds/{self.name}.json")
+            testbed_file = name if name.endswith(".json") else f"{base_dir}/testbeds/{self.name}.json"
+            f = open(testbed_file)
             self.config = json.load(f)
             f.close()
         except Exception as e:
@@ -116,7 +116,7 @@ class SaiTestbed():
             npu_cfg["traffic"] = self.with_traffic
             self.npu.append(self.spawn_asic(self.base_dir, npu_cfg, "npu"))
         for dpu_cfg in self.meta.config.get("dpu", []):
-            npu_cfg["traffic"] = self.with_traffic
+            dpu_cfg["traffic"] = self.with_traffic
             self.dpu.append(self.spawn_asic(self.base_dir, dpu_cfg, "dpu"))
         for dataplane_cfg in self.meta.config.get("dataplane"):
             dp = self.spawn_dataplane(dataplane_cfg)

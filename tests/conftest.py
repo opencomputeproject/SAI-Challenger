@@ -1,6 +1,5 @@
 import os
 import pytest
-import sys
 
 curdir = os.path.dirname(os.path.realpath(__file__))
 
@@ -11,7 +10,6 @@ from saichallenger.common.sai_testbed import SaiTestbed
 def pytest_addoption(parser):
     parser.addoption("--sai-server", action="store", default='localhost', help="SAI server IP")
     parser.addoption("--traffic", action="store_true", default=False, help="run tests with traffic")
-    parser.addoption("--saivs", action="store_true", default=False, help="running tests on top of libsaivs")
     parser.addoption("--loglevel", action="store", default='NOTICE', help="syncd logging level")
     parser.addoption("--asic", action="store", default=os.getenv('SC_ASIC'), help="ASIC type")
     parser.addoption("--target", action="store", default=os.getenv('SC_TARGET'), help="The target device with this NPU")
