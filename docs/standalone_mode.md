@@ -14,11 +14,11 @@ Start Docker container:
 
 Run SAI Challenger testcases:
 ```sh
-./exec.sh -t saivs pytest --setup=../setups/saivs_standalone.json -v -k "test_l2_basic"
+./exec.sh -t saivs pytest --testbed=saivs_standalone -v -k "test_l2_basic"
 ```
 
 Run SAI Challenger testcases and generate HTML report:
 ```sh
-./exec.sh -t saivs pytest --setup=../setups/saivs_standalone.json -v -k "test_l2_basic" --html=report.html --self-contained-html
+./exec.sh -t saivs pytest --testbed=saivs_standalone -v -k "test_l2_basic" --html=report.html --self-contained-html
 ```
 

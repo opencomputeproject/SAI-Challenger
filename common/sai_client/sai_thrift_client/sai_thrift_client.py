@@ -33,8 +33,9 @@ def assert_status(method):
 class SaiThriftClient(SaiClient):
     """Thrift SAI client implementation to wrap low level SAI calls"""
 
-    def __init__(self, client_config):
-        self.thrift_transport = TSocket.TSocket(client_config['ip'], client_config['port'])
+    def __init__(self, cfg):
+        self.config = cfg
+        self.thrift_transport = TSocket.TSocket(cfg['ip'], cfg['port'])
         self.thrift_transport = TTransport.TBufferedTransport(self.thrift_transport)
         protocol = TBinaryProtocol.TBinaryProtocol(self.thrift_transport)
         self.thrift_transport.open()

@@ -4,6 +4,6 @@ from saichallenger.common.sai import Sai
 
 class SaiPhy(Sai):
 
-    def __init__(self, exec_params):
-        super().__init__(exec_params)
+    def __init__(self, cfg):
+        super().__init__(cfg)
         # TODO:

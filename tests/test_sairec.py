@@ -37,11 +37,11 @@ def tofino_teardown(npu):
         "BCM56850/remove_create_port.rec"
     ],
 )
-def test_apply_sairec(npu, exec_params, dataplane, fname, bcm56850_teardown):
+def test_apply_sairec(npu, dataplane, fname, bcm56850_teardown):
     if npu.name not in ["BCM56850", "trident2"]:
         pytest.skip("VS specific scenario")
 
-    if exec_params["client"]["config"]["ip"] != 'localhost':
+    if npu.sai_client.config["ip"] != 'localhost':
         pytest.skip("Currently not supported in client-server mode")
 
     npu.sai_client.apply_rec("/sai/sonic-sairedis/tests/" + fname)

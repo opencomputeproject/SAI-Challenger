@@ -91,13 +91,11 @@ RUN sed -ri 's/^# unixsocket/unixsocket/' /etc/redis/redis.conf \
 # Disable kernel logging support
 RUN sed -ri '/imklog/s/^/#/' /etc/rsyslog.conf
 
-# Setup supervisord
-COPY scripts/veth-create.sh    /usr/bin/veth-create.sh
-COPY scripts/redis_start.sh    /usr/bin/redis_start.sh
-COPY configs/supervisord.conf  /etc/supervisor/conf.d/supervisord.conf
+# Install SAI-C dependencies
+RUN pip3 install pytest pytest_dependency pytest-html pdbpp macaddress click==8.0
 
 # Install PTF dependencies
-RUN pip3 install scapy
+RUN pip3 install scapy dpkt
 
 # Install ptf_nn_agent and PTF helpers (required by sai_dataplane.py)
 COPY ptf/ptf_nn/ptf_nn_agent.py      /ptf/ptf_nn/ptf_nn_agent.py
@@ -106,17 +104,27 @@ COPY ptf/README.md                   /ptf/README.md
 COPY ptf/src/ptf/*.py                /ptf/src/ptf/
 COPY ptf/src/ptf/platforms/*.py      /ptf/src/ptf/platforms/
 COPY ptf/requirements.txt            /ptf/requirements.txt
+RUN echo "#mock" > /ptf/ptf && pip3 install /ptf
 
-RUN echo "#mock" > /ptf/ptf \
-        && pip3 install /ptf
-
-# Install SAI Challenger CLI dependencies
-RUN pip3 install click==8.0 dpkt macaddress
+# Deploy SAI Challenger
+COPY common              /sai-challenger/common
+COPY cli                 /sai-challenger/cli
+COPY topologies          /sai-challenger/topologies
+COPY setup.py            /sai-challenger/setup.py
+COPY scripts/sai-cli-completion.sh   /sai-challenger/scripts/sai-cli-completion.sh
 RUN echo ". /sai-challenger/scripts/sai-cli-completion.sh" >> /root/.bashrc
 
-RUN pip3 install pytest pytest_dependency pytest-html
+# Deploy a remote commands listener
+COPY scripts/redis-cmd-listener.py   /sai-challenger/scripts/redis-cmd-listener.py
+
+# Install SAI Challenger
+RUN pip3 install /sai-challenger/common /sai-challenger
 
 WORKDIR /sai-challenger/tests
 
-CMD ["/usr/bin/supervisord"]
+# Setup supervisord
+COPY scripts/veth-create.sh    /usr/bin/veth-create.sh
+COPY scripts/redis_start.sh    /usr/bin/redis_start.sh
+COPY configs/supervisord.conf  /etc/supervisor/conf.d/supervisord.conf
 
+CMD ["/usr/bin/supervisord"]

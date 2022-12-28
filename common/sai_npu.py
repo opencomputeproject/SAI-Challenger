@@ -7,8 +7,8 @@ from saichallenger.common.sai_dataplane.sai_hostif_dataplane import SaiHostifDat
 
 class SaiNpu(Sai):
 
-    def __init__(self, exec_params):
-        super().__init__(exec_params)
+    def __init__(self, cfg):
+        super().__init__(cfg)
 
         self.switch_oid = "oid:0x0"
         self.dot1q_br_oid = "oid:0x0"

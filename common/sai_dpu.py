@@ -6,8 +6,8 @@ from saichallenger.common.sai_data import SaiObjType
 
 class SaiDpu(Sai):
 
-    def __init__(self, exec_params):
-        super().__init__(exec_params)
+    def __init__(self, cfg):
+        super().__init__(cfg)
         print("__INIT__")
         self.switch_oid = "oid:0x0"
         self.dot1q_br_oid = "oid:0x0"

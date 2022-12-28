@@ -13,7 +13,7 @@ class SaiTestbedMeta():
 
     def __init__(self, base_dir, name):
         try:
-            testbed_file = name if name.endswith(".json") else f"{base_dir}/testbeds/{self.name}.json"
+            testbed_file = name if name.endswith(".json") else f"{base_dir}/testbeds/{name}.json"
             f = open(testbed_file)
             self.config = json.load(f)
             f.close()
@@ -32,8 +32,6 @@ class SaiTestbedMeta():
             asic_dir = glob.glob(f"{base_dir}/{asic_type}/**/{asic}", recursive=True)
         except Exception as e:
             assert False, f"{e}"
-        print(f"{base_dir}/{asic_type}/**/{asic}")
-        print(asic_dir)
         return asic_dir[0]
 
     def get_sku_config(self, base_dir, alias, asic_type="npu"):
@@ -41,7 +39,6 @@ class SaiTestbedMeta():
         sku = cfg.get("sku", None)
         if type(sku) == str:
             asic_dir = self.get_asic_dir(base_dir, cfg["asic"], asic_type)
-            print(asic_dir)
             try:
                 target = cfg.get("target")
                 f = open(f"{asic_dir}/{target}/sku/{sku}.json")
@@ -64,7 +61,6 @@ class SaiTestbed():
     @staticmethod
     def spawn_asic(base_dir, cfg, asic_type="npu"):
         params = cfg.copy()
-        print(params)
 
         asic_dir = SaiTestbedMeta.get_asic_dir(base_dir, params["asic"], asic_type)
         params["asic_dir"] = asic_dir

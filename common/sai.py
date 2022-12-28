@@ -152,18 +152,18 @@ class CommandProcessor:
 
 
 class Sai():
-    def __init__(self, exec_params):
+    def __init__(self, cfg):
         self.command_processor = CommandProcessor(self)
-        self.libsaivs = exec_params["target"] == "saivs"
-        self.run_traffic = exec_params["traffic"] and not self.libsaivs
-        self.name = exec_params["asic"]
-        self.target = exec_params["target"]
-        self.sku = exec_params["sku"]
-        self.asic_dir = exec_params["asic_dir"]
+        self.libsaivs = cfg["target"] == "saivs"
+        self.run_traffic = cfg["traffic"] and not self.libsaivs
+        self.name = cfg["asic"]
+        self.target = cfg["target"]
+        self.sku = cfg["sku"]
+        self.asic_dir = cfg["asic_dir"]
         self._switch_oid = None
 
-        exec_params["client"]["config"]["saivs"] = self.libsaivs
-        self.sai_client = SaiClient.spawn(exec_params["client"])
+        cfg["client"]["config"]["saivs"] = self.libsaivs
+        self.sai_client = SaiClient.spawn(cfg["client"])
 
     @property
     def switch_oid(self):
