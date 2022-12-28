@@ -9,34 +9,38 @@ To choose which implementation to use you should explicitly specify the `type` a
 Currently, there are two dataplane types available: **PTF** and **SNAPPI**.
 Both of them are implementing *SaiDataplane* interface which is defined in the `common/sai_dataplane.py`.
 
-Dataplane implementation is located under `dataplane` directory. There you can find two directories `ptf` and `snappi` that correspond to the two available dataplane types.
+Dataplane implementation is located under `common/sai_dataplane/` directory. There you can find two directories `ptf` and `snappi` that correspond to the two available dataplane types.
 
 ## PTF example
 
 ```
-"DATAPLANE": [
+"dataplane": [
   {
     "alias": "ptf",
     "type": "ptf",
     "mode": "eth",
-    "port_groups": [{"10G": "veth1", "init": "10G", "alias": 0},
-                    {"10G": "veth2", "init": "10G", "alias": 1}]
+    "port_groups": [
+      {"alias": 0, "name": "veth1"},
+      {"alias": 1, "name": "veth2"}
+    ]
   }
 ]
 ```
 
-Where `port_groups` contain two ports: "veth1" and "veth2". "10G" is a port speed at the system start. For PTF, 10G mode does not affect the setup and required only by common `port_groups` implementation. 10G is selected because it is a default Linux kernel VETH driver mode.
+Where `port_groups` contain two ports: "veth1" and "veth2".
 
 ## SNAPPI example
 ```
-"DATAPLANE": [
+"dataplane": [
   {
-    "alias": "ixia",
+    "alias": "tg",
     "type": "snappi",
     "mode": "ixia_c",
     "controller": "https://127.0.0.1:443",
-    "port_groups": [{"10G": "veth1", "init": "10G", "alias": 0},
-                    {"10G": "veth3", "init": "10G", "alias": 1}]
+    "port_groups": [
+      {"alias": 0, "name": "veth1", "speed": "10G"},
+      {"alias": 1, "name": "veth2", "speed": "10G"}
+    ]
   }
 ]
 ```
@@ -50,10 +54,12 @@ SNAPPI specific attributes:
 * ixnetwork - `https://<tgen-ip>:<port>`
 * trex - `<tgen-ip>:<port>`
 
-`port_groups` may contain optional attribute - `location` - which is TG specific URL of the port. The format depends on a particular TG typeb.
+`port_groups` may contain optional attribute - `location` - which is TG specific URL of the port. The format depends on a particular TG type.
 
 Example for Ixia-C:
 ```
-"port_groups": [{"10G": "veth1", "init": "10G", "alias": 0, "location": "127.0.0.1:5555"},
-                {"10G": "veth2", "init": "10G", "alias": 1, "location": "127.0.0.1:5556"}]
+"port_groups": [
+    {"alias": 0, "name": "veth1", "speed": "10G", "location": "127.0.0.1:5555"},
+    {"alias": 1, "name": "veth2", "speed": "10G", "location": "127.0.0.1:5556"}
+]
 ```

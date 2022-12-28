@@ -1,42 +1,32 @@
-{"NPU": [
+{
+"npu": [
   {
     "alias": "vs",
     "asic": "trident2",
     "target": "saivs",
-    "type": "vs",
     "sku": null,
-    "mode": "client-server",
     "client": {
-        "type": "redis",
-        "config": {
-            "ip": "172.17.0.3",
-            "port": "6379",
-            "loglevel": "DEBUG"
-        }
-    },
-    "port_groups": [{"1x10G": "Ethernet0", "init": "1x10G", "alias": 0},
-                    {"1x10G": "Ethernet1", "init": "1x10G", "alias": 1}
-                  ],
-    "sai_dataplane": "ptf_nn"
+      "type": "redis",
+      "config": {
+          "ip": "172.17.0.2",
+          "port": "6379",
+          "loglevel": "NOTICE"
+      }
+    }
   }
 ],
 
-"DATAPLANE": [
+"dataplane": [
   {
     "alias": "tg",
     "type": "snappi",
     "mode": "ixia_c",
     "controller": "https://127.0.0.1:443",
-    "port_groups": [{"10G": "veth1", "init": "10G", "alias": 0},
-                    {"10G": "veth2", "init": "10G", "alias": 1}
-                   ]
+    "port_groups": [
+      {"alias": 0, "name": "veth1", "speed": "10G"},
+      {"alias": 1, "name": "veth2", "speed": "10G"}
+    ]
   }
-],
-
-"CONNECTIONS": {
-    "tg->vs": [[0, 0],
-                [1, 1]
-               ]
-}
+]
 
 }

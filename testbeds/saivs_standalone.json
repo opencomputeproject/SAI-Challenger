@@ -11,7 +11,7 @@
       "config": {
           "ip": "localhost",
           "port": "6379",
-          "loglevel": "DEBUG"
+          "loglevel": "NOTICE"
       }
     }
   }

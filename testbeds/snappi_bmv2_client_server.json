@@ -1,35 +1,33 @@
-{"DPU": [
+{
+
+"dpu": [
   {
     "alias": "dash",
     "asic": "generic",
     "target": "bmv2",
     "sku": null,
-    "type": null,
-    "mode": "client-server",
-    "sai_server_ip": "172.17.0.3",
-    "port_groups": [{"1x10G": "Ethernet0", "init": "1x10G", "alias": 0},
-                    {"1x10G": "Ethernet1", "init": "1x10G", "alias": 1}
-                  ],
-    "sai_dataplane": "ptf_nn"
+    "client": {
+      "type": "thrift",
+      "config": {
+          "ip": "127.0.0.1",
+          "port": "9092",
+          "loglevel": "NOTICE"
+      }
+    }
   }
 ],
 
-"DATAPLANE": [
+"dataplane": [
   {
     "alias": "tg",
     "type": "snappi",
     "mode": "ixia_c",
     "controller": "https://127.0.0.1:443",
-    "port_groups": [{"10G": "veth1", "init": "10G", "alias": 0},
-                    {"10G": "veth2", "init": "10G", "alias": 1}
-                   ]
+    "port_groups": [
+      {"alias": 0, "name": "veth1", "speed": "10G"},
+      {"alias": 1, "name": "veth2", "speed": "10G"}
+    ]
   }
-],
-
-"CONNECTIONS": {
-    "tg->dash": [[0, 0],
-                [1, 1]
-               ]
-}
+]
 
 }
