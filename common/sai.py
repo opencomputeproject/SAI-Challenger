@@ -128,8 +128,8 @@ class SaiData:
 
     def to_list(self, idx = 1):
         value = self.to_json()[idx]
-        n_items, _, items = value.partition(':')
-        return items.split(",") if int(n_items) > 0 else []
+        idx = value.index(":") + 1
+        return value[idx:].split(",")
 
     def oids(self, idx = 1):
         value = self.to_list(idx)
