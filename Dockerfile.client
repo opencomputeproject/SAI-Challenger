@@ -23,7 +23,8 @@ RUN apt-get -o Acquire::Check-Valid-Until=false update && apt-get install -y \
         rsyslog \
         supervisor
 
-RUN pip3 install pytest pytest_dependency pytest-html pdbpp
+# Install SAI-C dependencies
+RUN pip3 install pytest pytest_dependency pytest-html pdbpp macaddress click==8.0
 
 # Install PTF dependencies
 RUN pip3 install scapy dpkt
@@ -42,12 +43,37 @@ RUN apt-get install -y libffi-dev cmake wget \
         && rm -rf 1.0.0.tar.gz nanomsg-1.0.0 \
         && pip3 install nnpy
 
+# Install ptf_nn_agent and PTF helpers (required by sai_dataplane.py)
+COPY ptf/ptf_nn/ptf_nn_agent.py      /ptf/ptf_nn/ptf_nn_agent.py
+COPY ptf/setup.py                    /ptf/setup.py
+COPY ptf/README.md                   /ptf/README.md
+COPY ptf/src/ptf/*.py                /ptf/src/ptf/
+COPY ptf/src/ptf/platforms/*.py      /ptf/src/ptf/platforms/
+COPY ptf/requirements.txt            /ptf/requirements.txt
+RUN echo "#mock" > /ptf/ptf && pip3 install /ptf
+
+# Deploy SAI Challenger
+COPY common              /sai-challenger/common
+COPY cli                 /sai-challenger/cli
+COPY topologies          /sai-challenger/topologies
+COPY setup.py            /sai-challenger/setup.py
+COPY scripts/sai-cli-completion.sh   /sai-challenger/scripts/sai-cli-completion.sh
+RUN echo ". /sai-challenger/scripts/sai-cli-completion.sh" >> /root/.bashrc
+
+# Deploy a remote commands listener (mock for setup.py)
+RUN mkdir -p /sai-challenger/scripts \
+        && echo "#mock" > /sai-challenger/scripts/redis-cmd-listener.py
+
+# Install SAI Challenger
+RUN pip3 install /sai-challenger/common /sai-challenger
+
 # Disable kernel logging support
 RUN sed -ri '/imklog/s/^/#/' /etc/rsyslog.conf
 
-COPY configs/client/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-
 WORKDIR /sai-challenger/tests
+
+# Setup supervisord
+COPY configs/client/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 CMD ["/usr/bin/supervisord"]
 

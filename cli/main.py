@@ -4,22 +4,29 @@ import click
 import json
 import os
 
-from sai import SaiObjType
-from sai_npu import SaiNpu
+from saichallenger.common.sai_data import SaiObjType
+from saichallenger.common.sai_npu import SaiNpu
 
 VERSION = '0.1'
 
 exec_params = {
-    "server": "localhost",
+    # Generic parameters
     "traffic": False,
-    "saivs": False,
-    "loglevel": "NOTICE",
-    "sku": None,
+    "testbed": None,
+     # DUT specific parameters
+    "alias": "dut",
     "asic": None,
-    "asic_dir": None,
     "target": None
+    "sku": None,
+    "client": {
+        "type": "redis",
+        "config": {
+            "ip": "localhost",
+            "port": 6379,
+            "loglevel": "NOTICE",
+        }
+    }
 }
-
 
 # This is our main entrypoint - the main 'sai' command
 @click.group()
@@ -41,14 +48,23 @@ def init(sku):
     asic_dir = "/sai-challenger/npu/{}/{}/".format(platform, asic)
 
     params = {
-        "server": "localhost",
+        # Generic parameters
         "traffic": False,
-        "saivs": False,
-        "loglevel": "NOTICE",
-        "sku": sku,
+        "testbed": None,
+        # DUT specific parameters
+        "alias": "dut",
         "asic": asic,
-        "asic_dir": asic_dir,
         "target": target
+        "sku": sku,
+        "asic_dir": asic_dir,
+        "client": {
+            "type": "redis",
+            "config": {
+                "ip": "localhost",
+                "port": 6379,
+                "loglevel": "NOTICE",
+            }
+        }
     }
 
     npu_mod = None

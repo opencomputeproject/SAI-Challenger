@@ -1,13 +1,20 @@
 import pytest
-from sai import SaiObjType
+from saichallenger.common.sai_data import SaiObjType, SaiData
 import json
 
 from ptf.testutils import simple_tcp_packet, send_packet, verify_packets, verify_no_packet_any
 
 
+@pytest.fixture(scope="module", autouse=True)
+def skip_all(testbed_instance):
+    testbed = testbed_instance
+    if testbed is not None and len(testbed.npu) != 1:
+        pytest.skip("invalid for \"{}\" testbed".format(testbed.meta.name))
+
+
 def test_default_vrf(npu, dataplane):
     # Get default VRF
-    data = npu.get(npu.oid,
+    data = npu.get(npu.switch_oid,
                    ["SAI_SWITCH_ATTR_DEFAULT_VIRTUAL_ROUTER_ID", "oid:0x0"]).to_json()
     assert data[0] == 'SAI_SWITCH_ATTR_DEFAULT_VIRTUAL_ROUTER_ID'
     vrf_oid = data[1]

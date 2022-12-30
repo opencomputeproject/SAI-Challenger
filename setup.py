@@ -7,17 +7,24 @@ setup(
     license='Apache 2.0',
     author='Andriy Kokhan',
     author_email='andriy.kokhan@gmail.com',
-    url='https://github.com/PLVision/sai-challenger',
+    url='https://github.com/opencomputeproject/SAI-Challenger',
     install_requires=[
         'click==8.0',
     ],
-    packages=['cli', 'topologies'],
+    packages=[
+        'saichallenger.cli',
+        'saichallenger.topologies',
+    ],
+    package_dir={
+        'saichallenger.cli': 'cli',
+        'saichallenger.topologies': 'topologies',
+    },
     scripts=[
         'scripts/redis-cmd-listener.py'
     ],
     entry_points={
         'console_scripts': [
-            'sai = cli.main:cli',
+            'sai = saichallenger.cli.main:cli',
         ]
     },
 )
