@@ -1,6 +1,13 @@
 import pytest
-from sai import SaiObjType
-from ptf.testutils import simple_tcp_packet, send_packet, verify_packets
+from saichallenger.common.sai_data import SaiObjType
+from saichallenger.common.sai_dataplane.utils.ptf_testutils import simple_tcp_packet, send_packet, verify_packets
+
+
+@pytest.fixture(scope="module", autouse=True)
+def skip_all(testbed_instance):
+    testbed = testbed_instance
+    if testbed is not None and len(testbed.npu) != 1:
+        pytest.skip("invalid for \"{}\" testbed".format(testbed.meta.name))
 
 
 @pytest.fixture(scope="module")
@@ -58,3 +65,4 @@ def test_netdev_pkt(npu, dataplane, sai_hostif_obj, hostif_dataplane):
 def test_netdev_remove(npu, sai_hostif_obj):
     npu.remove(sai_hostif_obj)
     assert npu.remote_iface_exists("Ethernet0") == False
+

@@ -1,0 +1,32 @@
+{
+"npu": [
+  {
+    "alias": "vs",
+    "asic": "trident2",
+    "target": "saivs",
+    "sku": null,
+    "client": {
+      "type": "redis",
+      "config": {
+          "ip": "172.17.0.2",
+          "port": "6379",
+          "loglevel": "NOTICE"
+      }
+    }
+  }
+],
+
+"dataplane": [
+  {
+    "alias": "tg",
+    "type": "snappi",
+    "mode": "ixia_c",
+    "controller": "https://127.0.0.1:443",
+    "port_groups": [
+      {"alias": 0, "name": "veth1", "speed": "10G"},
+      {"alias": 1, "name": "veth2", "speed": "10G"}
+    ]
+  }
+]
+
+}

@@ -26,9 +26,9 @@ Start SAI Challenger server:
 
 Create veth links between client and server dockers:
 ```sh
-bash -c ./veth-create-host.sh sc-server-run sc-client-run
+./veth-create-host.sh sc-server-run sc-client-run
 ```
-Where: _sc-server-run_ and _sc-client-run_ are docker names of SAI-Challenger server and client respectively.
+Where: _sc-server-run_ and _sc-client-run_ are docker names of SAI-Challenger server and client respectively. (sc-server-trident2-saivs-run and sc-client-run)
 
 Alternatively, you can run the whole client-server environment on the same host with a single script:
 ```sh
@@ -45,13 +45,25 @@ And then shut it down:
 
 Run SAI Challenger testcases:
 ```sh
-./exec.sh -i client pytest --asic trident2 --target saivs --sai-server=172.17.0.4 -v -k "test_l2_basic"
+./exec.sh -i client pytest --testbed=saivs_client_server -v -k "test_l2_basic"
 ```
 
 Run SAI Challenger testcases and generate HTML report:
 ```sh
-./exec.sh -i client pytest --asic trident2 --target saivs --sai-server=172.17.0.4 -v -k "test_l2_basic" --html=report.html --self-contained-html
+./exec.sh -i client pytest --testbed=saivs_client_server -v -k "test_l2_basic" --html=report.html --self-contained-html
 ```
 
 **NOTE:** The option `--traffic` will be ignored when running on `saivs` target.
+
+In order to see the syncd log you need to connect to the `server`:
+```
+docker exec -it sc-server-trident2-saivs-run bash
+```
+And check  `/var/log/syslog`
+
+To see the input of the redis-server you need to install tcpdump and run it while tests are running:
+```
+sudo apt install -y tcpdump
+sudo tcpdump port 6379
+```
 
