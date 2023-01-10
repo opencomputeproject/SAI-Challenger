@@ -29,7 +29,7 @@ class SaiNpu(Sai):
         # Load SKU configuration if any
         if self.sku is not None:
             try:
-                f = open(f"{self.asic_dir}{self.target}/sku/{self.sku}.json")
+                f = open(f"{self.asic_dir}/{self.target}/sku/{self.sku}.json")
                 self.sku_config = json.load(f)
                 f.close()
             except Exception as e:
