@@ -103,14 +103,18 @@ def dpu(exec_params, testbed_instance):
 
 
 @pytest.fixture(scope="session")
-def dataplane_instance(testbed_instance):
+def dataplane_instance(exec_params, testbed_instance):
     if testbed_instance is not None:
         if len(testbed_instance.dataplane) > 1:
             yield None
         else:
             yield testbed_instance.dataplane[0]
     else:
-        dp = SaiTestbed.spawn_dataplane({"type": "ptf"})
+        cfg = {
+            "type": "ptf",
+            "traffic": exec_params["traffic"]
+        }
+        dp = SaiTestbed.spawn_dataplane(cfg)
         dp.init()
         yield dp
         dp.deinit()

@@ -115,6 +115,7 @@ class SaiTestbed():
             dpu_cfg["traffic"] = self.with_traffic
             self.dpu.append(self.spawn_asic(self.base_dir, dpu_cfg, "dpu"))
         for dataplane_cfg in self.meta.config.get("dataplane"):
+            dataplane_cfg["traffic"] = self.with_traffic
             dp = self.spawn_dataplane(dataplane_cfg)
             if dp is not None:
                 dp.init()
