@@ -660,7 +660,7 @@ class SaiRedisClient(SaiClient):
             assert rid.startswith("oid:"), f"Invalid RID format {vid}"
         return rid
 
-    def __asser_syncd_running(self, tout=30):
+    def __asser_syncd_running(self, tout=50):
         for i in range(tout):
             time.sleep(1)
             numsub = self.r.execute_command('PUBSUB', 'NUMSUB', 'ASIC_STATE_CHANNEL@1')

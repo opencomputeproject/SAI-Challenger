@@ -230,9 +230,10 @@ class SaiPtfDataPlane(SaiDataPlane, TestCase):
             filename = os.path.splitext(config["log_file"])[0] + '.pcap'
             dataplane_instance.start_pcap(filename)
 
-        for port_id, ifname in config["port_map"].items():
-            device, port = port_id
-            dataplane_instance.port_add(ifname, device, port)
+        if self.config and self.config.get("traffic", False):
+            for port_id, ifname in config["port_map"].items():
+                device, port = port_id
+                dataplane_instance.port_add(ifname, device, port)
 
         self.dataplane = dataplane_instance
 
