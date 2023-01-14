@@ -51,7 +51,7 @@ class SaiRedisClient(SaiClient):
         time.sleep(2)
         self.cache = {}
         self.rec2vid = {}
-        self.__asser_syncd_running()
+        self.__assert_syncd_running()
 
     def set_loglevel(self, sai_api, loglevel):
         '''
@@ -660,7 +660,7 @@ class SaiRedisClient(SaiClient):
             assert rid.startswith("oid:"), f"Invalid RID format {vid}"
         return rid
 
-    def __asser_syncd_running(self, tout=50):
+    def __assert_syncd_running(self, tout=30):
         for i in range(tout):
             time.sleep(1)
             numsub = self.r.execute_command('PUBSUB', 'NUMSUB', 'ASIC_STATE_CHANNEL@1')
