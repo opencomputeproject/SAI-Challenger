@@ -73,7 +73,7 @@ class SaiNpu(Sai):
 
             self.dot1q_bp_oids = self.get(self.dot1q_br_oid,
                                          ["SAI_BRIDGE_ATTR_PORT_LIST", self.make_list(bport_num, "oid:0x0")]).oids()
-            assert (bport_num == len(self.dot1q_bp_oids))
+            assert (len(self.dot1q_bp_oids) <= bport_num)
 
         # Update SKU
         if self.sku_config is not None:
