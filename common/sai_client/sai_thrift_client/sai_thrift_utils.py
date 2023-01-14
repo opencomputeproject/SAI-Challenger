@@ -63,7 +63,7 @@ class ThriftConverter():
                 actual_value = getattr(sai_headers, value, None)
                 if actual_value != None:
                     return actual_value
-            return int(value)
+            return 0 if value == '' else int(value)
         if value_type in [ 'booldata' ]:
             return value.lower() == "true" or value == "0"
         if value_type in [ 'mac', 'ipv4', 'ipv6', 'chardata' ]:
@@ -199,6 +199,8 @@ class ThriftConverter():
         """
         if value_type in [ 'objlist' ]:
             return ThriftConverter.from_sai_object_list(value)
+        elif value_type == "oid":
+            return "oid:" + hex(value)
 
         # TODO: Add more thrift->string convertes here
 

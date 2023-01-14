@@ -41,6 +41,7 @@ class SaiThriftClient(SaiClient):
         self.thrift_transport.open()
         self.thrift_client = sai_rpc.Client(protocol)
         self.sai_type_map = {}
+        self.rec2vid = {}
 
     def __del__(self):
         self.thrift_transport.close()
@@ -59,6 +60,11 @@ class SaiThriftClient(SaiClient):
                 if obj[1].startswith("oid:0x"):
                     oid = obj[1]
                 else:
+                    if obj_type == "SAI_OBJECT_TYPE_FDB_ENTRY":
+                        if "bvid" in obj[1]:
+                            # FDB key was provided in Redis format..
+                            obj[1] = obj[1].replace("bvid", "bv_id")
+                            obj[1] = obj[1].replace("mac", "mac_address")
                     key = json.loads(obj[1])
         elif type(obj) == SaiObjType:
             obj_type = obj
@@ -87,19 +93,25 @@ class SaiThriftClient(SaiClient):
         obj_type, oid, key = self.obj_to_items(obj)
         return self._operate_attributes('set', attrs=attr, oid=oid, obj_type=obj_type, key=key)
 
-    @assert_status
     def get(self, obj, attrs, do_assert=True):
         obj_type, oid, key = self.obj_to_items(obj)
         raw_result = self._operate_attributes('get', attrs=attrs, oid=oid, obj_type=obj_type, key=key)
-
+        if len(raw_result) == 0:
+            if do_assert:
+                assert False, f"get({obj}, {attrs}, True) operation failed!"
+            if attrs[1].startswith("1:"):
+                return "SAI_STATUS_BUFFER_OVERFLOW", SaiData('["", "128"]')
+            return "SAI_STATUS_FAILURE", None
         try:
             result = json.dumps(raw_result)
         except IndexError:
-            logging.exception(f'Unable unpack gee attrs result for oid: {oid}, key: {key}, obj_type {obj_type} '
+            logging.exception(f'Unable unpack get attrs result for oid: {oid}, key: {key}, obj_type {obj_type} '
                               f'attrs: {attrs} result data: {raw_result}')
             result = '[]'
 
-        return SaiData(result)
+        if do_assert:
+            return SaiData(result)
+        return "SAI_STATUS_SUCCESS", SaiData(result)
 
     def get_object_type(self, oid, default=None) -> SaiObjType:
         if default != None:
@@ -107,10 +119,11 @@ class SaiThriftClient(SaiClient):
 
         if oid != None:
             try:
-                return self.sai_type_map[oid]
-                # FIXME: Looks like self.thrift_client.sai_thrift_object_type_query() is broken for BMv2.
-                #        Using self.sai_type_map instead.
-                #return SaiObjType(self.thrift_client.sai_thrift_object_type_query(ThirftConverter.object_id(oid)))
+                obj_type = self.sai_type_map.get(oid, None)
+                if obj_type is None:
+                    # FIXME: Looks like self.thrift_client.sai_thrift_object_type_query() is broken for BMv2.
+                    obj_type = SaiObjType(self.thrift_client.sai_thrift_object_type_query(ThriftConverter.object_id(oid)))
+                return obj_type
             except Exception as e:
                 raise Exception
         return SaiObjType(0)
@@ -146,6 +159,8 @@ class SaiThriftClient(SaiClient):
         result = []
 
         for attr, value in ThriftConverter.convert_attributes_to_thrift(attrs):
+            if obj_type_name != "switch":
+                object_key = {obj_type_name + "_oid": oid}
             thrift_attr_value = sai_thrift_function(self.thrift_client, **object_key, **{attr: value})
             if operation == 'set':
                 # No need to have a list here, since set always takes only one attribute at a time
