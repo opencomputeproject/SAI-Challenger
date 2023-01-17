@@ -9,11 +9,11 @@ SAI testing and integration framework for any SAI oriented devices. The main ide
 SAI Challenger can be executed in two modes:
 1. [standalone mode](docs/standalone_mode.md) - both syncd and pytest are running in the same Docker container;
 
-<a href="url"><img src="img/sai-challenger-sm.svg" align="center" width="800" ></a>
+<a href="url"><img src="img/sai-challenger-sm.svg" align="center" width="500" ></a>
 
 2. [client-server mode](docs/client_server_mode.md) - syncd and pytest are running in the separate Docker containers;
 
-<a href="url"><img src="img/sai-challenger-cs.svg" align="center" width="800" ></a>
+<a href="url"><img src="img/sai-challenger-cs.svg" align="center" width="500" ></a>
 
 The standalone mode **SHOULD** be used in case of:
 - running TCs on vslib SAI implementation;
