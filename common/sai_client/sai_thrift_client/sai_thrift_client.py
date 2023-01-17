@@ -10,26 +10,6 @@ from thrift.protocol import TBinaryProtocol
 from thrift.transport import TSocket, TTransport
 
 
-def assert_status(method):
-    @wraps(method)
-    def method_wrapper(self, *args):
-        do_assert = args[-1]
-        try:
-            result = method(self, *args)
-        except Exception as e:
-            if do_assert:
-                raise AssertionError from e
-            else:
-                # TODO: pick correct STATUS
-                return sai_headers.SAI_STATUS_FAILURE
-        if do_assert and result is not None:
-            return result
-        else:
-            return sai_headers.SAI_STATUS_SUCCESS
-
-    return method_wrapper
-
-
 class SaiThriftClient(SaiClient):
     """Thrift SAI client implementation to wrap low level SAI calls"""
 
@@ -73,20 +53,29 @@ class SaiThriftClient(SaiClient):
 
         return obj_type, oid, key
 
-    @assert_status
     def create(self, obj, attrs, do_assert=True):
         obj_type, _, key = self.obj_to_items(obj)
-        oid_or_status = self._operate('create', attrs=attrs, obj_type=obj_type, key=key)
-        if key is None and type(oid_or_status) == int:
+        status, result = self._operate('create', attrs=attrs, obj_type=obj_type, key=key)
+        if key is None and type(result) == int:
             if type(obj_type) == str:
                 obj_type = SaiObjType[obj_type.replace("SAI_OBJECT_TYPE_", "")]
-            self.sai_type_map[oid_or_status] = obj_type
-        return ("oid:" + hex(oid_or_status)) if key is None else key
+            self.sai_type_map[result] = obj_type
 
-    @assert_status
+        vid = None
+        if status == 'SAI_STATUS_SUCCESS':
+            vid = ("oid:" + hex(result)) if key is None else key
+
+        if do_assert:
+            assert status == 'SAI_STATUS_SUCCESS', f"create({obj}, {attrs}) --> {status}"
+            return vid
+        return status, vid
+
     def remove(self, obj, do_assert=True):
         obj_type, oid, key = self.obj_to_items(obj)
-        return self._operate('remove', attrs=(), oid=oid, obj_type=obj_type, key=key)  # attrs are not needed on remove
+        status, _ = self._operate('remove', attrs=(), oid=oid, obj_type=obj_type, key=key)  # attrs are not needed on remove
+        if do_assert:
+            assert status == 'SAI_STATUS_SUCCESS', f"remove({obj}) --> {status}"
+        return status
 
     def set(self, obj, attr, do_assert=True):
         obj_type, oid, key = self.obj_to_items(obj)
@@ -147,7 +136,13 @@ class SaiThriftClient(SaiClient):
 
         attr_kwargs = dict(ThriftConverter.convert_attributes_to_thrift(attrs))
 
-        return sai_thrift_function(self.thrift_client, **object_key, **attr_kwargs)
+        result = sai_thrift_function(self.thrift_client, **object_key, **attr_kwargs)
+        status = ThriftConverter.convert_to_sai_status_str(sai_adapter.status)
+        if status == 'SAI_STATUS_SUCCESS':
+            result = key if key is not None else result
+        else:
+            result = None
+        return status, result
 
     def _operate_attributes(self, operation, attrs=(), oid=None, obj_type=None, key=None):
         if oid is not None and key is not None:
