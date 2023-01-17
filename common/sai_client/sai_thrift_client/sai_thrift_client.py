@@ -88,20 +88,22 @@ class SaiThriftClient(SaiClient):
         obj_type, oid, key = self.obj_to_items(obj)
         return self._operate('remove', attrs=(), oid=oid, obj_type=obj_type, key=key)  # attrs are not needed on remove
 
-    @assert_status
     def set(self, obj, attr, do_assert=True):
         obj_type, oid, key = self.obj_to_items(obj)
-        return self._operate_attributes('set', attrs=attr, oid=oid, obj_type=obj_type, key=key)
+        status, _ = self._operate_attributes('set', attrs=attr, oid=oid, obj_type=obj_type, key=key)
+        if do_assert:
+            assert status == 'SAI_STATUS_SUCCESS', f"set({obj}, {attr}) --> {status}"
+        return status
 
     def get(self, obj, attrs, do_assert=True):
         obj_type, oid, key = self.obj_to_items(obj)
-        raw_result = self._operate_attributes('get', attrs=attrs, oid=oid, obj_type=obj_type, key=key)
+        status, raw_result = self._operate_attributes('get', attrs=attrs, oid=oid, obj_type=obj_type, key=key)
         if len(raw_result) == 0:
             if do_assert:
                 assert False, f"get({obj}, {attrs}, True) operation failed!"
             if attrs[1].startswith("1:"):
                 return "SAI_STATUS_BUFFER_OVERFLOW", SaiData('["", "128"]')
-            return "SAI_STATUS_FAILURE", None
+            return status, None
         try:
             result = json.dumps(raw_result)
         except IndexError:
@@ -110,8 +112,10 @@ class SaiThriftClient(SaiClient):
             result = '[]'
 
         if do_assert:
+            assert status == 'SAI_STATUS_SUCCESS', f"get({obj}, {attrs}) --> {status}"
             return SaiData(result)
-        return "SAI_STATUS_SUCCESS", SaiData(result)
+
+        return status, SaiData(result)
 
     def get_object_type(self, oid, default=None) -> SaiObjType:
         if default != None:
@@ -161,14 +165,17 @@ class SaiThriftClient(SaiClient):
         for attr, value in ThriftConverter.convert_attributes_to_thrift(attrs):
             if obj_type_name != "switch":
                 object_key = {obj_type_name + "_oid": oid}
+
             thrift_attr_value = sai_thrift_function(self.thrift_client, **object_key, **{attr: value})
+
             if operation == 'set':
                 # No need to have a list here, since set always takes only one attribute at a time
-                result = ThriftConverter.convert_to_sai_status_str(thrift_attr_value)
+                status = ThriftConverter.convert_to_sai_status_str(thrift_attr_value)
             else:
+                status = ThriftConverter.convert_to_sai_status_str(sai_adapter.status)
                 result.extend(ThriftConverter.convert_attributes_from_thrift(thrift_attr_value))
 
-        return result
+        return status, result
 
     def cleanup(self):
         # TODO define
