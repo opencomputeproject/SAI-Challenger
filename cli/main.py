@@ -16,7 +16,7 @@ exec_params = {
      # DUT specific parameters
     "alias": "dut",
     "asic": None,
-    "target": None
+    "target": None,
     "sku": None,
     "client": {
         "type": "redis",
@@ -54,7 +54,7 @@ def init(sku):
         # DUT specific parameters
         "alias": "dut",
         "asic": asic,
-        "target": target
+        "target": target,
         "sku": sku,
         "asic_dir": asic_dir,
         "client": {
