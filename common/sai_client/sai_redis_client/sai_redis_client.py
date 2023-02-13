@@ -2,6 +2,7 @@ import json
 import redis
 import time
 import os
+import paramiko
 
 from saichallenger.common.sai_client.sai_client import SaiClient
 from saichallenger.common.sai_data import SaiObjType, SaiData
@@ -17,12 +18,47 @@ class SaiRedisClient(SaiClient):
         self.port = cfg["port"]
         self.libsaivs = cfg["saivs"]
 
+        self.ssh = paramiko.SSHClient()
+        self.ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        self.ssh.connect(self.server_ip, username="admin", password="YourPaSsWoRd")
+
+        self.ssh.exec_command("sudo systemctl stop monit")
+        self.ssh.exec_command("sudo systemctl stop sonic.target")
+        time.sleep(15)
+
+        # Stop SyncD just in case it's the second run of SAI-C
+        self.ssh.exec_command("docker stop syncd")
+
+        cmd = "echo \"sed -ri 's/--bind.*--port/--bind 0.0.0.0 --port/' /usr/share/sonic/templates/supervisord.conf.j2\" > redis_bind_fix.sh"
+        self.ssh.exec_command(cmd)
+        self.ssh.exec_command("docker cp redis_bind_fix.sh database:/")
+        self.ssh.exec_command("docker exec database bash redis_bind_fix.sh")
+        self.ssh.exec_command("sudo systemctl restart database")
+        time.sleep(10)
+
+        self.config_db = redis.Redis(host=self.server_ip, port=self.port, db=4)
+        self.device_metadata = self.config_db.hgetall("DEVICE_METADATA|localhost")
+        self.config_db.flushall()
+
+        self.ssh.exec_command("sudo systemctl stop database")
+        self.ssh.exec_command("docker restart database")
+        time.sleep(10)
+
+        self.config_db = redis.Redis(host=self.server_ip, port=self.port, db=4)
         self.r = redis.Redis(host=self.server_ip, port=self.port, db=1)
         self.loglevel_db = redis.Redis(host=self.server_ip, port=self.port, db=3)
+        self.config_db = redis.Redis(host=self.server_ip, port=self.port, db=4)
+
+        self.config_db.hmset("DEVICE_METADATA|localhost", self.device_metadata)
+        self.config_db.set("CONFIG_DB_INITIALIZED", "1")
+
+        self.ssh.exec_command("docker start syncd")
+
         self.cache = {}
         self.rec2vid = {}
 
         self.switch_oid = "oid:0x21000000000000"
+
 
     def cleanup(self):
         '''
@@ -45,12 +81,18 @@ class SaiRedisClient(SaiClient):
           5. The supervisord restarts syncd program as per `autorestart`
              option in `supervisord.conf` file.
         '''
-        self.r.flushall()
-        self.loglevel_db.hmset('syncd:syncd', {'LOGLEVEL':self.loglevel, 'LOGOUTPUT':'SYSLOG'})
-        self.r.shutdown()
-        time.sleep(2)
+        #self.r.flushall()
+        #self.loglevel_db.hmset('syncd:syncd', {'LOGLEVEL':self.loglevel, 'LOGOUTPUT':'SYSLOG'})
+        #self.r.shutdown()
+        #time.sleep(2)
+        #self.cache = {}
+        #self.rec2vid = {}
+        self.ssh.exec_command("docker stop syncd")
+        self.r.flushdb()
+        self.ssh.exec_command("docker start syncd")
         self.cache = {}
         self.rec2vid = {}
+
         self.__assert_syncd_running()
 
     def set_loglevel(self, sai_api, loglevel):
