@@ -101,9 +101,6 @@ class SaiRedisClient(SaiClient):
         self.config_db.hmset("DEVICE_METADATA|localhost", self.device_metadata)
         self.config_db.set("CONFIG_DB_INITIALIZED", "1")
 
-        #self.ssh.exec_command("docker start syncd")
-        #self.__assert_syncd_running()
-
         self.cache = {}
         self.rec2vid = {}
 
