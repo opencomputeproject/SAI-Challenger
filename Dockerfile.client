@@ -21,10 +21,11 @@ RUN apt-get -o Acquire::Check-Valid-Until=false update && apt-get install -y \
         python3-redis \
         iproute2 \
         rsyslog \
-        supervisor
+        supervisor \
+        python3-paramiko
 
 # Install SAI-C dependencies
-RUN pip3 install pytest pytest_dependency pytest-html pdbpp macaddress click==8.0 python3-paramiko
+RUN pip3 install pytest pytest_dependency pytest-html pdbpp macaddress click==8.0
 
 # Install PTF dependencies
 RUN pip3 install scapy dpkt

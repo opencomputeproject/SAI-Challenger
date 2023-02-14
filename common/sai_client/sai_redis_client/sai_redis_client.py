@@ -7,6 +7,47 @@ import paramiko
 from saichallenger.common.sai_client.sai_client import SaiClient
 from saichallenger.common.sai_data import SaiObjType, SaiData
 
+def service_is_active(target, service):
+    _, stdout, _ = target.exec_command(f"systemctl is-active {service}")
+    output = stdout.read().decode("utf-8")
+    return "inactive" not in output
+
+
+def container_is_running(target, container):
+    _, stdout, _ = target.exec_command(f"docker inspect {container}")
+    output = stdout.read().decode("utf-8")
+    return json.loads(output)[0]["State"]["Running"]
+
+def assert_container_state(target, container, is_running=True, tout=30):
+    for i in range(tout):
+        time.sleep(1)
+        if container_is_running(target, container) == is_running:
+            return
+    state = "not running" if is_running else "running"
+    assert False, f"The {container} container is still not running after {tout} seconds..."
+
+def assert_service_state(target, service, is_active=True, tout=30):
+    for i in range(tout):
+        time.sleep(1)
+        if service_is_active(target, service) == is_active:
+            return
+    state = "inactive" if is_active else "active"
+    assert False, f"The {service} service is still {state} after {tout} seconds..."
+
+def assert_redis_is_available(host, port, tout=30):
+    start_time = time.time()
+    r = redis.Redis(host=host, port=port, db=0)
+    while True:
+        try:
+            r.ping()
+            return
+        except:
+            if time.time() - start_time < tout:
+                time.sleep(1)
+                continue
+            assert False, f"Redis server is still not available after {tout} seconds..."
+
+
 class SaiRedisClient(SaiClient):
     """Redis SAI client implementation to wrap low level SAI calls"""
     attempts = 40
@@ -22,37 +63,46 @@ class SaiRedisClient(SaiClient):
         self.ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         self.ssh.connect(self.server_ip, username="admin", password="YourPaSsWoRd")
 
-        self.ssh.exec_command("sudo systemctl stop monit")
-        self.ssh.exec_command("sudo systemctl stop sonic.target")
-        time.sleep(15)
+        _, stdout, _ = self.ssh.exec_command('redis-cli -n 4 --raw hgetall "DEVICE_METADATA|localhost"')
+        output = stdout.readlines()
+        self.device_metadata = {}
+        for i in range(0, len(output), 2):
+            self.device_metadata[output[i][:-2]] = output[i + 1][:-2]
 
-        # Stop SyncD just in case it's the second run of SAI-C
-        self.ssh.exec_command("docker stop syncd")
-
+        # Enable Redis server to listen on all interfaces
         cmd = "echo \"sed -ri 's/--bind.*--port/--bind 0.0.0.0 --port/' /usr/share/sonic/templates/supervisord.conf.j2\" > redis_bind_fix.sh"
         self.ssh.exec_command(cmd)
         self.ssh.exec_command("docker cp redis_bind_fix.sh database:/")
         self.ssh.exec_command("docker exec database bash redis_bind_fix.sh")
-        self.ssh.exec_command("sudo systemctl restart database")
-        time.sleep(10)
 
-        self.config_db = redis.Redis(host=self.server_ip, port=self.port, db=4)
-        self.device_metadata = self.config_db.hgetall("DEVICE_METADATA|localhost")
-        self.config_db.flushall()
+        # Stop all SONiC services
+        for service in ["monit", "pmon", "sonic.target", "syncd", "swss", "database"]:
+            self.ssh.exec_command(f"sudo systemctl mask {service}")
+            self.ssh.exec_command(f"sudo systemctl stop {service}")
+            assert_service_state(self.ssh, service, is_active=False, tout=60)
 
-        self.ssh.exec_command("sudo systemctl stop database")
-        self.ssh.exec_command("docker restart database")
-        time.sleep(10)
+        # Stop SyncD just in case it's the second run of SAI-C
+        self.ssh.exec_command("docker stop syncd")
+        assert_container_state(self.ssh, "syncd", is_running=False)
 
-        self.config_db = redis.Redis(host=self.server_ip, port=self.port, db=4)
+        # Apply Redis config change
+        self.ssh.exec_command("docker stop database")
+        assert_container_state(self.ssh, "database", is_running=False)
+        self.ssh.exec_command("docker start database")
+        assert_container_state(self.ssh, "database", is_running=True)
+        assert_redis_is_available(self.server_ip, self.port)
+
         self.r = redis.Redis(host=self.server_ip, port=self.port, db=1)
         self.loglevel_db = redis.Redis(host=self.server_ip, port=self.port, db=3)
         self.config_db = redis.Redis(host=self.server_ip, port=self.port, db=4)
+        self.r.flushall()
 
+        # Write to CONFIG_DB SONiC device information needed on syncd start
         self.config_db.hmset("DEVICE_METADATA|localhost", self.device_metadata)
         self.config_db.set("CONFIG_DB_INITIALIZED", "1")
 
-        self.ssh.exec_command("docker start syncd")
+        #self.ssh.exec_command("docker start syncd")
+        #self.__assert_syncd_running()
 
         self.cache = {}
         self.rec2vid = {}
@@ -88,6 +138,7 @@ class SaiRedisClient(SaiClient):
         #self.cache = {}
         #self.rec2vid = {}
         self.ssh.exec_command("docker stop syncd")
+        assert_container_state(self.ssh, "syncd", is_running=False)
         self.r.flushdb()
         self.ssh.exec_command("docker start syncd")
         self.cache = {}

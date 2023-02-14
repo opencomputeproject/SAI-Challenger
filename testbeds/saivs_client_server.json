@@ -9,7 +9,7 @@
     "client": {
       "type": "redis",
       "config": {
-          "ip": "192.168.122.217",
+          "ip": "192.168.122.128",
           "port": "6379",
           "loglevel": "NOTICE"
       }
