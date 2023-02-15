@@ -32,7 +32,7 @@ Where: _sc-server-run_ and _sc-client-run_ are docker names of SAI-Challenger se
 
 Alternatively, you can run the whole client-server environment on the same host with a single script:
 ```sh
-./run_client_server.sh start -a trident2 -t saivs
+./run_client_server.sh -a trident2 -t saivs start
 ./run_client_server.sh start
 ```
 
