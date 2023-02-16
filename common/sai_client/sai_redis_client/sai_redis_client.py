@@ -23,11 +23,25 @@ class SonicEnvironment():
 
         # In SONiC environment, Redis is listening on loopback interface only.
         # So, we can retrieve device metadata though SSH only.
-        _, stdout, _ = self.ssh.exec_command('redis-cli -n 4 --raw hgetall "DEVICE_METADATA|localhost"')
+        # Try to get metadata from a file first.
+        _, stdout, _ = self.ssh.exec_command('cat device_metadata.log')
         output = stdout.readlines()
+        if len(output) <= 1:
+            # Try to get metadata from CONFIG_DB
+            _, stdout, _ = self.ssh.exec_command('redis-cli -n 4 --raw hgetall "DEVICE_METADATA|localhost"')
+            output = stdout.readlines()
+            assert len(output) > 1, "DEVICE_METADATA is not defines"
+
+            # Write metadata to the file
+            metadata = ""
+            for line in output:
+                metadata += line
+            metadata = metadata[:-1]
+            self.ssh.exec_command(f"echo \"{metadata}\" > device_metadata.log")
+
         device_metadata = {}
         for i in range(0, len(output), 2):
-            device_metadata[output[i][:-2]] = output[i + 1][:-2]
+            device_metadata[output[i][:-1]] = output[i + 1][:-1]
 
         # Enable Redis server to listen on all interfaces
         cmd = "echo \"sed -ri 's/--bind.*--port/--bind 0.0.0.0 --port/' /usr/share/sonic/templates/supervisord.conf.j2\" > redis_bind_fix.sh"
