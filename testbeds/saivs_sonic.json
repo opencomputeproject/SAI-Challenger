@@ -9,7 +9,10 @@
     "client": {
       "type": "redis",
       "config": {
-        "ip": "192.168.122.128",
+        "mode": "sonic",
+        "username": "admin",
+        "password": "YourPaSsWoRd",
+        "ip": "192.168.122.178",
         "port": "6379",
         "loglevel": "NOTICE"
       }

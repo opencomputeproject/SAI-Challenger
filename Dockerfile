@@ -27,7 +27,8 @@ RUN apt-get -o Acquire::Check-Valid-Until=false update && apt-get install -y \
         aspell \
         python3-pip \
         rsyslog \
-        supervisor
+        supervisor \
+        python3-paramiko
 
 # Add support for supervisord to handle startup dependencies
 RUN pip3 install supervisord-dependent-startup==1.4.0
