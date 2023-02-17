@@ -154,10 +154,10 @@ class CommandProcessor:
 class Sai():
     def __init__(self, cfg):
         self.command_processor = CommandProcessor(self)
-        self.libsaivs = cfg["target"] == "saivs"
+        self.libsaivs = cfg.get("target", None) == "saivs"
         self.run_traffic = cfg["traffic"] and not self.libsaivs
         self.name = cfg["asic"]
-        self.target = cfg["target"]
+        self.target = cfg.get("target", None)
         self.sku = cfg["sku"]
         self.asic_dir = cfg["asic_dir"]
         self._switch_oid = None

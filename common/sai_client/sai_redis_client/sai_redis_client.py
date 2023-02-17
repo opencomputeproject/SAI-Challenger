@@ -7,6 +7,10 @@ import paramiko
 from saichallenger.common.sai_client.sai_client import SaiClient
 from saichallenger.common.sai_data import SaiObjType, SaiData
 
+import warnings
+from cryptography.utils import CryptographyDeprecationWarning
+warnings.filterwarnings("ignore", category=CryptographyDeprecationWarning)
+
 
 class SonicEnvironment():
     def __init__(self, cfg):
@@ -50,9 +54,9 @@ class SonicEnvironment():
         self.ssh.exec_command("docker exec database bash redis_bind_fix.sh")
 
         # Stop all SONiC services
-        for service in ["monit", "pmon", "sonic.target", "syncd", "swss", "database"]:
-            self.ssh.exec_command(f"sudo systemctl mask {service}")
+        for service in ["monit", "pmon", "sonic.target", "database"]:
             self.ssh.exec_command(f"sudo systemctl stop {service}")
+            self.ssh.exec_command(f"sudo systemctl mask {service}")
             self._assert_service_state(service, is_active=False, tout=60)
 
         # Stop SyncD just in case it's the second run of SAI-C
@@ -566,8 +570,9 @@ class SaiRedisClient(SaiClient):
         if type(attrs) != str:
             attrs = json.dumps(attrs)
         status = self.operate("SAI_OBJECT_TYPE_SWITCH:" + self.switch_oid, attrs, "Sflush")
-        assert status[0].decode("utf-8") == 'Sflushresponse'
-        assert status[2].decode("utf-8") == 'SAI_STATUS_SUCCESS'
+        assert status[0].decode("utf-8") == 'Sflushresponse', f"{status}"
+        status = status[2].decode("utf-8")
+        assert status == 'SAI_STATUS_SUCCESS', f"flush_fdb_entries({attrs}) --> {status}"
 
     # Host interface
     def remote_iface_exists(self, iface):
