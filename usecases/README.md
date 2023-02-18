@@ -37,14 +37,14 @@ PTF embeds the Scapy packet library and has utilities and wrappers to make it ea
 
 OTG is supported by a variety of SW and HW-based packet generators. OTG has constructs allowing precision scheduling, multiple flows with built-in tracking, and much more. [ixia-c](https://github.com/open-traffic-generator/ixia-c) is an example of a free, SW-based traffic generator which supports OTG. It has been demonstrated to run at Gbps speeds ([commercial versions](https://www.keysight.com/us/en/products/network-test/protocol-load-test/keysight-elastic-network-generator.html) of ixia-c run close to line rate at 100Gbps). It runs as docker containers and has been deployed in the CI/CD pipelines of open-source projects such as [DASH](https://github.com/sonic-net/DASH) and [Ondatra](https://github.com/openconfig/ondatra). Tests written to run with a SW Traffic Generator can be run on HW as well. 
 
-The preferred way to use OTG traffic-generators is via native snappi methods supporting flow-based constructs. However, a wrapper library included with SAI Challenger allows OTG traffic generators to be used via familiar PTF helper methods. These create trivial "flows" of one packet to immitate the behaior of Scapy. The benefit of these wrappers is to allow existing, or even new, PTF tests to take advantage of OTG-capable traffic generators (SW or HW), using legacy dataplane helpers.
+The recommended way to use OTG traffic-generators is via native snappi methods supporting flow-based constructs. This exposes the full rabge of capabilities. However, a wrapper library included with SAI Challenger allows OTG traffic generators to be used via familiar PTF helper methods. These create trivial "flows" of one packet to immitate the behaior of Scapy. The benefit of these wrappers is to allow existing, or even new, PTF tests to take advantage of OTG-capable traffic generators (SW or HW), using legacy dataplane helpers.
 
 To summarize, test-cases can send/receive packets using three approaches:
-* PTF Dataplane (Scapy-based) using PTF helper classes
-* Native snappi (OTG-based) using flow-based APIs
-* PTF wrappers around snappi API, for PTF backwards-compatibility
+* PTF Dataplane (Scapy-based) using PTF helper classes - SW traffic generator only
+* Native snappi (OTG-based) using flow-based APIs - SW or HW OTG generators
+* PTF wrappers around snappi API, for PTF backwards-compatibility - SW or HW traffic generators
 
-The diagram below shows a superset of these possibilities:
+The diagram below shows a superset of these possibilities.
 
 ![tgen-variations](../img/tgen-variations.svg)
 
@@ -61,13 +61,13 @@ SAI Challenger can be executed in two modes:
 <a href="url"><img src="../img/sai-challenger-cs.svg" align="center" width="500" ></a>
 
 The standalone mode **SHOULD** be used in case of:
-- running TCs on vslib SAI implementation;
-- running TCs without traffic (without `--traffic` option) on HW;
-- running TCs with/without traffic on ASIC simulator when it also runs inside the same Docker container as syncd or sai_thrift server;
+- running TCs on vslib SAI implementation
+- running TCs without traffic (without `--traffic` option) on HW
+- running TCs with/without traffic on ASIC simulator when it also runs inside the same Docker container as syncd or sai_thrift server
 
 The client-server mode **CAN** be used in all the cases defined for the standalone mode, and **MUST** be used in case of:
-- running TCs with traffic (with `--traffic` option) on HW;
-- running TCs with traffic on ASIC simulator when it also runs inside the same Docker container as syncd or sai_thrift server but exposes ports outside the container;
+- running TCs with traffic (with `--traffic` option) on HW
+- running TCs with traffic on ASIC simulator when it also runs inside the same Docker container as syncd or sai_thrift server but exposes ports outside the container
 
 # Representative Use-Cases
 ## Virtual DUT, SW Traffic Generator
@@ -107,7 +107,7 @@ Summary:
 
 * Details of how traffic is conveyed between the DUT's CPU and the switching device are platform-specific (e.g. CPU NIC wired to special management port on the switch ASIC). SAI Challenger contains no specific support for this use-case, but if standard netdevs can be used, it should be possible. Likewise, the traffic must ingress and egress the DUT's "front panel" ports using various platform-specific techniques such as loopbacks, recirculation, etc.
 
-![saic-physical-dut-sw-tgen-no-host](../img/saic-physical-dut-sw-tgen-no-host.svg)
+![saic-physical-dut-sw-tgen-self-contained](../img/saic-physical-dut-sw-tgen-self-contained.svg)
 
 ## Physical DUT, HW Traffic Generator
 Summary:
@@ -147,7 +147,7 @@ This use-case takes advantage of an all-in-one testbed-in-a-box. Such a device, 
 
 In principle the SAI Challenger test framework could also run inside the same device, resulting in a compact solution.
 
->**Note:** This does not yet exist. This is a concept only. It would require a TBD SW image and license on the UHD100T32.
+>**Note:** This is a concept only, it has not been developed or tested. It would require a TBD SW image and license on the UHD100T32.
 
 Summary:
 * SAI-Challenger runs on the test host
@@ -163,7 +163,7 @@ Summary:
 ## Physical DUT, Testbed-in-a-box, SW & HW Traffic Generators
 This use-case is builds upon the [Physical DUT, Testbed-in-a-box, SW Traffic Generator](#physical-dut-testbed-in-a-box-sw-traffic-generator) but adds in the HW traffic-generator features of the UHD100T32.
 
->**Note:** This does not exist. This is a concept only. It would require a TBD SW image and license on the UHD100T32.
+>**Note:** This is a concept only, it has not been developed or tested. It would require a TBD SW image and license on the UHD100T32.
 
 Summary:
 * SAI-Challenger runs on the test host
