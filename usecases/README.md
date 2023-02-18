@@ -147,7 +147,7 @@ This use-case takes advantage of an all-in-one testbed-in-a-box. Such a device, 
 
 In principle the SAI Challenger test framework could also run inside the same device, resulting in a compact solution.
 
->**Note:** This does not exist. This is a concept only. It would require a TBD SW image and license on the UHD100T32.
+>**Note:** This does not yet exist. This is a concept only. It would require a TBD SW image and license on the UHD100T32.
 
 Summary:
 * SAI-Challenger runs on the test host
