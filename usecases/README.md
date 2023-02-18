@@ -5,10 +5,10 @@
     - [DUT Config Variations](#dut-config-variations)
     - [Traffic-Generator Variations](#traffic-generator-variations)
     - [Standalone mode vs. Client-Server Mode](#standalone-mode-vs-client-server-mode)
-- [Use-Case List](#use-case-list)
+- [Representative Use-Cases](#representative-use-cases)
   - [Virtual DUT, SW Traffic Generator](#virtual-dut-sw-traffic-generator)
   - [Physical DUT, SW Traffic Generator](#physical-dut-sw-traffic-generator)
-  - [Physical DUT, SW Traffic Generator, Test Controller on the DUT](#physical-dut-sw-traffic-generator-test-controller-on-the-dut)
+  - [Physical DUT, SW Traffic Generator and Test Controller also on the DUT](#physical-dut-sw-traffic-generator-and-test-controller-also-on-the-dut)
   - [Physical DUT, HW Traffic Generator](#physical-dut-hw-traffic-generator)
   - [Physical DUT, SW Traffic Generator, Fanout switches](#physical-dut-sw-traffic-generator-fanout-switches)
   - [Physical DUT, Testbed-in-a-box, SW Traffic Generator](#physical-dut-testbed-in-a-box-sw-traffic-generator)
@@ -24,7 +24,7 @@ Each use-case diagram may imply multiple variations of SAI-Challenger and Device
 ### DUT Config Variations
 The diagram portion below illustrates that SAI Challenger supports both saithrift and sairedis APIs. SAI Challenger test-cases can run over either API without change. A test configuration file selects which API to use.
 
-A given DUT can sun, one at a time, either saithrift RPC server (`saiserver`) or the SONiC `syncd` daemon. A test controller could execute one set of tests over saithrift (with `saiserver` running on the DUT) to verify the DUT via remote libsai calls; then execute the same tests using sairedis (with redis and syncd running on the DUT) to verify partial SONiC integration. The sonic-mgmt testbed has [instructions](https://github.com/sonic-net/sonic-mgmt/blob/master/docs/testbed/sai_quality/README.md) for executing PTF-based [sai_qualify](https://github.com/sonic-net/sonic-mgmt/tree/master/tests/sai_qualify) tests, by replacing the `syncd` container with `saiserver`. This same process should work if PTF is replaced with SAI Challenger.
+A given DUT can run, one at a time, either a saithrift RPC server (`saiserver`) or the SONiC `syncd` daemon. A test controller could execute one set of tests over saithrift (with `saiserver` running on the DUT) to verify the DUT via remote libsai calls; then execute the same tests using sairedis (with redis and syncd running on the DUT) to verify partial SONiC integration. The sonic-mgmt testbed has [instructions](https://github.com/sonic-net/sonic-mgmt/blob/master/docs/testbed/sai_quality/README.md) for executing PTF-based [sai_qualify](https://github.com/sonic-net/sonic-mgmt/tree/master/tests/sai_qualify) tests, by replacing the `syncd` container with `saiserver`. This same process should work if PTF is replaced with SAI Challenger.
 
 ![dut-api-variations](../img/dut-api-variations.svg)
 
@@ -37,7 +37,7 @@ PTF embeds the Scapy packet library and has utilities and wrappers to make it ea
 
 OTG is supported by a variety of SW and HW-based packet generators. OTG has constructs allowing precision scheduling, multiple flows with built-in tracking, and much more. [ixia-c](https://github.com/open-traffic-generator/ixia-c) is an example of a free, SW-based traffic generator which supports OTG. It has been demonstrated to run at Gbps speeds ([commercial versions](https://www.keysight.com/us/en/products/network-test/protocol-load-test/keysight-elastic-network-generator.html) of ixia-c run close to line rate at 100Gbps). It runs as docker containers and has been deployed in the CI/CD pipelines of open-source projects such as [DASH](https://github.com/sonic-net/DASH) and [Ondatra](https://github.com/openconfig/ondatra). Tests written to run with a SW Traffic Generator can be run on HW as well. 
 
-The preferred way to use OTG traffic-generators is via native snappi methods supporting flow-based constructs. However, a wrapper library allows OTG traffic generators to be used via familiar PTF helper methods. These create trivial "flows" of one packet to immitate the behaior of Scapy. The benefit of these wrappers is to allow existing, or even new, PTF tests to take advantage of OTG-capable traffic generators, using legacy dataplane helpers.
+The preferred way to use OTG traffic-generators is via native snappi methods supporting flow-based constructs. However, a wrapper library included with SAI Challenger allows OTG traffic generators to be used via familiar PTF helper methods. These create trivial "flows" of one packet to immitate the behaior of Scapy. The benefit of these wrappers is to allow existing, or even new, PTF tests to take advantage of OTG-capable traffic generators (SW or HW), using legacy dataplane helpers.
 
 To summarize, test-cases can send/receive packets using three approaches:
 * PTF Dataplane (Scapy-based) using PTF helper classes
@@ -51,13 +51,12 @@ The diagram below shows a superset of these possibilities:
 ### Standalone mode vs. Client-Server Mode
 
 SAI Challenger can be executed in two modes:
-1. [standalone mode](docs/standalone_mode.md) - both syncd and pytest are running in the same Docker container;
+1. [standalone mode](docs/standalone_mode.md) - both syncd and pytest are running in the same Docker container. This mode is generally only suitable for PTF dataplane testing, because everything is onside the same Docker container. OTG traffic-generator tests controlled by snappi require separate containers.
 
 <a href="url"><img src="../img/sai-challenger-sm.svg" align="center" width="500" ></a>
 
-This mode is generally only suitable for PTF dataplane testing, because everything is onside the same Docker container. OTG traffic-generator tests controlled by snappi require separate containers.
 
-2. [client-server mode](docs/client_server_mode.md) - syncd and pytest are running in the separate Docker containers;
+2. [client-server mode](docs/client_server_mode.md) - syncd and pytest are running in the separate Docker containers.
 
 <a href="url"><img src="../img/sai-challenger-cs.svg" align="center" width="500" ></a>
 
@@ -70,11 +69,12 @@ The client-server mode **CAN** be used in all the cases defined for the standalo
 - running TCs with traffic (with `--traffic` option) on HW;
 - running TCs with traffic on ASIC simulator when it also runs inside the same Docker container as syncd or sai_thrift server but exposes ports outside the container;
 
-# Use-Case List
+# Representative Use-Cases
 ## Virtual DUT, SW Traffic Generator
 Summary:
-* Everything runs on the test host
-* SAI-Challenger is virtually cabled to a software DUT using veth connections.
+* SAI-Challenger runs on the test host
+* The DUT is a SW dataplane running on the same test host.
+* SAI-Challenger is virtually cabled to the software DUT using veth connections.
 * The DUT is controlled via SAI-thrift, sairedis, or both (at different times), depending upon DUT capabilities, using internal management network.
 * Software traffic generation using host's veth ports, can use either or both:
   *  PTF/Scapy (packet-at-a-time)
@@ -85,6 +85,7 @@ Summary:
 ## Physical DUT, SW Traffic Generator
 Summary:
 * SAI-Challenger runs on the test host
+* The DUT is a physically separate device, whether a network switch, xPU or SW dataplane running on a server.
 * The DUT is controlled via SAI-thrift, sairedis, or both (at different times), depending upon DUT capabilities, using a management network.
 * Software traffic generation using host's NIC port(s), can use either or both:
   *  PTF/Scapy (packet-at-a-time)
@@ -92,12 +93,13 @@ Summary:
 
 ![saic-physical-dut-sw-tgen](../img/saic-physical-dut-sw-tgen.svg)
 
-## Physical DUT, SW Traffic Generator, Test Controller on the DUT
+## Physical DUT, SW Traffic Generator and Test Controller also on the DUT
 This is a variation on the previous use-case [Physical DUT, SW Traffic Generator](#physical-dut-sw-traffic-generator), but is entirely self-contained on the physical DUT.
->**Note:** This has not been tried yet. This is a concept only.
+>**Note:** This has not been tried yet. This is a concept only. Details of running SAI CHallenger on a DUT are TBD.
 
 Summary:
 * SAI-Challenger runs on the DUT itself
+* The DUT is a physically separate device, whether a network switch, xPU or SW dataplane running on a server.
 * The DUT is controlled via SAI-thrift, sairedis, or both (at different times), depending upon DUT capabilities, using internal management network.
 * Software traffic generation using internal, platform-dependent "CPU-to-Switch ASIC" port(s), can use either or both:
   *  PTF/Scapy (packet-at-a-time)
@@ -110,6 +112,7 @@ Summary:
 ## Physical DUT, HW Traffic Generator
 Summary:
 * SAI-Challenger runs on the test host
+* The DUT is a physically separate device, whether a network switch, xPU or SW dataplane running on a server.
 * Test controller is directly cabled to a physical DUT using Ethernet
 * The DUT is controlled via SAI-thrift, sairedis, or both (at different times), depending upon DUT capabilities.
 * [OTG](https://github.com/open-traffic-generator) hardware traffic generator such as Ixia chassis.
@@ -119,8 +122,11 @@ Summary:
 ## Physical DUT, SW Traffic Generator, Fanout switches
 This use-case is similar to the [Physical DUT, SW Traffic Generator](#physical-dut-sw-traffic-generator) use-case. Instead of a direct connection from the Test Server's NIC ports to a DUT port, one or more fanout switches are used to steer packets (e.g. via VLAN tags and fanout switching rules) to a large number of DUT traffic ports. This technique is used in the [sonic-mgmt testbed](https://github.com/sonic-net/sonic-mgmt/blob/master/docs/testbed/README.testbed.Overview.md).
 
+>**Note:** This has not been tried yet. This is a concept only.
+
 Summary:
 * SAI-Challenger runs on the test host
+* The DUT is a physically separate device, whether a network switch, xPU or SW dataplane running on a server.
 * Test controller is cabled to a fanout switch complex (one or more tiers) using Ethernet.
 * Fanout switch complex is cabled to the DUT traffic ports.
 * Details such as control-plane application VMs, open-vswitch, etc. as used in sonic-mgmt are omitted for clarity and are outside the scope of SAI Challenger. Here, SAI Challenger replaces the role of PTF in sonic-mgmt testbed.
@@ -132,7 +138,6 @@ Summary:
 ![saic-physical-dut-sw-tgen-fanout](../img/saic-physical-dut-sw-tgen-fanout.svg)
 
 
-
 For reference, the sonic-mgmt generic topology is shown below:
 
 <a href="url"><img src="https://github.com/sonic-net/sonic-mgmt/blob/master/docs/testbed/img/physical_connection.png" align="center" width="500" ></a>
@@ -141,10 +146,12 @@ For reference, the sonic-mgmt generic topology is shown below:
 This use-case takes advantage of an all-in-one testbed-in-a-box. Such a device, such as the [Keysight UHD100T32](https://www.keysight.com/us/en/assets/7019-0482/data-sheets/UHD100T32-QSFP28-Ultra-High-Density-32-Port-Test-System.pdf), merges the test controller, fanout switches, cEOS VMs, and PTF test framework, inside of a single appliance. In essence, it replace one or more test servers and one or more network switches, with a single box.
 
 In principle the SAI Challenger test framework could also run inside the same device, resulting in a compact solution.
->**Note:** This has not been tried yet. This is a concept only. It would require a sifferent SW license on the UHD100T32.
+
+>**Note:** This does not exist. This is a concept only. It would require a TBD SW image and license on the UHD100T32.
 
 Summary:
 * SAI-Challenger runs on the test host
+* The DUT is a physically separate device, whether a network switch, xPU or SW dataplane running on a server.
 * Test controller, control-plane application VMs, fanout switches and SW traffic generators are all embedded in a single appliance.
 * The DUT is controlled via SAI-thrift, sairedis, or both (at different times), depending upon DUT capabilities.
 * Software traffic generation using test host CPU, can use either or both:
@@ -156,7 +163,7 @@ Summary:
 ## Physical DUT, Testbed-in-a-box, SW & HW Traffic Generators
 This use-case is builds upon the [Physical DUT, Testbed-in-a-box, SW Traffic Generator](#physical-dut-testbed-in-a-box-sw-traffic-generator) but adds in the HW traffic-generator features of the UHD100T32.
 
->**Note:** This has not been tried yet. This is a concept only. It would require a different SW license on the UHD100T32.
+>**Note:** This does not exist. This is a concept only. It would require a TBD SW image and license on the UHD100T32.
 
 Summary:
 * SAI-Challenger runs on the test host
@@ -165,8 +172,8 @@ Summary:
 * Software traffic generation using test host CPU, can use either or both:
   *  PTF/Scapy (packet-at-a-time)
   *  [OTG](https://github.com/open-traffic-generator) software traffic generator such as ixia-c (flow-based testing).
-* Line-Rate HW traffic generation (32 ports x 100Gbps), also controlled by snappi. Cna be used separately or simultaneously with SW traffic generation. The built-in switch capability multiplexes and demultiplexes the differing sources/sinks.
-* 
+* Line-Rate HW traffic generation (32 ports x 100Gbps), also controlled by snappi. Can be used separately or simultaneously with SW traffic generation. The built-in switch capability multiplexes and demultiplexes the differing sources/sinks.
+
 ![saic-physical-dut-testbed-in-a-box-sw-hw-tgen](../img/saic-physical-dut-testbed-in-a-box-sw-hw-tgen.svg)
 
 ## Umbrella Framework Executing PTF Tests
