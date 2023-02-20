@@ -12,6 +12,7 @@ IMAGE_TYPE="standalone"
 ASIC_TYPE=""
 ASIC_PATH=""
 TARGET=""
+SAI_INTERFACE="redis"
 
 print-help() {
     echo
@@ -45,6 +46,10 @@ while [[ $# -gt 0 ]]; do
         ;;
         "-t"|"--target")
             TARGET="$2"
+            shift
+        ;;
+        "-s"|"--sai_interface")
+            SAI_INTERFACE="$2"
             shift
         ;;
     esac
@@ -103,6 +108,13 @@ print-build-options() {
 }
 
 trap print-build-options EXIT
+
+# Build base Docker image
+if [ "${SAI_INTERFACE}" = "thrift" ]; then
+    IMG_NAME=$(echo "sc-${ASIC_TYPE}-${TARGET}" | tr '[:upper:]' '[:lower:]')
+    docker build -f Dockerfile.saithrift -t $IMG_NAME .
+    exit 0
+fi
 
 # Build base Docker image
 if [ "${IMAGE_TYPE}" = "standalone" ]; then

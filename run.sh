@@ -73,7 +73,8 @@ done
 
 if [[ "${IMAGE_TYPE}" != "standalone" && \
       "${IMAGE_TYPE}" != "client" && \
-      "${IMAGE_TYPE}" != "server" ]]; then
+      "${IMAGE_TYPE}" != "server" && \
+      "${IMAGE_TYPE}" != "thrift" ]]; then
     echo "Unknown image type \"${IMAGE_TYPE}\""
     exit 1
 fi
@@ -136,7 +137,14 @@ stop_docker_container() {
 if [ "${COMMAND}" = "start" ]; then
 
     # Start Docker container
-    if [ "${IMAGE_TYPE}" = "standalone" ]; then
+    if [ "${IMAGE_TYPE}" = "thrift" ]; then
+        docker run --name sc-thrift-${ASIC_TYPE}-${TARGET}-run \
+        -v $(pwd):/sai-challenger \
+        --cap-add=NET_ADMIN \
+        ${OPTS} \
+        --device /dev/net/tun:/dev/net/tun \
+        -d sc-thrift-${ASIC_TYPE}-${TARGET}
+    elif [ "${IMAGE_TYPE}" = "standalone" ]; then
         docker run --name sc-${ASIC_TYPE}-${TARGET}-run \
         -v $(pwd):/sai-challenger \
         --cap-add=NET_ADMIN \
@@ -159,9 +167,11 @@ if [ "${COMMAND}" = "start" ]; then
     fi
 
 elif [ "${COMMAND}" = "stop" ]; then
-
     # Stop Docker container
-    if [ "${IMAGE_TYPE}" = "standalone" ]; then
+    if [ "${SAI_INTERFACE}" = "thrift" ]; then
+        CONTAINER_NAME=$(echo "sc-thrift-${ASIC_TYPE}-${TARGET}-run" | tr '[:upper:]' '[:lower:]')
+        stop_docker_container ${CONTAINER_NAME}
+    elif [ "${IMAGE_TYPE}" = "standalone" ]; then
         stop_docker_container sc-${ASIC_TYPE}-${TARGET}-run
     elif [ "${IMAGE_TYPE}" = "server" ]; then
         stop_docker_container sc-server-${ASIC_TYPE}-${TARGET}-run
