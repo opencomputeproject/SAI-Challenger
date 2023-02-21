@@ -122,24 +122,15 @@ class SaiNpu(Sai):
         return oid
 
     def remove_vlan_member(self, vlan_oid, bp_oid):
-        assert vlan_oid.startswith("oid:")
+        status, data = self.get_by_type(vlan_oid, "SAI_VLAN_ATTR_MEMBER_LIST", "sai_object_list_t")
+        assert status == "SAI_STATUS_SUCCESS"
 
-        vlan_mbr_oids = []
-        status, data = self.get(vlan_oid, ["SAI_VLAN_ATTR_MEMBER_LIST", "1:oid:0x0"], False)
-        if status == "SAI_STATUS_SUCCESS":
-            vlan_mbr_oids = data.oids()
-        elif status == "SAI_STATUS_BUFFER_OVERFLOW":
-            oids = self.make_list(data.uint32(), "oid:0x0")
-            vlan_mbr_oids = self.get(vlan_oid, ["SAI_VLAN_ATTR_MEMBER_LIST", oids]).oids()
-        else:
-            assert status == "SAI_STATUS_SUCCESS"
-
+        vlan_mbr_oids = data.to_list()
         for vlan_mbr_oid in vlan_mbr_oids:
             oid = self.get(vlan_mbr_oid, ["SAI_VLAN_MEMBER_ATTR_BRIDGE_PORT_ID", "oid:0x0"]).oid()
             if oid == bp_oid:
                 self.remove(vlan_mbr_oid)
                 return
-
         assert False
 
     def create_route(self, dest, vrf_oid, nh_oid=None, opt_attr=None):
@@ -206,12 +197,15 @@ class SaiNpu(Sai):
         for idx in range(num_ports):
             self.remove_vlan_member(self.default_vlan_oid, self.dot1q_bp_oids[idx])
             self.remove(self.dot1q_bp_oids[idx])
+            oid = self.get(self.port_oids[idx], ["SAI_PORT_ATTR_PORT_SERDES_ID", "oid:0x0"]).oid()
+            if oid != "oid:0x0":
+                self.remove(oid)
             self.remove(self.port_oids[idx])
         self.port_oids.clear()
         self.dot1q_bp_oids.clear()
 
         # Create ports as per SKU
-        for port in sku["port_groups"]:
+        for port in sku["port"]:
             port_attr = [
                 "SAI_PORT_ATTR_ADMIN_STATE",   "true",
                 "SAI_PORT_ATTR_PORT_VLAN_ID",  self.default_vlan_id,
@@ -258,4 +252,16 @@ class SaiNpu(Sai):
                                     "SAI_BRIDGE_PORT_ATTR_ADMIN_STATE", "true"
                                 ])
             self.dot1q_bp_oids.append(bp_oid)
-            self.create_vlan_member(self.default_vlan_oid, bp_oid, "SAI_VLAN_TAGGING_MODE_UNTAGGED")
+
+        # Check whether bridge ports were added into the default VLAN implicitly
+        default_vlan_bp = []
+        status, data = self.get_by_type(self.default_vlan_oid, "SAI_VLAN_ATTR_MEMBER_LIST", "sai_object_list_t")
+        assert status == "SAI_STATUS_SUCCESS"
+        vlan_mbr_oids = data.to_list()
+        for vlan_mbr_oid in vlan_mbr_oids:
+            oid = self.get(vlan_mbr_oid, ["SAI_VLAN_MEMBER_ATTR_BRIDGE_PORT_ID", "oid:0x0"]).oid()
+            default_vlan_bp.append(oid)
+
+        for oid in self.dot1q_bp_oids:
+            if oid not in default_vlan_bp:
+                self.create_vlan_member(self.default_vlan_oid, bp_oid, "SAI_VLAN_TAGGING_MODE_UNTAGGED")
