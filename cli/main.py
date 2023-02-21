@@ -56,7 +56,8 @@ def set(testbed):
     cfg = {
         "testbed": testbed
     }
-    shutil.rmtree(sai_c_path)
+    if os.path.exists(sai_c_path):
+        shutil.rmtree(sai_c_path)
     os.makedirs(sai_c_path)
     with open(sai_c_cfg_file, "w+") as f:
         f.write(json.dumps(cfg, indent=4) + "\n")
