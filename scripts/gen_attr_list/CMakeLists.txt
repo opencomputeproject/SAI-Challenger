@@ -10,7 +10,6 @@ set(SAI "/usr/include/sai")
 
 add_library(objlib OBJECT saimetadatautils.c saimetadata.c saiserialize.c)
 include_directories(${SAI})
-#add_library(saimetadata saimetadatautils.c saimetadata.c saimetadatatest.c)
 add_library(saimetadata STATIC $<TARGET_OBJECTS:objlib>)
 
 set_target_properties(saimetadata PROPERTIES LINKER_LANGUAGE CXX)
@@ -18,8 +17,6 @@ set_target_properties(saimetadata PROPERTIES LINKER_LANGUAGE CXX)
 add_executable(${TARGET} generate_attrs.cpp)
 
 target_link_libraries(${TARGET} PRIVATE saimetadata)
-#target_link_libraries(${TARGET} PUBLIC
-#    saimetadata)
 target_include_directories(${TARGET} PUBLIC
     ${SAI}
     json/single_include/nlohmann)
