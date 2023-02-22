@@ -29,7 +29,16 @@ RUN apt-get -o Acquire::Check-Valid-Until=false update && apt-get install -y \
         aspell \
         python3-pip \
         rsyslog \
-        supervisor
+        supervisor \
+        cmake \
+        graphviz \
+        doxygen \
+        aspell \
+        git \
+        nlohmann-json-dev \
+        python3-paramiko
+
+RUN pip3 install redis
 
 # Add support for supervisord to handle startup dependencies
 RUN pip3 install supervisord-dependent-startup==1.4.0
@@ -103,7 +112,13 @@ RUN wget "http://archive.apache.org/dist/thrift/0.11.0/thrift-0.11.0.tar.gz" \
     && make && make install \
     && pip3 install lib/py
 
-COPY patches/SAI/0001-improve-enum-values-integration-check-1727.patch /sai
+# Install SAI attributes metadata JSON generator
+COPY scripts/gen_attr_list /sai/gen_attr_list
+RUN apt-get install -y nlohmann-json-dev
+
+# Install patch for SAI check
+COPY patches/SAI/0001-improve-enum-values-integration-check-1727.patch /sai/
+
 RUN git clone https://github.com/sonic-net/sonic-sairedis.git \
         && cd sonic-sairedis \
         && . /sai.env \
@@ -122,16 +137,15 @@ RUN git clone https://github.com/sonic-net/sonic-sairedis.git \
         && dpkg -i libsaimetadata-dev_1.0.0_amd64.deb
 RUN cp 0001-improve-enum-values-integration-check-1727.patch sonic-sairedis \
         && cd sonic-sairedis && patch -p1 < 0001-improve-enum-values-integration-check-1727.patch \
-        && cd SAI && make saithrift-install
+        && cd SAI && make saithrift-install \
+        && cp meta/saimetadatautils.c /sai/gen_attr_list/ \
+        && cp meta/saimetadata.c /sai/gen_attr_list/ \
+        && cp meta/saiserialize.c /sai/gen_attr_list/ 
         #&& cd - \
         #&& mv sonic-sairedis/tests . \
         #&& rm -f *.deb \
         #&& rm -rf sonic-sairedis/* \
         #&& mv tests sonic-sairedis/
-
-# Install SAI attributes metadata JSON generator
-COPY scripts/gen_attr_list /sai/gen_attr_list
-RUN apt-get install -y nlohmann-json-dev
 
 # Build SAI attributes metadata JSON generator and generate /etc/sai/sai.json
 RUN cd /sai/gen_attr_list \

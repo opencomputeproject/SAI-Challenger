@@ -2,14 +2,17 @@
 
 "npu": [
   {
-    "alias": "vs",
-    "asic": "trident2",
-    "target": "saivs",
-    "sku": null,
+    "alias": "td3",
+    "asic": "trident3",
+    "target": "AS7726-32X",
+    "sku": "32x100g",
     "client": {
       "type": "redis",
       "config": {
-        "ip": "172.17.0.3",
+        "mode": "sonic",
+        "username": "admin",
+        "password": "YourPaSsWoRd",
+        "ip": "172.19.9.62",
         "port": "6379",
         "loglevel": "NOTICE"
       }
