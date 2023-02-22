@@ -8,7 +8,6 @@ trap 'last_command=$current_command; current_command=$BASH_COMMAND' DEBUG
 # echo an error message before exiting
 trap 'echo ERROR: "\"${last_command}\" command filed with exit code $?."' ERR
 
-#SAI_INTERFACE="redis"
 IMAGE_TYPE="standalone"
 ASIC_TYPE=""
 ASIC_PATH=""
@@ -68,10 +67,6 @@ while [[ $# -gt 0 ]]; do
             COMMAND="$2"
             shift
         ;;
-        #"-s"|"--sai_interface")
-        #    SAI_INTERFACE="$2"
-        #    shift
-        #;;
     esac
     shift
 done

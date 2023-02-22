@@ -141,11 +141,6 @@ RUN cp 0001-improve-enum-values-integration-check-1727.patch sonic-sairedis \
         && cp meta/saimetadatautils.c /sai/gen_attr_list/ \
         && cp meta/saimetadata.c /sai/gen_attr_list/ \
         && cp meta/saiserialize.c /sai/gen_attr_list/ 
-        #&& cd - \
-        #&& mv sonic-sairedis/tests . \
-        #&& rm -f *.deb \
-        #&& rm -rf sonic-sairedis/* \
-        #&& mv tests sonic-sairedis/
 
 # Build SAI attributes metadata JSON generator and generate /etc/sai/sai.json
 RUN cd /sai/gen_attr_list \

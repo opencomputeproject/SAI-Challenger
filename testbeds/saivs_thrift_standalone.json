@@ -7,10 +7,10 @@
     "target": "saivs",
     "sku": null,
     "client": {
-      "type": "redis",
+      "type": "thrift",
       "config": {
           "ip": "localhost",
-          "port": "6379",
+          "port": "9092",
           "loglevel": "NOTICE"
       }
     }
