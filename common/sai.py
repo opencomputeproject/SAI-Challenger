@@ -153,13 +153,14 @@ class CommandProcessor:
 
 class Sai():
     def __init__(self, cfg):
+        self.cfg = cfg.copy()
         self.command_processor = CommandProcessor(self)
-        self.libsaivs = cfg.get("target", None) == "saivs"
+        self.libsaivs = cfg.get("target") == "saivs"
         self.run_traffic = cfg["traffic"] and not self.libsaivs
-        self.name = cfg["asic"]
-        self.target = cfg.get("target", None)
-        self.sku = cfg["sku"]
-        self.asic_dir = cfg["asic_dir"]
+        self.name = cfg.get("asic")
+        self.target = cfg.get("target")
+        self.sku = cfg.get("sku")
+        self.asic_dir = cfg.get("asic_dir")
         self._switch_oid = None
 
         cfg["client"]["config"]["saivs"] = self.libsaivs
@@ -178,6 +179,9 @@ class Sai():
         yield from map(self.command_processor.process_command, commands)
 
     def cleanup(self):
+        dut = self.cfg.get("dut", None)
+        if dut:
+            dut.cleanup()
         return self.sai_client.cleanup()
 
     def set_loglevel(self, sai_api, loglevel):
@@ -233,6 +237,9 @@ class Sai():
     def remote_iface_agent_stop(self):
         return self.sai_client.remote_iface_agent_stop()
 
+    def vid_to_type(self, vid):
+        return self.sai_client.vid_to_type(vid)
+
     # Used in tests
     @staticmethod
     def get_meta(obj_type=None):
@@ -273,7 +280,7 @@ class Sai():
                 return attr[1]
         return None
 
-    def get_by_type(self, obj, attr, attr_type, do_assert = True):
+    def get_by_type(self, obj, attr, attr_type, do_assert=False):
         # TODO: Check how to map these types into the struct or list
         unsupported_types = [
                                 "sai_port_eye_values_list_t", "sai_prbs_rx_state_t",
