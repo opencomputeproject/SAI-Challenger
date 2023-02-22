@@ -3,11 +3,18 @@
 import click
 import json
 import os
+import shutil
 
 from saichallenger.common.sai_data import SaiObjType
+from saichallenger.common.sai import Sai
 from saichallenger.common.sai_npu import SaiNpu
+from saichallenger.common.sai_testbed import SaiTestbedMeta
+from saichallenger.common.sai_testbed import SaiTestbed
 
 VERSION = '0.1'
+
+sai_c_path = "/etc/sai-c"
+sai_c_cfg_file = sai_c_path + "/cfg.json"
 
 exec_params = {
     # Generic parameters
@@ -34,52 +41,174 @@ def cli():
     pass
 
 
+@cli.group()
+def testbed():
+    """Manage SAI testbed"""
+    pass
+
+
+# 'testbed set' command
+@testbed.command()
+@click.argument('testbed', metavar='<name>', required=True, type=str)
+def set(testbed):
+    """Set SAI testbed"""
+
+    cfg = {
+        "testbed": testbed
+    }
+    if os.path.exists(sai_c_path):
+        shutil.rmtree(sai_c_path)
+    os.makedirs(sai_c_path)
+    with open(sai_c_cfg_file, "w+") as f:
+        f.write(json.dumps(cfg, indent=4) + "\n")
+
+
+def get_sai_testbed() -> SaiTestbed:
+    cfg = None
+    try:
+        with open(sai_c_cfg_file, "r") as f:
+            cfg = json.load(f)
+    except:
+        return None
+
+    testbed = None
+    if cfg:
+        testbed_name = cfg.get("testbed", "undefined")
+        if testbed_name != "undefined":
+            testbed = SaiTestbed("/sai-challenger", testbed_name, False, True)
+            testbed.spawn()
+    return testbed
+
+
+def get_sai_entity() -> Sai:
+    testbed = get_sai_testbed()
+    if testbed:
+        # TODO: Retrieve SAI entiry by alias or by type and index
+        return testbed.npu[0]
+    # fall back to the default
+    return SaiNpu(exec_params)
+
+
+# 'testbed info' command
+@testbed.command()
+def info():
+    """Print SAI testbed details"""
+
+    click.echo()
+    try:
+        with open(sai_c_cfg_file, "r") as f:
+            cfg = json.load(f)
+    except:
+        click.echo("SAI testbed name:   undefined")
+        click.echo()
+        return False
+
+    testbed = cfg.get("testbed", "undefined")
+    click.echo("SAI testbed name:      {}".format(testbed))
+    if testbed == "undefined":
+        click.echo()
+        return False
+
+    meta = SaiTestbedMeta("/sai-challenger", testbed)
+    target_type = "npu"
+    cfg = meta.config.get(target_type, None)
+    if not cfg:
+        target_type = "dpu"
+        cfg = meta.config.get(target_type, None)
+    if not cfg:
+        target_type = "phy"
+        cfg = meta.config.get(target_type, None)
+    if not cfg:
+        click.echo()
+        return True
+
+    click.echo("Active target type:    {}".format(target_type))
+    click.echo("Active target name:    {}".format(cfg[0]["alias"]))
+    click.echo("Active target API:     {}".format(cfg[0]["client"]["type"]))
+    click.echo("Active target IP:      {}".format(cfg[0]["client"]["config"]["ip"]))
+    click.echo("Active target HWSKU:   {}".format(cfg[0]["sku"]))
+    click.echo()
+
+
+# 'testbed init' command
+@testbed.command()
+def init():
+    """Initialize testbed"""
+
+    click.echo()
+    testbed = get_sai_testbed()
+    if not testbed:
+        click.echo("The testbed is undefined!\n")
+        return False
+
+    testbed.init()
+    click.echo("The testbed \"{}\" initialization completed!\n".format(testbed.name))
+
+
+@cli.group()
+def dut():
+    """Manage SAI DUT"""
+    pass
+
+
+# DUT 'init' command
+@dut.command()
+@click.argument('dut', metavar='[<DUT alias>]', required=False, type=str)
+def init(dut):
+    """Initialize DUT environment that some number of SAI devices"""
+
+    if not dut:
+        dut = "default"
+
+    testbed = get_sai_testbed()
+    if not testbed:
+        click.echo(f"Failed to initialize {dut} DUT. The testbed is undefined!\n")
+        return False
+
+    if not testbed.dut:
+        click.echo(f"Failed to initialize {dut} DUT. The DUT is undefined!\n")
+        return False
+
+    if dut == "default":
+        testbed.dut[0].init()
+        click.echo()
+        return True
+
+    for item in testbed.dut:
+        if item.alias == dut:
+            item.init()
+            click.echo()
+            return True
+
+    click.echo(f"Unknown DUT {dut}!\n")
+    return False
+
+
+# DUT 'set' command
+@dut.command()
+@click.argument('dut', metavar='[<DUT alias>]', required=True, type=str)
+@click.argument('asic', metavar='[<ASIC alias>]', required=False, type=str)
+def set(dut, asic):
+    click.echo("Not implemented\n")
+    return False
+
+
 # 'init' command
 @cli.command()
-@click.argument('sku', metavar='[<SKU>]', required=False, type=str)
-def init(sku):
+def init():
     """Initialize SAI switch"""
 
     click.echo()
 
-    platform = os.getenv('SC_PLATFORM')
-    asic = os.getenv('SC_ASIC')
-    target = os.getenv('SC_TARGET')
-    asic_dir = "/sai-challenger/npu/{}/{}/".format(platform, asic)
+    sai = get_sai_entity()
+    if not sai:
+        click.echo("SAI entity is undefined!\n")
+        return False
 
-    params = {
-        # Generic parameters
-        "traffic": False,
-        "testbed": None,
-        # DUT specific parameters
-        "alias": "dut",
-        "asic": asic,
-        "target": target,
-        "sku": sku,
-        "asic_dir": asic_dir,
-        "client": {
-            "type": "redis",
-            "config": {
-                "ip": "localhost",
-                "port": 6379,
-                "loglevel": "NOTICE",
-            }
-        }
-    }
-
-    npu_mod = None
-    module_name = "sai_npu"
-    try:
-        npu_mod = imp.load_module(module_name, *imp.find_module(module_name, [asic_dir]))
-    except:
-        try:
-            npu_mod = imp.load_module(module_name, *imp.find_module(module_name, [asic_dir + "../"]))
-        except:
-            pass
-
-    npu = npu_mod.SaiNpuImpl(params) if npu_mod is not None else SaiNpu(params)
-    npu.reset()
-    click.echo("Initialized {} {}\n".format(asic, target))
+    sai.reset()
+    asic = sai.cfg.get("asic", "generic SAI switch")
+    target = sai.cfg.get("target", "generic target")
+    click.echo("Initialized {} on {}\n".format(asic, target))
 
 
 # 'get' command
@@ -94,7 +223,7 @@ def get(oid, attrs):
         click.echo("SAI object ID must start with 'oid:' prefix\n")
         return False
 
-    sai = SaiNpu(exec_params)
+    sai = get_sai_entity()
 
     obj_type = sai.vid_to_type(oid)
     for attr in attrs:
@@ -131,7 +260,7 @@ def set(oid, attr, value):
         click.echo("Invalid SAI object's attribute {} provided\n".format(attr))
         return False
 
-    sai = SaiNpu(exec_params)
+    sai = get_sai_entity()
     status = sai.set(oid, [attr, value], False)
     click.echo(status + '\n')
 
@@ -155,7 +284,7 @@ def create(obj_type, attrs):
         click.echo("Invalid SAI object's attributes {} provided\n".format(attrs))
         return False
 
-    sai = SaiNpu(exec_params)
+    sai = get_sai_entity()
     status, oid = sai.create(obj_type, attrs, False)
     if status == "SAI_STATUS_SUCCESS":
         click.echo("Created SAI object {} with {}\n".format(obj_type.name, oid))
@@ -174,7 +303,7 @@ def remove(oid):
         click.echo("SAI object ID must start with 'oid:' prefix\n")
         return False
 
-    sai = SaiNpu(exec_params)
+    sai = get_sai_entity()
     status = sai.remove(oid, False)
     click.echo(status + '\n')
 
@@ -201,7 +330,7 @@ def list(obj_type):
             return False
         obj_type = None
 
-    sai = SaiNpu(exec_params)
+    sai = get_sai_entity()
 
     oids = sai.get_oids(obj_type)
     for key, oids in oids.items():
@@ -221,7 +350,7 @@ def dump(oid):
         click.echo("SAI object ID must start with 'oid:' prefix\n")
         return False
 
-    sai = SaiNpu(exec_params)
+    sai = get_sai_entity()
     obj_type = sai.vid_to_type(oid)
     meta = sai.get_meta(obj_type)
 
@@ -253,7 +382,7 @@ def get(oid, cntrs):
         click.echo("SAI object ID must start with 'oid:' prefix\n")
         return False
 
-    sai = SaiNpu(exec_params)
+    sai = get_sai_entity()
 
     attrs = []
     for cntr in cntrs:
@@ -283,7 +412,7 @@ def clear(oid, cntrs):
         click.echo("SAI object ID must start with 'oid:' prefix\n")
         return False
 
-    sai = SaiNpu(exec_params)
+    sai = get_sai_entity()
 
     attrs = []
     for cntr in cntrs:

@@ -4,6 +4,7 @@ import json
 import glob
 import logging
 
+from saichallenger.common.sai_dut import SaiDut
 from saichallenger.common.sai_npu import SaiNpu
 from saichallenger.common.sai_dpu import SaiDpu
 from saichallenger.common.sai_dataplane.sai_dataplane import SaiDataPlane
@@ -50,13 +51,17 @@ class SaiTestbedMeta():
 
 
 class SaiTestbed():
-    def __init__(self, base_dir, name, with_traffic):
+    def __init__(self, base_dir, name, with_traffic, skip_dataplane=False):
         self.meta = SaiTestbedMeta(base_dir, name)
+        self.dut = []
         self.npu = []
         self.dpu = []
+        self.phy = []
         self.dataplane = []
+        self.name = name
         self.base_dir = base_dir
         self.with_traffic = with_traffic
+        self.skip_dataplane = skip_dataplane
 
     @staticmethod
     def spawn_asic(base_dir, cfg, asic_type="npu"):
@@ -95,38 +100,77 @@ class SaiTestbed():
                 asic = SaiDpu(params)
             else:
                 assert False, f"Failed to instantiate default {asic_type} module"
-
-        if asic is not None:
-            asic.reset()
         return asic
 
     @staticmethod
     def spawn_dataplane(cfg=None):
         return SaiDataPlane.spawn(cfg)
 
+    @staticmethod
+    def spawn_dut(cfg=None):
+        '''
+        SAI testbed may consist of multiple DUTs. Each DUT should be considered
+        as a standalone manageable device with its own IP address.
+        Each DUT may consist of multiple SAI entities - NPUs, DPUs, extrenal PHYs.
+        In a simplest case the DUT has just one SAI entity - NPU or DPU or PHY.
+        However, we still should consider DUT management (e.g., prepare DUT
+        for TCs runnning) separately of SAI configuration. So, this logic
+        has been moved into a separate class `SaiDut`.
+        '''
+        return SaiDut.spawn(cfg)
+
+    def spawn(self):
+        if self.npu or self.dpu or self.phy:
+            # to avoid to be executed more than once
+            return
+
+        for npu_cfg in self.meta.config.get("npu", []):
+            if npu_cfg["client"]["config"].get("mode", None):
+                npu_cfg["client"]["config"]["alias"] = npu_cfg["alias"]
+                dut = self.spawn_dut(npu_cfg["client"]["config"])
+                self.dut.append(dut)
+                npu_cfg["dut"] = dut
+            npu_cfg["traffic"] = self.with_traffic
+            asic = self.spawn_asic(self.base_dir, npu_cfg, "npu")
+            self.npu.append(asic)
+        for dpu_cfg in self.meta.config.get("dpu", []):
+            if dpu_cfg["client"]["config"].get("mode", None):
+                dpu_cfg["client"]["config"]["alias"] = npu_cfg["alias"]
+                dut = self.spawn_dut(dpu_cfg["client"]["config"])
+                self.dut.append(dut)
+                dpu_cfg["dut"] = dut
+            dpu_cfg["traffic"] = self.with_traffic
+            asic = self.spawn_asic(self.base_dir, dpu_cfg, "dpu")
+            self.dpu.append(asic)
+        for dataplane_cfg in self.meta.config.get("dataplane"):
+            dataplane_cfg["traffic"] = self.with_traffic
+            dp = self.spawn_dataplane(dataplane_cfg)
+            self.dataplane.append(dp)
+
     def init(self):
         """
         per session init
         """
-        for npu_cfg in self.meta.config.get("npu", []):
-            npu_cfg["traffic"] = self.with_traffic
-            self.npu.append(self.spawn_asic(self.base_dir, npu_cfg, "npu"))
-        for dpu_cfg in self.meta.config.get("dpu", []):
-            dpu_cfg["traffic"] = self.with_traffic
-            self.dpu.append(self.spawn_asic(self.base_dir, dpu_cfg, "dpu"))
-        for dataplane_cfg in self.meta.config.get("dataplane"):
-            dataplane_cfg["traffic"] = self.with_traffic
-            dp = self.spawn_dataplane(dataplane_cfg)
-            if dp is not None:
+        self.spawn()
+
+        for dut in self.dut:
+            dut.init()
+
+        for npu in self.npu:
+            npu.reset()
+        for dpu in self.dpu:
+            dpu.reset()
+        if not self.skip_dataplane:
+            for dp in self.dataplane:
                 dp.init()
-                self.dataplane.append(dp)
 
     def deinit(self):
         """
         per session deinit
         """
-        for dp in self.dataplane:
-            dp.deinit()
+        if not self.skip_dataplane:
+            for dp in self.dataplane:
+                dp.deinit()
 
     def setup(self):
         """

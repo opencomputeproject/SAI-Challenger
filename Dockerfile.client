@@ -22,7 +22,42 @@ RUN apt-get -o Acquire::Check-Valid-Until=false update && apt-get install -y \
         iproute2 \
         rsyslog \
         supervisor \
+        cmake \
+        graphviz \
+        doxygen \
+        aspell \
+        git \
+        nlohmann-json-dev \
         python3-paramiko
+
+WORKDIR /sai
+
+# Install SAI attributes metadata JSON generator
+COPY scripts/gen_attr_list /sai/gen_attr_list
+COPY sai.env /
+
+RUN git clone https://github.com/opencomputeproject/SAI.git \
+        && cd SAI \
+        && . /sai.env \
+        && git checkout ${SAI_ID} \
+        && cd meta \
+        && make saimetadata.h \
+        && make saimetadata.c \
+        && cd .. \
+        && mkdir /usr/include/sai \
+        && cp inc/* /usr/include/sai/ \
+        && cp experimental/* /usr/include/sai/ \
+        && cp meta/sai*.h /usr/include/sai/ \
+        && cp meta/saimetadatautils.c /sai/gen_attr_list/ \
+        && cp meta/saimetadata.c /sai/gen_attr_list/ \
+        && cp meta/saiserialize.c /sai/gen_attr_list/ \
+        && cd /sai/gen_attr_list \
+        && mkdir build && cd build \
+        && cmake .. \
+        && make -j$(nproc) \
+        && mkdir -p /etc/sai \
+        && ./attr_list_generator > /etc/sai/sai.json \
+        && rm -rf /sai/SAI
 
 # Install SAI-C dependencies
 RUN pip3 install pytest pytest_dependency pytest-html pdbpp macaddress click==8.0

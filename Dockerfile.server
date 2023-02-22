@@ -59,10 +59,6 @@ RUN git clone --recursive https://github.com/sonic-net/sonic-swss-common \
 
 WORKDIR /sai
 
-# Install SAI attributes metadata JSON generator
-COPY scripts/gen_attr_list /sai/gen_attr_list
-RUN apt-get install -y nlohmann-json-dev
-
 # Install ptf_nn_agent dependencies
 RUN apt-get install -y libffi-dev \
         && wget https://github.com/nanomsg/nanomsg/archive/1.0.0.tar.gz \
@@ -108,17 +104,14 @@ RUN pip3 install click==8.0 pytest
 # Deploy SAI Challenger CLI
 COPY setup.py            /sai-challenger/setup.py
 COPY cli/__init__.py     /sai-challenger/cli/__init__.py
-COPY cli/main.py         /sai-challenger/cli/main.py
 COPY common              /sai-challenger/common
 COPY topologies          /sai-challenger/topologies
 COPY .build/npu          /sai-challenger/npu
-COPY scripts/sai-cli-completion.sh   /sai-challenger/scripts/sai-cli-completion.sh
-RUN echo ". /sai-challenger/scripts/sai-cli-completion.sh" >> /root/.bashrc
 
 # Deploy a remote commands listener
 COPY scripts/redis-cmd-listener.py   /sai-challenger/scripts/redis-cmd-listener.py
 
-# Install SAI Challenger CLI and the remote commands listener
+# Install SAI Challenger's remote commands listener
 RUN pip3 install /sai-challenger/common /sai-challenger
 
 WORKDIR /sai-challenger
