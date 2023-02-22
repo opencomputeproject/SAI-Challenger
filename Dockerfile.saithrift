@@ -103,6 +103,7 @@ RUN wget "http://archive.apache.org/dist/thrift/0.11.0/thrift-0.11.0.tar.gz" \
     && make && make install \
     && pip3 install lib/py
 
+COPY patches/SAI/0001-improve-enum-values-integration-check-1727.patch /sai
 RUN git clone https://github.com/sonic-net/sonic-sairedis.git \
         && cd sonic-sairedis \
         && . /sai.env \
@@ -119,9 +120,9 @@ RUN git clone https://github.com/sonic-net/sonic-sairedis.git \
         && dpkg -i libsaivs-dev_1.0.0_amd64.deb \
         && dpkg -i libsaimetadata_1.0.0_amd64.deb \
         && dpkg -i libsaimetadata-dev_1.0.0_amd64.deb
-COPY patches/SAI/0001-improve-enum-values-integration-check-1727.patch sonic-sairedis/
-RUN cd sonic-sairedis && patch -p1 < 0001-improve-enum-values-integration-check-1727.patch
-RUN cd sonic-sairedis/SAI && make saithrift-install
+RUN cp 0001-improve-enum-values-integration-check-1727.patch sonic-sairedis \
+        && cd sonic-sairedis && patch -p1 < 0001-improve-enum-values-integration-check-1727.patch \
+        && cd SAI && make saithrift-install
         #&& cd - \
         #&& mv sonic-sairedis/tests . \
         #&& rm -f *.deb \
