@@ -155,12 +155,12 @@ class Sai():
     def __init__(self, cfg):
         self.cfg = cfg.copy()
         self.command_processor = CommandProcessor(self)
-        self.libsaivs = cfg.get("target", None) == "saivs"
+        self.libsaivs = cfg.get("target") == "saivs"
         self.run_traffic = cfg["traffic"] and not self.libsaivs
-        self.name = cfg["asic"]
-        self.target = cfg.get("target", None)
-        self.sku = cfg["sku"]
-        self.asic_dir = cfg["asic_dir"]
+        self.name = cfg.get("asic")
+        self.target = cfg.get("target")
+        self.sku = cfg.get("sku")
+        self.asic_dir = cfg.get("asic_dir")
         self._switch_oid = None
 
         cfg["client"]["config"]["saivs"] = self.libsaivs

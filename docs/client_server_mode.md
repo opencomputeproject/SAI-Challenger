@@ -26,7 +26,7 @@ Start SAI Challenger server:
 
 Create veth links between client and server dockers:
 ```sh
-./veth-create-host.sh sc-server-run sc-client-run
+sudo ./veth-create-host.sh sc-server-run sc-client-run
 ```
 Where: _sc-server-run_ and _sc-client-run_ are docker names of SAI-Challenger server and client respectively. (sc-server-trident2-saivs-run and sc-client-run)
 

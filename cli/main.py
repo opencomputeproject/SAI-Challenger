@@ -79,6 +79,7 @@ def get_sai_testbed() -> SaiTestbed:
             testbed.spawn()
     return testbed
 
+
 def get_sai_entity() -> Sai:
     testbed = get_sai_testbed()
     if testbed:
@@ -205,9 +206,9 @@ def init():
         return False
 
     sai.reset()
-    asic = sai.cfg.get("asic", None)
-    target = sai.cfg.get("target", None)
-    click.echo("Initialized {} {}\n".format(asic, target))
+    asic = sai.cfg.get("asic", "generic SAI switch")
+    target = sai.cfg.get("target", "generic target")
+    click.echo("Initialized {} on {}\n".format(asic, target))
 
 
 # 'get' command
