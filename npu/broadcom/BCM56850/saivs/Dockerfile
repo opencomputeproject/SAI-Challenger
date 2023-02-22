@@ -16,7 +16,13 @@ RUN git clone https://github.com/sonic-net/sonic-sairedis.git \
         && cd SAI && git fetch origin \
         && git checkout ${SAI_ID} \
         && git submodule update --init --recursive \
-        && cd .. \
+        && cd meta \
+        && make saimetadata.h \
+        && make saimetadata.c \
+        && cp saimetadatautils.c /sai/gen_attr_list/ \
+        && cp saimetadata.c /sai/gen_attr_list/ \
+        && cp saiserialize.c /sai/gen_attr_list/ \
+        && cd ../.. \
         && ./autogen.sh \
         && dpkg-buildpackage -us -uc -b --target=binary-syncd-vs --jobs=auto \
         && cd .. \
