@@ -11,6 +11,11 @@ def skip_all(testbed_instance):
     if testbed is not None and len(testbed.npu) != 1:
         pytest.skip("invalid for \"{}\" testbed".format(testbed.meta.name))
 
+@pytest.fixture(autouse=True)
+def on_prev_test_failure(prev_test_failed, npu):
+    if prev_test_failed:
+        npu.reset()
+
 
 def test_l2_access_to_access_vlan(npu, dataplane):
     """
