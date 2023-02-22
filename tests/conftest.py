@@ -6,6 +6,26 @@ curdir = os.path.dirname(os.path.realpath(__file__))
 from saichallenger.common.sai_npu import SaiNpu
 from saichallenger.common.sai_testbed import SaiTestbed
 
+_previous_test_failed = False
+
+@pytest.hookimpl(tryfirst=True, hookwrapper=True)
+def pytest_runtest_makereport(item, call):
+
+  outcome = yield
+  rep = outcome.get_result()
+
+  global _previous_test_failed
+  if rep.when == "setup":
+      _previous_test_failed = rep.outcome not in ["passed", "skipped"]
+  elif not _previous_test_failed:
+      _previous_test_failed = rep.outcome not in ["passed", "skipped"]
+
+
+@pytest.fixture
+def prev_test_failed():
+    global _previous_test_failed
+    return _previous_test_failed
+
 
 def pytest_addoption(parser):
     parser.addoption("--sai-server", action="store", default='localhost', help="SAI server IP")
