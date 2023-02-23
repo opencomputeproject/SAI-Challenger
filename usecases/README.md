@@ -74,7 +74,7 @@ The client-server mode **CAN** be used in all the cases defined for the standalo
 ## Summary
 The following diagram shows a high-level view of varioususe-case scenarios. You can click on each image to jump to the section which describes it in greater detail.
 
-<a href="url"><img src="../img/saic-use-cases-overview.svg" align="center" width="500" ></a>
+![saic-use-cases-overview](../img/saic-use-cases-overview.svg)
 ## Virtual DUT, SW Traffic Generator
 Summary:
 * SAI-Challenger runs on the test host
