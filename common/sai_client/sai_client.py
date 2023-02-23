@@ -81,6 +81,14 @@ class SaiClient:
     def remote_iface_agent_stop(self):
         raise NotImplementedError
 
+    # Generic
+    def get_object_key(self, obj_type=None):
+        '''
+        Returns a dictionary where object type is a key,
+        and the list of SAI object keys (OIDs or entries) is a value.
+        '''
+        raise NotImplementedError
+
     @staticmethod
     def spawn(params) -> 'SaiClient':
         """Load different SAI client implementations based on parameters"""

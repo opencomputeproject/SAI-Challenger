@@ -477,7 +477,7 @@ class SaiRedisClient(SaiClient):
         assert not self.is_dut_mbr, "Operation is not supported in SONiC environment"
         return self.__remote_cmd_operate("stop_nn_agent") == "ok"
 
-    def get_oids(self, obj_type=None):
+    def get_object_key(self, obj_type=None):
         oids = []
         all_oids = []
         oids_by_type = dict()

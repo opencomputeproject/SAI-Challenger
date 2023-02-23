@@ -332,7 +332,7 @@ def list(obj_type):
 
     sai = get_sai_entity()
 
-    oids = sai.get_oids(obj_type)
+    oids = sai.get_object_key(obj_type)
     for key, oids in oids.items():
         click.echo(key)
         for idx, oid in enumerate(oids):
