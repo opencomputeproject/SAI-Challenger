@@ -25,8 +25,6 @@ class SaiRedisClient(SaiClient):
         self.cache = {}
         self.rec2vid = {}
 
-        self.switch_oid = "oid:0x21000000000000"
-
     def cleanup(self):
         '''
         Flushes Redis DB and restarts syncd application.
@@ -429,7 +427,7 @@ class SaiRedisClient(SaiClient):
             assert status[2] == 'SAI_STATUS_SUCCESS'
         return status[2]
 
-    def flush_fdb_entries(self, attrs=None):
+    def flush_fdb_entries(self, obj, attrs=None):
         """
         To flush all static entries, set SAI_FDB_FLUSH_ATTR_ENTRY_TYPE = SAI_FDB_FLUSH_ENTRY_TYPE_STATIC.
         To flush both static and dynamic entries, then set SAI_FDB_FLUSH_ATTR_ENTRY_TYPE = SAI_FDB_FLUSH_ENTRY_TYPE_ALL.
@@ -442,11 +440,16 @@ class SaiRedisClient(SaiClient):
         5) Flush all static entries by bridge port and VLAN - Set SAI_FDB_FLUSH_ATTR_ENTRY_TYPE,
            SAI_FDB_FLUSH_ATTR_BRIDGE_PORT_ID, and SAI_FDB_FLUSH_ATTR_BV_ID
         """
+        if obj.startswith("oid:"):
+            assert self.vid_to_rid(obj), f"Unable to retrieve RID by VID {obj}"
+            obj = self.vid_to_type(obj) + ":" + obj
+        assert obj.startswith("SAI_OBJECT_TYPE_")
+
         if attrs is None:
             attrs = ["SAI_FDB_FLUSH_ATTR_ENTRY_TYPE", "SAI_FDB_FLUSH_ENTRY_TYPE_ALL"]
         if type(attrs) != str:
             attrs = json.dumps(attrs)
-        status = self.operate("SAI_OBJECT_TYPE_SWITCH:" + self.switch_oid, attrs, "Sflush")
+        status = self.operate(obj, attrs, "Sflush")
         assert status[0].decode("utf-8") == 'Sflushresponse', f"{status}"
         status = status[2].decode("utf-8")
         assert status == 'SAI_STATUS_SUCCESS', f"flush_fdb_entries({attrs}) --> {status}"
