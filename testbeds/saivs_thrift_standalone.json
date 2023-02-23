@@ -1,0 +1,46 @@
+{
+
+"npu": [
+  {
+    "alias": "vs",
+    "asic": "trident2",
+    "target": "saivs",
+    "sku": null,
+    "client": {
+      "type": "thrift",
+      "config": {
+          "ip": "localhost",
+          "port": "9092",
+          "loglevel": "NOTICE"
+      }
+    }
+  }
+],
+
+"dataplane": [
+  {
+    "alias": "ptf",
+    "type": "ptf",
+    "mode": "eth",
+    "port_groups": [
+      {"alias": 0, "name": "veth1"},
+      {"alias": 1, "name": "veth2"},
+      {"alias": 2, "name": "veth3"},
+      {"alias": 3, "name": "veth4"},
+      {"alias": 4, "name": "veth5"},
+      {"alias": 5, "name": "veth6"},
+      {"alias": 6, "name": "veth7"},
+      {"alias": 7, "name": "veth8"},
+      {"alias": 8, "name": "veth9"},
+      {"alias": 9, "name": "veth10"},
+      {"alias": 10, "name": "veth11"},
+      {"alias": 11, "name": "veth12"},
+      {"alias": 12, "name": "veth13"},
+      {"alias": 13, "name": "veth14"},
+      {"alias": 14, "name": "veth15"},
+      {"alias": 15, "name": "veth16"}
+    ]
+  }
+]
+
+}
