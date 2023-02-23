@@ -132,7 +132,7 @@ trap print-start-options EXIT
 
 # Start Docker container
 if [ "${IMAGE_TYPE}" = "standalone" ]; then
-    CONTAINER="sc-${ASIC_TYPE}-${TARGET}-run"
+    CONTAINER=$(echo "sc-${ASIC_TYPE}-${TARGET}-run" | tr '[:upper:]' '[:lower:]')
 elif [ "${IMAGE_TYPE}" = "server" ]; then
     CONTAINER="sc-server-${ASIC_TYPE}-${TARGET}-run"
 else
