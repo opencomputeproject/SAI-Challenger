@@ -218,8 +218,8 @@ class Sai():
         return self.sai_client.clear_stats(obj, attrs, do_assert)
 
     # Flush FDB
-    def flush_fdb_entries(self, attrs=None):
-        return self.sai_client.flush_fdb_entries(attrs)
+    def flush_fdb_entries(self, obj, attrs=None):
+        self.sai_client.flush_fdb_entries(obj, attrs)
 
     # Host interface
     def remote_iface_exists(self, iface):

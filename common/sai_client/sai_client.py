@@ -52,7 +52,7 @@ class SaiClient:
         raise NotImplementedError
 
     # Flush FDB
-    def flush_fdb_entries(self, attrs=None):
+    def flush_fdb_entries(self, obj, attrs=None):
         raise NotImplementedError
 
     # BULK
