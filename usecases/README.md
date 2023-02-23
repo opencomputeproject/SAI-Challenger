@@ -6,9 +6,10 @@
     - [Traffic-Generator Variations](#traffic-generator-variations)
     - [Standalone mode vs. Client-Server Mode](#standalone-mode-vs-client-server-mode)
 - [Representative Use-Cases](#representative-use-cases)
+  - [Summary](#summary)
   - [Virtual DUT, SW Traffic Generator](#virtual-dut-sw-traffic-generator)
   - [Physical DUT, SW Traffic Generator](#physical-dut-sw-traffic-generator)
-  - [Physical DUT, SW Traffic Generator and Test Controller also on the DUT](#physical-dut-sw-traffic-generator-and-test-controller-also-on-the-dut)
+  - [Physical DUT self-contained testbed with SW Traffic Generator](#physical-dut-self-contained-testbed-with-sw-traffic-generator)
   - [Physical DUT, HW Traffic Generator](#physical-dut-hw-traffic-generator)
   - [Physical DUT, SW Traffic Generator, Fanout switches](#physical-dut-sw-traffic-generator-fanout-switches)
   - [Physical DUT, Testbed-in-a-box, SW Traffic Generator](#physical-dut-testbed-in-a-box-sw-traffic-generator)
@@ -37,7 +38,7 @@ PTF embeds the Scapy packet library and has utilities and wrappers to make it ea
 
 OTG is supported by a variety of SW and HW-based packet generators. OTG has constructs allowing precision scheduling, multiple flows with built-in tracking, and much more. [ixia-c](https://github.com/open-traffic-generator/ixia-c) is an example of a free, SW-based traffic generator which supports OTG. It has been demonstrated to run at Gbps speeds ([commercial versions](https://www.keysight.com/us/en/products/network-test/protocol-load-test/keysight-elastic-network-generator.html) of ixia-c run close to line rate at 100Gbps). It runs as docker containers and has been deployed in the CI/CD pipelines of open-source projects such as [DASH](https://github.com/sonic-net/DASH) and [Ondatra](https://github.com/openconfig/ondatra). Tests written to run with a SW Traffic Generator can be run on HW as well. 
 
-The recommended way to use OTG traffic-generators is via native snappi methods supporting flow-based constructs. This exposes the full rabge of capabilities. However, a wrapper library included with SAI Challenger allows OTG traffic generators to be used via familiar PTF helper methods. These create trivial "flows" of one packet to immitate the behaior of Scapy. The benefit of these wrappers is to allow existing, or even new, PTF tests to take advantage of OTG-capable traffic generators (SW or HW), using legacy dataplane helpers.
+The recommended way to use OTG traffic-generators is via native snappi methods supporting flow-based constructs. This exposes the full range of capabilities. However, a wrapper library included with SAI Challenger allows OTG traffic generators to be used via familiar PTF helper methods. These create trivial "flows" of one packet to immitate the behaior of Scapy. The benefit of these wrappers is to allow existing, or even new, PTF tests to take advantage of OTG-capable traffic generators (SW or HW), using legacy dataplane helpers.
 
 To summarize, test-cases can send/receive packets using three approaches:
 * PTF Dataplane (Scapy-based) using PTF helper classes - SW traffic generator only
@@ -70,6 +71,10 @@ The client-server mode **CAN** be used in all the cases defined for the standalo
 - running TCs with traffic on ASIC simulator when it also runs inside the same Docker container as syncd or sai_thrift server but exposes ports outside the container
 
 # Representative Use-Cases
+## Summary
+The following diagram shows a high-level view of varioususe-case scenarios. You can click on each image to jump to the section which describes it in greater detail.
+
+<a href="url"><img src="../img/saic-use-cases-overview.svg" align="center" width="500" ></a>
 ## Virtual DUT, SW Traffic Generator
 Summary:
 * SAI-Challenger runs on the test host
@@ -93,7 +98,7 @@ Summary:
 
 ![saic-physical-dut-sw-tgen](../img/saic-physical-dut-sw-tgen.svg)
 
-## Physical DUT, SW Traffic Generator and Test Controller also on the DUT
+## Physical DUT self-contained testbed with SW Traffic Generator
 This is a variation on the previous use-case [Physical DUT, SW Traffic Generator](#physical-dut-sw-traffic-generator), but is entirely self-contained on the physical DUT.
 >**Note:** This has not been tried yet. This is a concept only. Details of running SAI CHallenger on a DUT are TBD.
 
