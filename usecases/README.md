@@ -72,25 +72,24 @@ The client-server mode **CAN** be used in all the cases defined for the standalo
 
 # Representative Use-Cases
 ## Summary
-The following diagram shows a high-level view of various use-case scenarios. You can click on the title above each diagram to jump to a section which describes it in greater detail.
+The following diagram shows a high-level view of various use-case scenarios; others are You can click on the title above each diagram to jump to a section which describes it in greater detail.
 
 
-| | | |
-| ---- | ---- | ---- |
 | [Virtual DUT, SW Traffic Generator](#virtual-dut-sw-traffic-generator) | [Physical DUT, SW Traffic Generator](#physical-dut-sw-traffic-generator) | [Physical DUT self-contained testbed with SW Traffic Generator](#physical-dut-self-contained-testbed-with-sw-traffic-generator) |
+| ---- | ---- | ---- |
 ![saic-virtual-dut-sw-tgen-mini](../img/saic-virtual-dut-sw-tgen-mini.svg) |![saic-physical-dut-sw-tgen-mini](../img/saic-physical-dut-sw-tgen-mini.svg) |![saic-physical-dut-sw-tgen-self-contained-mini](../img/saic-physical-dut-sw-tgen-self-contained-mini.svg)
 
-| | |
-| ---- | ---- |
 [Physical DUT, HW Traffic Generator](#physical-dut-hw-traffic-generator) | [Physical DUT, SW Traffic Generator, Fanout switches](#physical-dut-sw-traffic-generator-fanout-switches)
+| ---- | ---- |
 ![saic-physical-dut-hw-tgen-mini](../img/saic-physical-dut-hw-tgen-mini.svg) |![saic-physical-dut-sw-tgen-fanout-mini](../img/saic-physical-dut-sw-tgen-fanout-mini.svg) 
 
-| | |
-| ---- | ---- |
 [Physical DUT, Testbed-in-a-box, SW Traffic Generator](#physical-dut-testbed-in-a-box-sw-traffic-generator) | [Physical DUT, Testbed-in-a-box, SW \& HW Traffic Generators](#physical-dut-testbed-in-a-box-sw--hw-traffic-generators)
+| ---- | ---- |
 ![saic-physical-dut-testbed-in-a-box-sw-tgen-mini](../img/saic-physical-dut-testbed-in-a-box-sw-tgen-mini.svg) |![saic-physical-dut-testbed-in-a-box-sw-hw-tgen-mini](../img/saic-physical-dut-testbed-in-a-box-sw-hw-tgen-mini.svg) 
 
-
+|[Umbrella Framework Executing PTF Tests](#umbrella-framework-executing-ptf-tests)|
+| --- |
+![saic-ptf-sw-tgen-mini](../img/saic-ptf-sw-tgen-mini.svg)
 ## Virtual DUT, SW Traffic Generator
 Summary:
 * SAI-Challenger runs on the test host
@@ -200,10 +199,19 @@ Summary:
 ## Umbrella Framework Executing PTF Tests
 SAI-Challenger can act as an umbrella test framework for traditional PTF (e.g. SAI-PTF) test cases.
 
-In this mode, pictured below, SAI Challenger invokes PTF test-cases as a standlone program. In so doing, it passes it the appropriate PTF port configuration parameters on the command-line, which are extracted and translated from SAI Challenger native test config files. This makes for a more convenient and integrated test environment. While in this mode, only the native PTF dataplane methods and DUT config API (saithrift) are available, because that is what are supported by SAI-PTF.
+In this scenario, pictured below, SAI-Challenger can run two types of tests:
+* Native SAI Challenger tests, which are Pytests. These can take advantage of every SAI Challenger capability  as described in this document.
+*  Native PTF tests. SAI Challenger invokes PTF test-cases by calling the PTF executable to run PTF tests "natively." In so doing, it passes it the appropriate PTF port configuration parameters on the command-line, which are extracted and translated from SAI Challenger native test config files. This makes for a more convenient and integrated test environment. While in this mode, only the native PTF dataplane methods and DUT config API (saithrift) are available, because that is what are supported by SAI-PTF.
+
+
+For brevity, only one scenario is shown: A test server with SW traffic-generators, feeding a DUT. However, the unbrella framework concept is equally applicable to other scenarios such as:
+- [Physical DUT, SW Traffic Generator, Fanout switches](#physical-dut-sw-traffic-generator-fanout-switches)
+- [Physical DUT, self-contained testbed with SW Traffic Generator](#physical-dut-self-contained-testbed-with-sw-traffic-generator)
+- [Physical DUT, Testbed-in-a-box, SW Traffic Generator](#physical-dut-testbed-in-a-box-sw-traffic-generator)
 
 Summary:
 * SAI-Challenger scenarios which utilize a SW traffic generator, can also invoke PTF test cases as an umbrella test framework.
-* PTF tests executed by SAI Challenger only support traditional PTF packet generation utility methods.
+* PTF tests executed by SAI Challenger only support traditional PTF-Scapy packet generation utility methods and can only configure the DUT using saithrift.
+* Applicable to virtual or physical DUT testing.
 
-![saic-running-ptf-tests](../img/saic-running-ptf-tests.svg)
+![saic-ptf-sw-tgen](../img/saic-ptf-sw-tgen.svg)
