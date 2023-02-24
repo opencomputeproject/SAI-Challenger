@@ -9,7 +9,7 @@
   - [Summary](#summary)
   - [Virtual DUT, SW Traffic Generator](#virtual-dut-sw-traffic-generator)
   - [Physical DUT, SW Traffic Generator](#physical-dut-sw-traffic-generator)
-  - [Physical DUT self-contained testbed with SW Traffic Generator](#physical-dut-self-contained-testbed-with-sw-traffic-generator)
+  - [Physical DUT, self-contained testbed with SW Traffic Generator](#physical-dut-self-contained-testbed-with-sw-traffic-generator)
   - [Physical DUT, HW Traffic Generator](#physical-dut-hw-traffic-generator)
   - [Physical DUT, SW Traffic Generator, Fanout switches](#physical-dut-sw-traffic-generator-fanout-switches)
   - [Physical DUT, Testbed-in-a-box, SW Traffic Generator](#physical-dut-testbed-in-a-box-sw-traffic-generator)
@@ -72,9 +72,25 @@ The client-server mode **CAN** be used in all the cases defined for the standalo
 
 # Representative Use-Cases
 ## Summary
-The following diagram shows a high-level view of varioususe-case scenarios. You can click on each image to jump to the section which describes it in greater detail.
+The following diagram shows a high-level view of various use-case scenarios. You can click on the title above each diagram to jump to a section which describes it in greater detail.
 
-![saic-use-cases-overview](../img/saic-use-cases-overview.svg)
+
+| | | |
+| ---- | ---- | ---- |
+| [Virtual DUT, SW Traffic Generator](#virtual-dut-sw-traffic-generator) | [Physical DUT, SW Traffic Generator](#physical-dut-sw-traffic-generator) | [Physical DUT self-contained testbed with SW Traffic Generator](#physical-dut-self-contained-testbed-with-sw-traffic-generator) |
+![saic-virtual-dut-sw-tgen-mini](../img/saic-virtual-dut-sw-tgen-mini.svg) |![saic-physical-dut-sw-tgen-mini](../img/saic-physical-dut-sw-tgen-mini.svg) |![saic-physical-dut-sw-tgen-self-contained-mini](../img/saic-physical-dut-sw-tgen-self-contained-mini.svg)
+
+| | |
+| ---- | ---- |
+[Physical DUT, HW Traffic Generator](#physical-dut-hw-traffic-generator) | [Physical DUT, SW Traffic Generator, Fanout switches](#physical-dut-sw-traffic-generator-fanout-switches)
+![saic-physical-dut-hw-tgen-mini](../img/saic-physical-dut-hw-tgen-mini.svg) |![saic-physical-dut-sw-tgen-fanout-mini](../img/saic-physical-dut-sw-tgen-fanout-mini.svg) 
+
+| | |
+| ---- | ---- |
+[Physical DUT, Testbed-in-a-box, SW Traffic Generator](#physical-dut-testbed-in-a-box-sw-traffic-generator) | [Physical DUT, Testbed-in-a-box, SW \& HW Traffic Generators](#physical-dut-testbed-in-a-box-sw--hw-traffic-generators)
+![saic-physical-dut-testbed-in-a-box-sw-tgen-mini](../img/saic-physical-dut-testbed-in-a-box-sw-tgen-mini.svg) |![saic-physical-dut-testbed-in-a-box-sw-hw-tgen-mini](../img/saic-physical-dut-testbed-in-a-box-sw-hw-tgen-mini.svg) 
+
+
 ## Virtual DUT, SW Traffic Generator
 Summary:
 * SAI-Challenger runs on the test host
@@ -98,9 +114,9 @@ Summary:
 
 ![saic-physical-dut-sw-tgen](../img/saic-physical-dut-sw-tgen.svg)
 
-## Physical DUT self-contained testbed with SW Traffic Generator
+## Physical DUT, self-contained testbed with SW Traffic Generator
 This is a variation on the previous use-case [Physical DUT, SW Traffic Generator](#physical-dut-sw-traffic-generator), but is entirely self-contained on the physical DUT.
->**Note:** This has not been tried yet. This is a concept only. Details of running SAI CHallenger on a DUT are TBD.
+>**Note:** This has not been tried yet. This is a concept only. Details of running SAI Challenger on a DUT are TBD. It should be straightforward.
 
 Summary:
 * SAI-Challenger runs on the DUT itself
