@@ -12,8 +12,6 @@
   - [Physical DUT, self-contained testbed with SW Traffic Generator](#physical-dut-self-contained-testbed-with-sw-traffic-generator)
   - [Physical DUT, HW Traffic Generator](#physical-dut-hw-traffic-generator)
   - [Physical DUT, SW Traffic Generator, Fanout switches](#physical-dut-sw-traffic-generator-fanout-switches)
-  - [Physical DUT, Testbed-in-a-box, SW Traffic Generator](#physical-dut-testbed-in-a-box-sw-traffic-generator)
-  - [Physical DUT, Testbed-in-a-box, SW \& HW Traffic Generators](#physical-dut-testbed-in-a-box-sw--hw-traffic-generators)
   - [Umbrella Framework Executing PTF Tests](#umbrella-framework-executing-ptf-tests)
 
 # SAI Challenger Use-Case Scenarios
@@ -45,7 +43,7 @@ To summarize, test-cases can send/receive packets using three approaches:
 * Native snappi (OTG-based) using flow-based APIs - SW or HW OTG generators
 * PTF wrappers around snappi API, for PTF backwards-compatibility - SW or HW traffic generators
 
-The diagram below shows a superset of these possibilities.
+The diagram below shows a superset of these possibilities. Follow the arrows starting from the "Test Case" icon to see which APIs can be used to control the intended type of traffic generator and physical/virtual traffic connections.
 
 ![tgen-variations](../img/tgen-variations.svg)
 
@@ -82,10 +80,6 @@ The following diagram shows a high-level view of various use-case scenarios; oth
 [Physical DUT, HW Traffic Generator](#physical-dut-hw-traffic-generator) | [Physical DUT, SW Traffic Generator, Fanout switches](#physical-dut-sw-traffic-generator-fanout-switches)
 | ---- | ---- |
 ![saic-physical-dut-hw-tgen-mini](../img/saic-physical-dut-hw-tgen-mini.svg) |![saic-physical-dut-sw-tgen-fanout-mini](../img/saic-physical-dut-sw-tgen-fanout-mini.svg) 
-
-[Physical DUT, Testbed-in-a-box, SW Traffic Generator](#physical-dut-testbed-in-a-box-sw-traffic-generator) | [Physical DUT, Testbed-in-a-box, SW \& HW Traffic Generators](#physical-dut-testbed-in-a-box-sw--hw-traffic-generators)
-| ---- | ---- |
-![saic-physical-dut-testbed-in-a-box-sw-tgen-mini](../img/saic-physical-dut-testbed-in-a-box-sw-tgen-mini.svg) |![saic-physical-dut-testbed-in-a-box-sw-hw-tgen-mini](../img/saic-physical-dut-testbed-in-a-box-sw-hw-tgen-mini.svg) 
 
 |[Umbrella Framework Executing PTF Tests](#umbrella-framework-executing-ptf-tests)|
 | --- |
@@ -158,56 +152,24 @@ Summary:
 ![saic-physical-dut-sw-tgen-fanout](../img/saic-physical-dut-sw-tgen-fanout.svg)
 
 
-For reference, the sonic-mgmt generic topology is shown below:
+For reference, the sonic-mgmt generic topology is shown below. Refer to [sonic-mgmt testbed](https://github.com/sonic-net/sonic-mgmt/blob/master/docs/testbed/README.testbed.Overview.md) for more detailed information.
 
 <a href="url"><img src="https://github.com/sonic-net/sonic-mgmt/blob/master/docs/testbed/img/physical_connection.png" align="center" width="500" ></a>
 
-## Physical DUT, Testbed-in-a-box, SW Traffic Generator
-This use-case takes advantage of an all-in-one testbed-in-a-box. Such a device, such as the [Keysight UHD100T32](https://www.keysight.com/us/en/assets/7019-0482/data-sheets/UHD100T32-QSFP28-Ultra-High-Density-32-Port-Test-System.pdf), merges the test controller, fanout switches, cEOS VMs, and PTF test framework, inside of a single appliance. In essence, it replace one or more test servers and one or more network switches, with a single box.
-
-In principle the SAI Challenger test framework could also run inside the same device, resulting in a compact solution.
-
->**Note:** This is a concept only, it has not been developed or tested. It would require a TBD SW image and license on the UHD100T32.
-
-Summary:
-* SAI-Challenger runs on the test host
-* The DUT is a physically separate device, whether a network switch, xPU or SW dataplane running on a server.
-* Test controller, control-plane application VMs, fanout switches and SW traffic generators are all embedded in a single appliance.
-* The DUT is controlled via SAI-thrift, sairedis, or both (at different times), depending upon DUT capabilities.
-* Software traffic generation using test host CPU, can use either or both:
-  *  PTF/Scapy (packet-at-a-time)
-  *  [OTG](https://github.com/open-traffic-generator) software traffic generator such as ixia-c (flow-based testing).
-
-![saic-physical-dut-testbed-in-a-box-sw-tgen](../img/saic-physical-dut-testbed-in-a-box-sw-tgen.svg)
-
-## Physical DUT, Testbed-in-a-box, SW & HW Traffic Generators
-This use-case is builds upon the [Physical DUT, Testbed-in-a-box, SW Traffic Generator](#physical-dut-testbed-in-a-box-sw-traffic-generator) but adds in the HW traffic-generator features of the UHD100T32.
-
->**Note:** This is a concept only, it has not been developed or tested. It would require a TBD SW image and license on the UHD100T32.
-
-Summary:
-* SAI-Challenger runs on the test host
-* Test controller, control-plane application VMs, fanout switches and SW/HW traffic generators are all embedded in a single appliance.
-* The DUT is controlled via SAI-thrift, sairedis, or both (at different times), depending upon DUT capabilities.
-* Software traffic generation using test host CPU, can use either or both:
-  *  PTF/Scapy (packet-at-a-time)
-  *  [OTG](https://github.com/open-traffic-generator) software traffic generator such as ixia-c (flow-based testing).
-* Line-Rate HW traffic generation (32 ports x 100Gbps), also controlled by snappi. Can be used separately or simultaneously with SW traffic generation. The built-in switch capability multiplexes and demultiplexes the differing sources/sinks.
-
-![saic-physical-dut-testbed-in-a-box-sw-hw-tgen](../img/saic-physical-dut-testbed-in-a-box-sw-hw-tgen.svg)
 
 ## Umbrella Framework Executing PTF Tests
 SAI-Challenger can act as an umbrella test framework for traditional PTF (e.g. SAI-PTF) test cases.
 
 In this scenario, pictured below, SAI-Challenger can run two types of tests:
-* Native SAI Challenger tests, which are Pytests. These can take advantage of every SAI Challenger capability  as described in this document.
-*  Native PTF tests. SAI Challenger invokes PTF test-cases by calling the PTF executable to run PTF tests "natively." In so doing, it passes it the appropriate PTF port configuration parameters on the command-line, which are extracted and translated from SAI Challenger native test config files. This makes for a more convenient and integrated test environment. While in this mode, only the native PTF dataplane methods and DUT config API (saithrift) are available, because that is what are supported by SAI-PTF.
+* **Native SAI Challenger tests**: These use the PyTest framework. These can take advantage of every SAI Challenger capability  as described in this document.
+* **Native PTF tests**: SAI Challenger invokes PTF test-cases by calling the PTF executable to run PTF tests "natively." In so doing, it passes it the appropriate PTF port configuration parameters on the command-line, which are extracted and translated from SAI Challenger native test config files. This makes for a more convenient and integrated test environment. While in this mode, only the native PTF dataplane methods and DUT config API (saithrift) are available, because that is what are supported by SAI-PTF.
 
 
-For brevity, only one scenario is shown: A test server with SW traffic-generators, feeding a DUT. However, the unbrella framework concept is equally applicable to other scenarios such as:
-- [Physical DUT, SW Traffic Generator, Fanout switches](#physical-dut-sw-traffic-generator-fanout-switches)
-- [Physical DUT, self-contained testbed with SW Traffic Generator](#physical-dut-self-contained-testbed-with-sw-traffic-generator)
-- [Physical DUT, Testbed-in-a-box, SW Traffic Generator](#physical-dut-testbed-in-a-box-sw-traffic-generator)
+For brevity, only one scenario is shown in the diagram below: a test server with SW traffic-generators, feeding a DUT. However, the unbrella framework concept is equally applicable to other scenarios such as:
+
+* [Virtual DUT, SW Traffic Generator](#virtual-dut-sw-traffic-generator) or [Physical DUT, SW Traffic Generator](#physical-dut-sw-traffic-generator)
+* [Physical DUT, SW Traffic Generator, Fanout switches](#physical-dut-sw-traffic-generator-fanout-switches)
+* [Physical DUT, self-contained testbed with SW Traffic Generator](#physical-dut-self-contained-testbed-with-sw-traffic-generator)
 
 Summary:
 * SAI-Challenger scenarios which utilize a SW traffic generator, can also invoke PTF test cases as an umbrella test framework.
