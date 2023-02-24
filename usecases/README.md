@@ -70,7 +70,7 @@ The client-server mode **CAN** be used in all the cases defined for the standalo
 
 # Representative Use-Cases
 ## Summary
-The following diagram shows a high-level view of various use-case scenarios; others are You can click on the title above each diagram to jump to a section which describes it in greater detail.
+The following diagram shows a high-level view of various use-case scenarios; others are possible. You can click on the title above each diagram to jump to a section which describes it in greater detail.
 
 
 | [Virtual DUT, SW Traffic Generator](#virtual-dut-sw-traffic-generator) | [Physical DUT, SW Traffic Generator](#physical-dut-sw-traffic-generator) | [Physical DUT self-contained testbed with SW Traffic Generator](#physical-dut-self-contained-testbed-with-sw-traffic-generator) |
