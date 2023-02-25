@@ -6,24 +6,6 @@ SAI testing and integration framework for any SAI oriented devices. The main ide
 - fully dockerized environment;
 
 
-SAI Challenger can be executed in two modes:
-1. [standalone mode](docs/standalone_mode.md) - both syncd and pytest are running in the same Docker container;
-
-<a href="url"><img src="img/sai-challenger-sm.svg" align="center" width="500" ></a>
-
-2. [client-server mode](docs/client_server_mode.md) - syncd and pytest are running in the separate Docker containers;
-
-<a href="url"><img src="img/sai-challenger-cs.svg" align="center" width="500" ></a>
-
-The standalone mode **SHOULD** be used in case of:
-- running TCs on vslib SAI implementation;
-- running TCs without traffic (without `--traffic` option) on HW;
-- running TCs with/without traffic on ASIC simulator when it also runs inside the same Docker container as syncd or sai_thrift server;
-
-The client-server mode **CAN** be used in all the cases defined for the standalone mode, and **MUST** be used in case of:
-- running TCs with traffic (with `--traffic` option) on HW;
-- running TCs with traffic on ASIC simulator when it also runs inside the same Docker container as syncd or sai_thrift server but exposes ports outside the container;
-
 ## SAI Challenger sources
 
 To get SAI Challenger sources:
@@ -32,6 +14,23 @@ git clone https://github.com/opencomputeproject/SAI-Challenger.git
 cd sai-challenger/
 git submodule update --init --recursive
 ```
+# Applications
+SAI Challenger has many applications. A partial list is below:
+* Virtual and Physical testbeds
+* Testing and debugging libsai using saithrift, independent of any Network Operating System (NOS)
+* SONiC-SAI Integration and test using sairedis
+* CI/CD and regression testing of virtual or physical DUTs
+* DUT performance testing using HW traffic generators
+* PHY (transceiver) device testing & qualification
+* Ubrella test harness for native SAI Challenger test cases as well as legacy SAI-PTF test cases, using a single-pane-of-glass to reduce testbed complexity.
+
+# Use-case scenarios
+SAI Challenger has many configuration options, resulting in numerous permutations of:
+* Physical or virtual DUT testing
+* DUT Configuration APIs - saithrift or sairedis
+* Dataplane (packet test) - PTF/Scapy or OTG/snappi.
+
+See [Use-Cases README](usecases/README.md) for more details. 
 
 # Architecture
 
