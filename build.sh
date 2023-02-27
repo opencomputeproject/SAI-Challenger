@@ -25,6 +25,8 @@ print-help() {
     echo "     ASIC to be tested"
     echo "  -t TARGET"
     echo "     Target device with this NPU"
+    echo "  -s [redis|thrift]"
+    echo "     SAI interface"
     echo
     exit 0
 }
@@ -102,19 +104,13 @@ print-build-options() {
     echo " ASIC name          : ${ASIC_TYPE}"
     echo " ASIC target        : ${TARGET}"
     echo " Platform path      : ${ASIC_PATH}"
+    echo " SAI interface      : ${SAI_INTERFACE}"     
     echo
     echo "==========================================="
     echo
 }
 
 trap print-build-options EXIT
-
-# Build base Docker image
-if [ "${SAI_INTERFACE}" = "thrift" ]; then
-    IMG_NAME=$(echo "sc-${ASIC_TYPE}-${TARGET}" | tr '[:upper:]' '[:lower:]')
-    docker build -f Dockerfile.saithrift -t $IMG_NAME .
-    exit 0
-fi
 
 # Build base Docker image
 if [ "${IMAGE_TYPE}" = "standalone" ]; then
@@ -130,11 +126,14 @@ fi
 
 # Build target Docker image
 pushd "${ASIC_PATH}/${TARGET}"
+IMG_NAME=$(echo "${ASIC_TYPE}-${TARGET}" | tr '[:upper:]' '[:lower:]')
 if [ "${IMAGE_TYPE}" = "standalone" ]; then
-    docker build -f Dockerfile -t sc-${ASIC_TYPE}-${TARGET} .
+    if [ "${SAI_INTERFACE}" = "thrift" ]; then
+        docker build -f Dockerfile.saithrift -t sc-${IMG_NAME}-thrift .
+    else
+        docker build -f Dockerfile -t sc-${IMG_NAME} .
+    fi
 elif [ "${IMAGE_TYPE}" = "server" ]; then
-    docker build -f Dockerfile.server -t sc-server-${ASIC_TYPE}-${TARGET} .
+    docker build -f Dockerfile.server -t sc-server-${IMG_NAME} .
 fi
 popd
-
-
