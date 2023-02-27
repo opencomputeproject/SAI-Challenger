@@ -27,7 +27,7 @@ RUN apt install -y ${SAIGEN_DEPS} \
         && cp experimental/* /usr/include/sai/ \
         && cd test/saithriftv2/ \
         && make meta \
-        && make clientlib \
+        && make install-pylib \
         && cd dist \
         && tar zxf saithrift-0.9.tar.gz \
         && cd saithrift-0.9 \
