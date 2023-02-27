@@ -14,6 +14,7 @@ ASIC_PATH=""
 TARGET=""
 OPTS=""
 COMMAND="start"
+SAI_INTERFACE="redis"
 
 print-help() {
     echo
@@ -31,6 +32,8 @@ print-help() {
     echo "  -p Run Docker in --privileged mode"
     echo "  -n Run Docker with host networking namespace"
     echo "  -r Remove Docker after run"
+    echo "  -s [redis|thrift]"
+    echo "     SAI interface"
     echo
     exit 0
 }
@@ -65,6 +68,10 @@ while [[ $# -gt 0 ]]; do
         ;;
         "-c")
             COMMAND="$2"
+            shift
+        ;;
+        "-s"|"--sai_interface")
+            SAI_INTERFACE="$2"
             shift
         ;;
     esac
@@ -117,6 +124,7 @@ print-start-options() {
     echo " ASIC name          : ${ASIC_TYPE}"
     echo " ASIC target        : ${TARGET}"
     echo " Platform path      : ${ASIC_PATH}"
+    echo " SAI interface      : ${SAI_INTERFACE}"
     echo
     echo "==========================================="
     echo
@@ -137,7 +145,11 @@ if [ "${COMMAND}" = "start" ]; then
 
     # Start Docker container
     if [ "${IMAGE_TYPE}" = "standalone" ]; then
-        IMG_NAME=$(echo "sc-${ASIC_TYPE}-${TARGET}" | tr '[:upper:]' '[:lower:]')
+        if [ "${SAI_INTERFACE}" = "thrift" ]; then
+            IMG_NAME=$(echo "sc-${ASIC_TYPE}-${TARGET}-thrift" | tr '[:upper:]' '[:lower:]')
+        else
+            IMG_NAME=$(echo "sc-${ASIC_TYPE}-${TARGET}" | tr '[:upper:]' '[:lower:]')
+        fi
         docker run --name ${IMG_NAME}-run \
         -v $(pwd):/sai-challenger \
         --cap-add=NET_ADMIN \
@@ -162,11 +174,12 @@ if [ "${COMMAND}" = "start" ]; then
 elif [ "${COMMAND}" = "stop" ]; then
 
     # Stop Docker container
-    if [ "${SAI_INTERFACE}" = "thrift" ]; then
-        CONTAINER_NAME=$(echo "sc-thrift-${ASIC_TYPE}-${TARGET}-run" | tr '[:upper:]' '[:lower:]')
-        stop_docker_container ${CONTAINER_NAME}
-    elif [ "${IMAGE_TYPE}" = "standalone" ]; then
-        stop_docker_container sc-${ASIC_TYPE}-${TARGET}-run
+    if [ "${IMAGE_TYPE}" = "standalone" ]; then
+        if [ "${SAI_INTERFACE}" = "thrift" ]; then
+            stop_docker_container sc-${ASIC_TYPE}-${TARGET}-thrift-run
+        else
+            stop_docker_container sc-${ASIC_TYPE}-${TARGET}-run
+        fi
     elif [ "${IMAGE_TYPE}" = "server" ]; then
         stop_docker_container sc-server-${ASIC_TYPE}-${TARGET}-run
     else
