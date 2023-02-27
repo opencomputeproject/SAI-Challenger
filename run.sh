@@ -141,49 +141,47 @@ stop_docker_container() {
     [ -L /var/run/netns/$NETNS ] && sudo rm /var/run/netns/$NETNS
 }
 
+if [ "${SAI_INTERFACE}" = "thrift" ]; then
+    PREFIX="sc-thrift"
+else
+    PREFIX="sc"
+fi
+
 if [ "${COMMAND}" = "start" ]; then
 
     # Start Docker container
     if [ "${IMAGE_TYPE}" = "standalone" ]; then
-        if [ "${SAI_INTERFACE}" = "thrift" ]; then
-            IMG_NAME=$(echo "sc-${ASIC_TYPE}-${TARGET}-thrift" | tr '[:upper:]' '[:lower:]')
-        else
-            IMG_NAME=$(echo "sc-${ASIC_TYPE}-${TARGET}" | tr '[:upper:]' '[:lower:]')
-        fi
+        IMG_NAME=$(echo "${PREFIX}-${ASIC_TYPE}-${TARGET}" | tr '[:upper:]' '[:lower:]')
         docker run --name ${IMG_NAME}-run \
-        -v $(pwd):/sai-challenger \
-        --cap-add=NET_ADMIN \
-        ${OPTS} \
-        --device /dev/net/tun:/dev/net/tun \
-        -d ${IMG_NAME}
+            -v $(pwd):/sai-challenger \
+            --cap-add=NET_ADMIN \
+            ${OPTS} \
+            --device /dev/net/tun:/dev/net/tun \
+            -d ${IMG_NAME}
     elif [ "${IMAGE_TYPE}" = "server" ]; then
         docker run --name sc-server-${ASIC_TYPE}-${TARGET}-run \
-        --cap-add=NET_ADMIN \
-        ${OPTS} \
-        --device /dev/net/tun:/dev/net/tun \
-        -d sc-server-${ASIC_TYPE}-${TARGET}
+            --cap-add=NET_ADMIN \
+            ${OPTS} \
+            --device /dev/net/tun:/dev/net/tun \
+            -d sc-server-${ASIC_TYPE}-${TARGET}
     else
-        docker run --name sc-client-run \
-        -v $(pwd):/sai-challenger \
-        --cap-add=NET_ADMIN \
-        --device /dev/net/tun:/dev/net/tun \
-        ${OPTS} \
-        -d sc-client
+        docker run --name ${PREFIX}-client-run \
+            -v $(pwd):/sai-challenger \
+            --cap-add=NET_ADMIN \
+            --device /dev/net/tun:/dev/net/tun \
+            ${OPTS} \
+            -d ${PREFIX}-client
     fi
 
 elif [ "${COMMAND}" = "stop" ]; then
 
     # Stop Docker container
     if [ "${IMAGE_TYPE}" = "standalone" ]; then
-        if [ "${SAI_INTERFACE}" = "thrift" ]; then
-            stop_docker_container sc-${ASIC_TYPE}-${TARGET}-thrift-run
-        else
-            stop_docker_container sc-${ASIC_TYPE}-${TARGET}-run
-        fi
+        stop_docker_container ${PREFIX}-${ASIC_TYPE}-${TARGET}-run
     elif [ "${IMAGE_TYPE}" = "server" ]; then
         stop_docker_container sc-server-${ASIC_TYPE}-${TARGET}-run
     else
-        stop_docker_container sc-client-run
+        stop_docker_container ${PREFIX}-client-run
     fi
 
 else

@@ -14,7 +14,6 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Install generic packages
 RUN apt-get -o Acquire::Check-Valid-Until=false update && apt-get install -y \
         apt-utils \
-        procps \
         build-essential \
         python3 \
         python3-pip \

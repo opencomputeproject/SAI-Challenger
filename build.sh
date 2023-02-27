@@ -114,14 +114,17 @@ trap print-build-options EXIT
 
 # Build base Docker image
 if [ "${IMAGE_TYPE}" = "standalone" ]; then
-    docker build -f Dockerfile -t sc-base .
+    docker build -f dockerfiles/Dockerfile -t sc-base .
 elif [ "${IMAGE_TYPE}" = "server" ]; then
     find ${ASIC_PATH}/../ -type f -name \*.py -exec install -D {} .build/{} \;
     find ${ASIC_PATH}/../ -type f -name \*.json -exec install -D {} .build/{} \;
-    docker build -f Dockerfile.server -t sc-server-base .
+    docker build -f dockerfiles/Dockerfile.server -t sc-server-base .
     rm -rf .build/
 else
-    docker build -f Dockerfile.client -t sc-client .
+    docker build -f dockerfiles/Dockerfile.client -t sc-client .
+    if [ "${SAI_INTERFACE}" = "thrift" ]; then
+        docker build -f dockerfiles/Dockerfile.saithrift-client -t sc-thrift-client .
+    fi
 fi
 
 # Build target Docker image
@@ -129,7 +132,7 @@ pushd "${ASIC_PATH}/${TARGET}"
 IMG_NAME=$(echo "${ASIC_TYPE}-${TARGET}" | tr '[:upper:]' '[:lower:]')
 if [ "${IMAGE_TYPE}" = "standalone" ]; then
     if [ "${SAI_INTERFACE}" = "thrift" ]; then
-        docker build -f Dockerfile.saithrift -t sc-${IMG_NAME}-thrift .
+        docker build -f Dockerfile.saithrift -t sc-thrift-${IMG_NAME} .
     else
         docker build -f Dockerfile -t sc-${IMG_NAME} .
     fi
