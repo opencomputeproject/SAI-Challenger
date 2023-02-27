@@ -95,8 +95,7 @@ COPY ptf/src/ptf/*.py                /ptf/src/ptf/
 COPY ptf/src/ptf/platforms/*.py      /ptf/src/ptf/platforms/
 COPY ptf/requirements.txt            /ptf/requirements.txt
 
-RUN echo "#mock" > /ptf/ptf \
-        && pip3 install /ptf
+RUN echo "#mock" > /ptf/ptf && pip3 install /ptf
 
 # Install SAI Challenger CLI dependencies
 RUN pip3 install click==8.0 pytest
@@ -111,7 +110,7 @@ COPY .build/npu          /sai-challenger/npu
 # Deploy a remote commands listener
 COPY scripts/redis-cmd-listener.py   /sai-challenger/scripts/redis-cmd-listener.py
 
-# Install SAI Challenger's remote commands listener
+# Install SAI Challenger
 RUN pip3 install /sai-challenger/common /sai-challenger
 
 WORKDIR /sai-challenger
@@ -122,4 +121,3 @@ COPY scripts/redis_start.sh    /usr/bin/redis_start.sh
 COPY configs/server/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 CMD ["/usr/bin/supervisord"]
-
