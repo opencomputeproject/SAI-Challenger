@@ -27,8 +27,7 @@ RUN apt-get -o Acquire::Check-Valid-Until=false update && apt-get install -y \
         aspell \
         python3-pip \
         rsyslog \
-        supervisor \
-        python3-paramiko
+        supervisor
 
 # Add support for supervisord to handle startup dependencies
 RUN pip3 install supervisord-dependent-startup==1.4.0
@@ -60,10 +59,6 @@ RUN git clone --recursive https://github.com/sonic-net/sonic-swss-common \
 
 WORKDIR /sai
 
-# Install SAI attributes metadata JSON generator
-COPY scripts/gen_attr_list /sai/gen_attr_list
-RUN apt-get install -y nlohmann-json-dev
-
 # Install ptf_nn_agent dependencies
 RUN apt-get install -y libffi-dev \
         && wget https://github.com/nanomsg/nanomsg/archive/1.0.0.tar.gz \
@@ -92,9 +87,6 @@ RUN sed -ri 's/^# unixsocket/unixsocket/' /etc/redis/redis.conf \
 # Disable kernel logging support
 RUN sed -ri '/imklog/s/^/#/' /etc/rsyslog.conf
 
-# Install SAI-C dependencies
-RUN pip3 install pytest pytest_dependency pytest-html pdbpp macaddress click==8.0
-
 # Install PTF dependencies
 RUN pip3 install scapy dpkt
 
@@ -105,7 +97,16 @@ COPY ptf/README.md                   /ptf/README.md
 COPY ptf/src/ptf/*.py                /ptf/src/ptf/
 COPY ptf/src/ptf/platforms/*.py      /ptf/src/ptf/platforms/
 COPY ptf/requirements.txt            /ptf/requirements.txt
+
 RUN echo "#mock" > /ptf/ptf && pip3 install /ptf
+
+# Install SAI attributes metadata JSON generator
+COPY scripts/gen_attr_list /sai/gen_attr_list
+RUN apt-get install -y nlohmann-json-dev
+
+# Install SAI-C dependencies
+RUN pip3 install pytest pytest_dependency pytest-html pdbpp macaddress click==8.0
+RUN apt-get install -y python3-paramiko
 
 # Deploy SAI Challenger
 COPY common              /sai-challenger/common
