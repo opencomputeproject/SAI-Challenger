@@ -138,17 +138,19 @@ print-start-options() {
 
 trap print-start-options EXIT
 
+if [ "${SAI_INTERFACE}" = "thrift" ]; then
+    PREFIX="sc-thrift"
+else
+    PREFIX="sc"
+fi
+
 # Start Docker container
 if [ "${IMAGE_TYPE}" = "standalone" ]; then
-    if [ "${SAI_INTERFACE}" = "thrift" ]; then
-        CONTAINER=$(echo "sc-${ASIC_TYPE}-${TARGET}-thrift-run" | tr '[:upper:]' '[:lower:]')
-    else
-        CONTAINER=$(echo "sc-${ASIC_TYPE}-${TARGET}-run" | tr '[:upper:]' '[:lower:]')
-    fi
+    CONTAINER=$(echo "${PREFIX}-${ASIC_TYPE}-${TARGET}-run" | tr '[:upper:]' '[:lower:]')
 elif [ "${IMAGE_TYPE}" = "server" ]; then
     CONTAINER="sc-server-${ASIC_TYPE}-${TARGET}-run"
 else
-    CONTAINER="sc-client-run"
+    CONTAINER="${PREFIX}-client-run"
 fi
 docker exec -ti ${CONTAINER} ${EXEC_CMD}
 
