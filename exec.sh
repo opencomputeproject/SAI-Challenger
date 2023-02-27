@@ -13,6 +13,7 @@ ASIC_TYPE=""
 ASIC_PATH=""
 TARGET=""
 EXEC_CMD=""
+SAI_INTERFACE="redis"
 
 print-help() {
     echo
@@ -25,6 +26,8 @@ print-help() {
     echo "     ASIC to be tested"
     echo "  -t TARGET"
     echo "     Target device with this NPU"
+    echo "  -s [redis|thrift]"
+    echo "     SAI interface"
     echo
     exit 0
 }
@@ -54,6 +57,10 @@ while [[ $# -gt 0 ]]; do
             else
                 EXEC_CMD="${EXEC_CMD} ${1} ${2}"
             fi
+            shift
+        ;;
+        "-s"|"--sai_interface")
+            SAI_INTERFACE="$2"
             shift
         ;;
         *)
@@ -119,6 +126,7 @@ print-start-options() {
         echo " ASIC name          : ${ASIC_TYPE}"
         echo " ASIC target        : ${TARGET}"
         echo " Platform path      : ${ASIC_PATH}"
+        echo " SAI interface      : ${SAI_INTERFACE}"
     fi
 
     echo " Container name     : ${CONTAINER}"
@@ -132,7 +140,11 @@ trap print-start-options EXIT
 
 # Start Docker container
 if [ "${IMAGE_TYPE}" = "standalone" ]; then
-    CONTAINER=$(echo "sc-${ASIC_TYPE}-${TARGET}-run" | tr '[:upper:]' '[:lower:]')
+    if [ "${SAI_INTERFACE}" = "thrift" ]; then
+        CONTAINER=$(echo "sc-${ASIC_TYPE}-${TARGET}-thrift-run" | tr '[:upper:]' '[:lower:]')
+    else
+        CONTAINER=$(echo "sc-${ASIC_TYPE}-${TARGET}-run" | tr '[:upper:]' '[:lower:]')
+    fi
 elif [ "${IMAGE_TYPE}" = "server" ]; then
     CONTAINER="sc-server-${ASIC_TYPE}-${TARGET}-run"
 else
