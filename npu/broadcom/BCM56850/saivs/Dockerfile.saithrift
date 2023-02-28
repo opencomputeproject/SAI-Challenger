@@ -77,6 +77,9 @@ RUN cd /sai/gen_attr_list \
         && mkdir -p /etc/sai \
         && ./attr_list_generator > /etc/sai/sai.json
 
+# Install PTF dependencies
+RUN pip3 install pysubnettree
+
 # Setup supervisord
 COPY configs/sai.profile       /etc/sai.d/sai.profile
 COPY configs/lanemap.ini       /usr/share/sonic/hwsku/lanemap.ini
