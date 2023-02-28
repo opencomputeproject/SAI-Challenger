@@ -84,6 +84,6 @@ COPY configs/supervisord.conf  /etc/supervisor/conf.d/supervisord.conf
 COPY configs/port_config.ini             /usr/share/sonic/hwsku/port_config.ini
 COPY configs/supervisord.conf.saithrift  /etc/supervisor/conf.d/supervisord.conf
 
-WORKDIR /sai-challenger
+WORKDIR /sai-challenger/tests
 
 CMD ["/usr/bin/supervisord"]
