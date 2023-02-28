@@ -11,7 +11,7 @@ SAI testing and integration framework for any SAI oriented devices. The main ide
 To get SAI Challenger sources:
 ```sh
 git clone https://github.com/opencomputeproject/SAI-Challenger.git
-cd sai-challenger/
+cd SAI-Challenger/
 git submodule update --init --recursive
 ```
 # Applications
