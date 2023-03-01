@@ -12,17 +12,12 @@ RUN pip3 install ctypesgen thrift==0.11.0
 
 COPY sai.env /sai
 
-# Install patch for SAI check
-COPY patches/SAI/0001-improve-enum-values-integration-check-1727.patch /sai/
-
 WORKDIR /sai
 RUN apt install -y ${SAIGEN_DEPS} \
         && git clone https://github.com/opencomputeproject/SAI.git \
         && cd SAI \
         && . /sai/sai.env \
         && git checkout ${SAI_ID} \
-        && cp /sai/0001-improve-enum-values-integration-check-1727.patch . \
-        && patch -p2 < 0001-improve-enum-values-integration-check-1727.patch \
         && cp inc/* /usr/include/sai/ \
         && cp experimental/* /usr/include/sai/ \
         && cd test/saithriftv2/ \

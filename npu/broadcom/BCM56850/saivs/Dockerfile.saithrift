@@ -34,8 +34,6 @@ ENV platform=vs
 #        && cd /sai \
 #        && rm -rf thrift-0.11.0 thrift-0.11.0.tar.gz
 
-# Install patch for SAI check
-COPY patches/SAI/0001-improve-enum-values-integration-check-1727.patch /sai/
 RUN git clone https://github.com/sonic-net/sonic-sairedis.git \
         && cd sonic-sairedis \
         && . /sai.env \
@@ -45,6 +43,8 @@ RUN git clone https://github.com/sonic-net/sonic-sairedis.git \
         && git checkout ${SAI_ID} \
         && git submodule update --init --recursive \
         && cd .. \
+        # Exclude sairedis tests that require Redis to be running
+        && find . -type f -name Makefile.am | xargs sed -ri 's/^TESTS =/# TESTS =/' \
         && ./autogen.sh \
         && dpkg-buildpackage -us -uc -b --target=binary-syncd-vs --jobs=auto \
         && cd .. \
@@ -55,13 +55,7 @@ RUN git clone https://github.com/sonic-net/sonic-sairedis.git \
         && dpkg -i syncd-vs_1.0.0_amd64.deb \
         && dpkg -i libsaimetadata_1.0.0_amd64.deb \
         && dpkg -i libsaimetadata-dev_1.0.0_amd64.deb \
-        && cp /sai/0001-improve-enum-values-integration-check-1727.patch /sai/sonic-sairedis \
-        && cd /sai/sonic-sairedis && patch -p1 < 0001-improve-enum-values-integration-check-1727.patch \
-        && cd SAI && make saithrift-install \
-        && cd test/saithriftv2/ \
-        && make meta \
-        && make install-pylib \
-        && cd ../.. \
+        && cd sonic-sairedis/SAI && make saithrift-install \
         && cp meta/saimetadatautils.c /sai/gen_attr_list/ \
         && cp meta/saimetadata.c /sai/gen_attr_list/ \
         && cp meta/saiserialize.c /sai/gen_attr_list/ \
