@@ -19,7 +19,7 @@ def set_ptf_params(request):
     
     arg_back = sys.argv
     # provide required PTF runner params to avoid exiting with an error
-    sys.argv = ['ptf.py','--test-dir', '/sai-challenger/sai/ptf', *ports]
+    sys.argv = ['ptf.py','--test-dir', '/sai-challenger/usecases/sai-ptf/SAI/ptf', *ports]
 
     # load PTF runner module to let it collect test params into ptf.config
     import imp
