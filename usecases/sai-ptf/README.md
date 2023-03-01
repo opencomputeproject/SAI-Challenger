@@ -34,7 +34,7 @@ docker exec -ti sc-thrift-trident2-saivs-run bash
 
 Run a PTF test
 ```
-pytest --testbed=saivs_thrift_standalone usecase/sai-ptf/SAI/ptf/saifdb.py -k FdbAttributeTest -v
+pytest --testbed=saivs_thrift_standalone usecases/sai-ptf/SAI/ptf/saifdb.py -k FdbAttributeTest -v
 ```
 
 Run a SAI Challenger test using Thrift interface
