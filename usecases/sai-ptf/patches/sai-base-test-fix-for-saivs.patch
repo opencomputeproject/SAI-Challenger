@@ -1,4 +1,4 @@
---- ptf/sai_base_test.py	2023-03-01 13:25:34.653826108 +0200
+--- ptf/sai_base_test.py	2023-03-02 11:55:39.257444349 +0200
 +++ ptf/sai_base_test.py-new	2023-03-01 11:26:49.447906432 +0200
 @@ -224,7 +224,29 @@
          #TODO check if this is common behivor or specified after check on more platform
@@ -57,7 +57,22 @@
  
      def check_cpu_port_hdl(self):
          """
-@@ -328,11 +359,6 @@
+@@ -305,6 +336,14 @@
+         self.assertEqual(self.status(), SAI_STATUS_SUCCESS)
+ 
+ 
++    def warm_start_switch(self):
++        """
++        Warm start switch.
++        """
++        self.switch_id = sai_thrift_create_switch(
++        self.client, init_switch=True, warm_recover=True)
++        self.assertEqual(self.status(), SAI_STATUS_SUCCESS)
++
+     def setUp(self):
+         super(SaiHelperBase, self).setUp()
+         self.set_logger_name()
+@@ -320,11 +359,6 @@
          self.default_vlan_id = attr['default_vlan_id']
          self.assertNotEqual(self.default_vlan_id, 0)
  
@@ -69,7 +84,7 @@
          # get default vrf
          attr = sai_thrift_get_switch_attribute(
              self.client, default_virtual_router_id=True)
-@@ -345,7 +371,7 @@
+@@ -337,7 +371,7 @@
          self.get_default_1q_bridge_id()
  
          #remove all default 1Q bridge port
@@ -78,7 +93,7 @@
  
          # get cpu port
          attr = sai_thrift_get_switch_attribute(self.client, cpu_port=True)
-@@ -353,7 +379,13 @@
+@@ -345,7 +379,13 @@
          self.assertNotEqual(self.cpu_port_hdl, 0)
  
          # get cpu port queue handles
@@ -93,7 +108,7 @@
  
          print("Finish SaiHelperBase setup")
  
-@@ -361,7 +393,7 @@
+@@ -353,7 +393,7 @@
      def tearDown(self):
          try:
              for port in self.port_list:
@@ -102,7 +117,7 @@
                  sai_thrift_set_port_attribute(
                      self.client, port, port_vlan_id=0)
              #Todo: Remove this condition after brcm's remove_switch issue fixed
-@@ -397,12 +429,18 @@
+@@ -389,12 +429,18 @@
          attr = sai_thrift_get_switch_attribute(
              self.client, number_of_active_ports=True)
          self.active_ports_no = attr['number_of_active_ports']
@@ -121,7 +136,7 @@
                  sai_thrift_remove_port(self.client, port)
  
          # add new ports from port config file
-@@ -553,9 +591,9 @@
+@@ -545,9 +591,9 @@
              available_snat_entry=True,
              available_dnat_entry=True,
              available_double_nat_entry=True,
@@ -134,7 +149,7 @@
          if debug:
              self.printNumberOfAvaiableResources(switch_resources)
  
-@@ -591,6 +629,9 @@
+@@ -583,6 +629,9 @@
              number_of_ecmp_groups=True,
              ecmp_members=True)
  
@@ -144,7 +159,7 @@
          for key, value in available_resources.items():
              if value != init_resources[key]:
                  if debug:
-@@ -632,11 +673,12 @@
+@@ -624,11 +673,12 @@
          Create bridge ports base on port_list.
          """
          ports = ports or range(0, len(self.port_list))
@@ -158,7 +173,7 @@
                  port_id=port_id,
                  type=SAI_BRIDGE_PORT_TYPE_PORT,
                  admin_state=True)
-@@ -658,7 +700,7 @@
+@@ -650,7 +700,7 @@
          # add LAG to bridge
          lag_bp = sai_thrift_create_bridge_port(
              self.client,
@@ -167,39 +182,57 @@
              port_id=lag_id,
              type=SAI_BRIDGE_PORT_TYPE_PORT,
              admin_state=True)
-@@ -852,16 +894,22 @@
-                                             addr=sai_thrift_ip_addr_t(
-                                                 ip6=DEFAULT_IP_V6_PREFIX),
-                                             mask=sai_thrift_ip_addr_t(ip6=DEFAULT_IP_V6_PREFIX))
--        self.default_ipv6_route_entry = sai_thrift_route_entry_t(vr_id=self.default_vrf,
--                                                                 destination=v6_default)
+@@ -833,6 +883,39 @@
+     +--------+-------------------------------------------------------------------+
+     """
+ 
++    def create_default_v4_v6_route_entry(self):
++        """
++        Create default v4 and v6 route entry.
++        """
++        DEFAULT_IP_V4_PREFIX = '0.0.0.0/0'
++        DEFAULT_IP_V6_PREFIX = '0000:0000:0000:0000:0000:0000:0000:0000'
++        print("Create default v4&v6 route entry...")
++        v6_default = sai_thrift_ip_prefix_t(addr_family=1,
++                                            addr=sai_thrift_ip_addr_t(
++                                                ip6=DEFAULT_IP_V6_PREFIX),
++                                            mask=sai_thrift_ip_addr_t(ip6=DEFAULT_IP_V6_PREFIX))
 +        self.default_ipv6_route_entry = sai_thrift_route_entry_t(
 +            switch_id=self.switch_id,
 +            vr_id=self.default_vrf,
 +            destination=v6_default
 +        )
-         status = sai_thrift_create_route_entry(
-             self.client,
-             route_entry=self.default_ipv6_route_entry,
-             packet_action=SAI_PACKET_ACTION_DROP)
-         self.assertEqual(status, SAI_STATUS_SUCCESS)
- 
--        self.default_ipv4_route_entry = sai_thrift_route_entry_t(vr_id=self.default_vrf,
--                                                                 destination=sai_ipprefix(DEFAULT_IP_V4_PREFIX))
++        status = sai_thrift_create_route_entry(
++            self.client,
++            route_entry=self.default_ipv6_route_entry,
++            packet_action=SAI_PACKET_ACTION_DROP)
++        self.assertEqual(status, SAI_STATUS_SUCCESS)
++
 +        self.default_ipv4_route_entry = sai_thrift_route_entry_t(
 +            switch_id=self.switch_id,
 +            vr_id=self.default_vrf,
 +            destination=sai_ipprefix(DEFAULT_IP_V4_PREFIX)
 +        )
-         status = sai_thrift_create_route_entry(
-             self.client,
-             route_entry=self.default_ipv4_route_entry,
-@@ -920,7 +968,7 @@
-         # Creating route in default VRF will failed if there aren't default routes.
-         # Solution
-         # Create default route before create route in detaul VRF
--        self.create_default_v4_v6_route_entry()
-+        #self.create_default_v4_v6_route_entry()
++        status = sai_thrift_create_route_entry(
++            self.client,
++            route_entry=self.default_ipv4_route_entry,
++            packet_action=SAI_PACKET_ACTION_DROP)
++        self.assertEqual(self.status(), SAI_STATUS_SUCCESS)
++
+     def setUp(self):
+         super(SaiHelper, self).setUp()
  
+@@ -880,6 +963,13 @@
+         self.create_routing_interfaces(lags=[3, 4])
+         self.create_routing_interfaces(ports=[10, 11, 12, 13])
+ 
++        # Create default route for default VRF is mandartory.
++        # Issue #1606(https://github.com/opencomputeproject/SAI/issues/1606)
++        # Creating route in default VRF will failed if there aren't default routes.
++        # Solution
++        # Create default route before create route in detaul VRF
++        #self.create_default_v4_v6_route_entry()
++
      def tearDown(self):
          sai_thrift_set_port_attribute(self.client, self.port2, port_vlan_id=0)
+         sai_thrift_set_lag_attribute(self.client, self.lag1, port_vlan_id=0)

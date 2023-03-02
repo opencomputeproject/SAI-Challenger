@@ -11,7 +11,7 @@ SAI Challenger has capability to run these tests by setting up proper test envir
 git submodule update --init --recursive
 cp usecases/sai-ptf/ptf-conftest.py usecases/sai-ptf/SAI/ptf/conftest.py
 cp usecases/sai-ptf/patches/sai-base-test-fix-for-saivs.patch usecases/sai-ptf/SAI/
-cd usecases/sai-ptf/SAI/ && git checkout c80ff330 && patch -p0 < sai-base-test-fix-for-saivs.patch && cd -
+cd usecases/sai-ptf/SAI/ && patch -p0 < sai-base-test-fix-for-saivs.patch && cd -
 ```
 
 1. Build a Docker image with required test env
