@@ -12,7 +12,7 @@ To get SAI Challenger sources:
 ```sh
 git clone https://github.com/opencomputeproject/SAI-Challenger.git
 cd SAI-Challenger/
-git submodule update --init --recursive
+git submodule update --init
 ```
 # Applications
 SAI Challenger has many applications. A partial list is below:

@@ -8,7 +8,7 @@ SAI Challenger has capability to run these tests by setting up proper test envir
 
 0. Setup the environment
 ```
-git submodule update --init --recursive
+git submodule update --init
 cp usecases/sai-ptf/ptf-conftest.py usecases/sai-ptf/SAI/ptf/conftest.py
 cp usecases/sai-ptf/patches/sai-base-test-fix-for-saivs.patch usecases/sai-ptf/SAI/
 cd usecases/sai-ptf/SAI/ && patch -p0 < sai-base-test-fix-for-saivs.patch && cd -
