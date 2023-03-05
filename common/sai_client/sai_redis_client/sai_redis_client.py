@@ -18,7 +18,7 @@ class SaiRedisClient(SaiClient):
         self.port = cfg["port"]
         self.libsaivs = cfg["saivs"]
 
-        self.is_dut_mbr = cfg.get("mode", None) is not None
+        self.is_dut_mbr = cfg.get("mode") is not None
 
         self.r = redis.Redis(host=self.server_ip, port=self.port, db=1)
         self.loglevel_db = redis.Redis(host=self.server_ip, port=self.port, db=3)

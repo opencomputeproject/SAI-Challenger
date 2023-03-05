@@ -17,6 +17,13 @@ def bcm56850_teardown(npu):
 
 
 @pytest.fixture(scope="module")
+def trident3_teardown(npu):
+    yield
+    if npu.name in ["trident3"]:
+        npu.reset()
+
+
+@pytest.fixture(scope="module")
 def tofino_teardown(npu):
     yield
     if npu.name == "tofino":
@@ -44,7 +51,20 @@ def test_apply_sairec(npu, dataplane, fname, bcm56850_teardown):
     if npu.sai_client.config["ip"] != 'localhost':
         pytest.skip("Currently not supported in client-server mode")
 
-    npu.sai_client.apply_rec("/sai/sonic-sairedis/tests/" + fname)
+    npu.apply_rec("/sai/sonic-sairedis/tests/" + fname)
+
+
+@pytest.mark.parametrize(
+    "fname",
+    [
+        "t1_factory_default.rec",
+    ],
+)
+def test_trident3_scenario(npu, dataplane, fname, trident3_teardown):
+    if npu.name != "trident3":
+        pytest.skip("Trident3 specific scenario")
+
+    npu.apply_rec(f"/sai-challenger/npu/broadcom/{npu.name}/{npu.target}/scenarios/{fname}")
 
 
 @pytest.mark.parametrize(

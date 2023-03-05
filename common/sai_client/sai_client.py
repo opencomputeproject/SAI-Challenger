@@ -14,6 +14,9 @@ class SaiClient:
     def set_loglevel(self, sai_api, loglevel):
         raise NotImplementedError
 
+    def apply_rec(self, fname):
+        raise NotImplementedError
+
     # CRUD
     def create(self, obj, attrs, do_assert=True):
         """
