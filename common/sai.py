@@ -178,6 +178,12 @@ class Sai():
     def process_commands(self, commands):
         yield from map(self.command_processor.process_command, commands)
 
+    def apply_rec(self, fname):
+        dut = self.cfg.get("dut", None)
+        if dut:
+            dut.cleanup()
+        return self.sai_client.apply_rec(fname)
+
     def cleanup(self):
         dut = self.cfg.get("dut", None)
         if dut:
