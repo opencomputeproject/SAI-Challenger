@@ -131,12 +131,16 @@ class SaiSnappiDataPlane(SaiDataPlane):
 
         return cap_dict
 
-    def start_traffic(self):
+    def start_traffic(self, flow_names=None):
         """ Start traffic flow(s) which are already configured.
         """
         ts = self.api.transmit_state()
         ts.state = ts.START
-        logging.info('Start traffic')
+        if flow_names is not None:
+            ts.flow_names = flow_names
+            logging.info(f'Start flows: {" ".join(flow_names)}')
+        else:
+            logging.info('Start traffic')
         res = self.api.set_transmit_state(ts)
         assert self.api_results_ok(res), res
 
@@ -328,6 +332,10 @@ class SaiSnappiDataPlane(SaiDataPlane):
 
         vxlan = flow.packet.add().vxlan
         vxlan.vni.value = vni
+        # Other supported fields. Uncomment in case of emergency ;)
+        # vxlan.flags.value = 0b00001000  # VNI is True
+        # vxlan.reserved0.value = 0
+        # vxlan.reserved1.value = 0
 
         # Setup increment
         self.set_increment(vxlan.vni, vni_choice, vni_count, vni, vni_step)
