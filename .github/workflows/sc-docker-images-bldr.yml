@@ -1,8 +1,10 @@
+name: sc-docker-images-bldr
+
 on:
   push:
     branches: [ "**" ]
     paths:
-      - '.github/workflows/saichallenger-client-docker.yml'
+      - '.github/workflows/sc-docker-images-bldr.yml'
       - 'dockerfiles/Dockerfile'
       - 'dockerfiles/Dockerfile.client'
       - 'dockerfiles/Dockerfile.saithrift-client'
@@ -27,7 +29,7 @@ on:
   pull_request:
     branches: [ "**" ]
     paths:
-      - '.github/workflows/saichallenger-client-docker.yml'
+      - '.github/workflows/sc-docker-images-bldr.yml'
       - 'dockerfiles/Dockerfile'
       - 'dockerfiles/Dockerfile.client'
       - 'dockerfiles/Dockerfile.saithrift-client'
@@ -54,7 +56,7 @@ on:
 jobs:
   
   build-sc-client-thrift:
-    name: Build SAI-Challenger-client-thrift-image
+    name: Build SAI Challenger client thrift image
     runs-on: ubuntu-20.04
     steps:
     - uses: actions/checkout@v3
@@ -65,7 +67,7 @@ jobs:
        ./build.sh -i client -s thrift
   
   build-sc-standalone:
-    name: Build SAI-Challenger-standalone-image
+    name: Build SAI Challenger standalone image
     runs-on: ubuntu-20.04
     steps:
     - uses: actions/checkout@v3
@@ -76,7 +78,7 @@ jobs:
         ./build.sh -i standalone 
   
   build-sc-stadalone-thrift:
-    name: Build SAI-Challenger-standalone-thrift-image
+    name: Build SAI Challenger standalone thrift image
     runs-on: ubuntu-20.04
     steps:
     - uses: actions/checkout@v3
@@ -85,8 +87,9 @@ jobs:
     - name: build docker image
       run: |
        ./build.sh -i standalone -s thrift
+  
   build-sc-server:
-    name: Build SAI-Challenger-server-image
+    name: Build SAI Challenger server image
     runs-on: ubuntu-20.04
     steps:
     - uses: actions/checkout@v3
@@ -97,7 +100,7 @@ jobs:
        ./build.sh -i server
        
   build-sc-server-thrift:
-    name: Build SAI-Challenger-server-thrift-image
+    name: Build SAI Challenger server thrift image
     runs-on: ubuntu-20.04
     steps:
     - uses: actions/checkout@v3
@@ -106,4 +109,3 @@ jobs:
     - name: build docker image
       run: |
        ./build.sh -i server -s thrift
-
