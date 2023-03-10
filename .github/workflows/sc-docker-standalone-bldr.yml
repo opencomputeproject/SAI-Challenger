@@ -1,0 +1,32 @@
+name: sc-docker-standalone-bldr
+
+on:
+  pull_request:
+    types: [ opened, synchronize, reopened ]
+    branches: [ "**" ]
+    paths:
+      - '.github/workflows/sc-docker-standalone-bldr.yml'
+      - 'dockerfiles/Dockerfile'
+      - 'npu/broadcom/trident2/saivs/Dockerfile'
+      - 'npu/broadcom/trident2/saivs/Dockerfile.saithrift'
+      - 'common/'
+      - 'builds/'
+      - 'cli/'
+      - 'scripts/'
+      - 'configs/'
+      - 'setup.py'
+      - 'build.sh'
+      - '.dockerignore'
+  
+jobs:   
+  build-sc-stadalone-thrift:
+    name: Build SAI Challenger standalone image
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v3
+    - name: submodules update
+      run: git submodule update --init
+    - name: build standalone docker image
+      run: ./build.sh -i standalone
+    - name: build standalone docker thrift image
+      run: ./build.sh -i standalone -s thrift
