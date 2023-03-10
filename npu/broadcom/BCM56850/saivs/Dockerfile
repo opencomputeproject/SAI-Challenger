@@ -12,10 +12,9 @@ RUN git clone https://github.com/sonic-net/sonic-sairedis.git \
         && cd sonic-sairedis \
         && . /sai.env \
         && git checkout ${SAIREDIS_ID} \
-        && git submodule update --init --recursive \
+        && git submodule update --init \
         && cd SAI && git fetch origin \
         && git checkout ${SAI_ID} \
-        && git submodule update --init --recursive \
         && cd meta \
         && make saimetadata.h \
         && make saimetadata.c \
@@ -31,7 +30,6 @@ RUN git clone https://github.com/sonic-net/sonic-sairedis.git \
         && dpkg -i libsaimetadata_1.0.0_amd64.deb \
         && dpkg -i libsaimetadata-dev_1.0.0_amd64.deb \
         && dpkg -i libsairedis_1.0.0_amd64.deb \
-        && dpkg -i libsairedis-dev_1.0.0_amd64.deb \
         && dpkg -i libsaivs_1.0.0_amd64.deb \
         && dpkg -i libsaivs-dev_1.0.0_amd64.deb \
         && dpkg -i syncd-vs_1.0.0_amd64.deb \
@@ -56,4 +54,3 @@ COPY configs/supervisord.conf  /etc/supervisor/conf.d/supervisord.conf
 WORKDIR /sai-challenger/tests
 
 CMD ["/usr/bin/supervisord"]
-
