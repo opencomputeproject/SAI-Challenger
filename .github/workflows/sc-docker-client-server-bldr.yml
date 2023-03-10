@@ -1,0 +1,43 @@
+name: sc-docker-client-server-bldr
+
+on:
+  pull_request:
+    types: [ opened, synchronize, reopened ]
+    branches: [ "**" ]
+    paths:
+      - '.github/workflows/sc-docker-client-server-bldr.yml'
+      - 'dockerfiles/Dockerfile.client'
+      - 'dockerfiles/Dockerfile.saithrift-client'
+      - 'dockerfiles/Dockerfile.server'
+      - 'npu/broadcom/trident2/saivs/Dockerfile.server'
+      - 'common/'
+      - 'builds/'
+      - 'cli/'
+      - 'scripts/'
+      - 'configs/'
+      - 'setup.py'
+      - 'build.sh'
+      - '.dockerignore'
+
+jobs: 
+  build-sc-server:
+    name: Build SAI Challenger server image
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v3
+    - name: submodules update
+      run: git submodule update --init
+    - name: build server docker image
+      run: ./build.sh -i server
+
+  build-sc-client:
+    name: Build SAI Challenger client image
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v3
+    - name: submodules update
+      run: git submodule update --init
+    - name: build client docker image
+      run: ./build.sh -i client
+    - name: build client thrift docker image
+      run: ./build.sh -i client -s thrift
