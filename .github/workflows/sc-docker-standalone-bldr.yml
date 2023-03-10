@@ -28,12 +28,10 @@ jobs:
       run: git submodule update --init
     - name: build standalone docker image
       run: ./build.sh -i standalone
-    - name: Setup upterm session
-      uses: lhotari/action-upterm@v1
     - name: start SAI-C in standalone mode
       run: ./run.sh -i standalone
     - name: sleep
-      run: sleep 10s
+      run: sleep 20s
     - name: run tests
       run: ./exec.sh pytest --testbed=saivs_standalone -v -k "test_l2_basic"
     - name: build standalone docker thrift image
