@@ -9,7 +9,7 @@ on:
       - 'dockerfiles/Dockerfile.client'
       - 'dockerfiles/Dockerfile.saithrift-client'
       - 'dockerfiles/Dockerfile.server'
-      - 'npu/broadcom/trident2/saivs/Dockerfile.server'
+      - 'npu/broadcom/BCM56850/saivs/Dockerfile.server'
       - 'common/'
       - 'builds/'
       - 'cli/'
