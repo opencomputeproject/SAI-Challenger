@@ -2,7 +2,6 @@ FROM sc-base
 
 # Install generic packages
 RUN apt-get install -y \
-        nlohmann-json-dev \
         libtemplate-perl \
         libconst-fast-perl \
         libmoosex-aliases-perl \
@@ -38,23 +37,21 @@ RUN git clone https://github.com/sonic-net/sonic-sairedis.git \
         && cd sonic-sairedis \
         && . /sai.env \
         && git checkout ${SAIREDIS_ID} \
-        && git submodule update --init --recursive \
+        && git submodule update --init \
         && cd SAI && git fetch origin \
         && git checkout ${SAI_ID} \
-        && git submodule update --init --recursive \
         && cd .. \
         # Exclude sairedis tests that require Redis to be running
         && find . -type f -name Makefile.am | xargs sed -ri 's/^TESTS =/# TESTS =/' \
         && ./autogen.sh \
         && dpkg-buildpackage -us -uc -b --target=binary-syncd-vs --jobs=auto \
         && cd .. \
-        && dpkg -i libsaivs_1.0.0_amd64.deb \
-        && dpkg -i libsaivs-dev_1.0.0_amd64.deb \
-        && dpkg -i libsairedis_1.0.0_amd64.deb \
-        && dpkg -i libsairedis-dev_1.0.0_amd64.deb \
-        && dpkg -i syncd-vs_1.0.0_amd64.deb \
         && dpkg -i libsaimetadata_1.0.0_amd64.deb \
         && dpkg -i libsaimetadata-dev_1.0.0_amd64.deb \
+        && dpkg -i libsairedis_1.0.0_amd64.deb \
+        && dpkg -i libsaivs_1.0.0_amd64.deb \
+        && dpkg -i libsaivs-dev_1.0.0_amd64.deb \
+        && dpkg -i syncd-vs_1.0.0_amd64.deb \
         && cd sonic-sairedis/SAI && make saithrift-install \
         && cp meta/saimetadatautils.c /sai/gen_attr_list/ \
         && cp meta/saimetadata.c /sai/gen_attr_list/ \
