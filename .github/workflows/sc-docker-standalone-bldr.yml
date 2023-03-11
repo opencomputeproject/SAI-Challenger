@@ -42,5 +42,9 @@ jobs:
            "test_acl_ut or test_bridge_ut or test_switch_ut or test_vrf_ut or test_port_ut.py"
     - name: Build standalone docker image with SAI thrift
       run: ./build.sh -i standalone -s thrift
+    - name: Start SAI-C in standalone mode with SAI thrift
+      run: ./run.sh -i standalone -s thrift
+    - name: Wait for SAI-C services to come up
+      run: sleep 10s
     - name: Run thrift tests
-      run: ./exec.sh -s thrift pytest --testbed=saivs_thrift_standalone -v -k "access_to_access"
+      run: ./exec.sh --no-tty -s thrift pytest --testbed=saivs_thrift_standalone -v -k "access_to_access"
