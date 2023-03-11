@@ -35,5 +35,12 @@ jobs:
       run: sleep 10s
     - name: Run tests
       run: ./exec.sh --no-tty pytest --testbed=saivs_standalone -v -k "test_l2_basic"
+    - name: Run sairedis tests
+      run: ./exec.sh --no-tty pytest --testbed=saivs_standalone -v -k "test_sairec"
+    - name: Run unit tests
+      run: ./exec.sh --no-tty pytest --testbed=saivs_standalone -v -k \
+           "test_acl_ut or test_bridge_ut or test_switch_ut or test_vrf_ut or test_port_ut.py"
     - name: Build standalone docker image with SAI thrift
       run: ./build.sh -i standalone -s thrift
+    - name: Run thrift tests
+      run: ./exec.sh -s thrift pytest --testbed=saivs_thrift_standalone -v -k "access_to_access"
