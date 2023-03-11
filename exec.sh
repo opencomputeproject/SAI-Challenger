@@ -14,6 +14,7 @@ ASIC_PATH=""
 TARGET=""
 EXEC_CMD=""
 SAI_INTERFACE="redis"
+TTY="-ti"
 
 print-help() {
     echo
@@ -28,6 +29,8 @@ print-help() {
     echo "     Target device with this NPU"
     echo "  -s [redis|thrift]"
     echo "     SAI interface"
+    echo
+    echo "  --no-tty   Do not allocate a pseudo-TTY"
     echo
     exit 0
 }
@@ -62,6 +65,9 @@ while [[ $# -gt 0 ]]; do
         "-s"|"--sai_interface")
             SAI_INTERFACE="$2"
             shift
+        ;;
+        "--no-tty")
+            TTY=""
         ;;
         *)
             if [ -z "${EXEC_CMD}" ]; then
@@ -152,5 +158,5 @@ elif [ "${IMAGE_TYPE}" = "server" ]; then
 else
     CONTAINER="${PREFIX}-client-run"
 fi
-docker exec -ti ${CONTAINER} ${EXEC_CMD}
+docker exec ${TTY} ${CONTAINER} ${EXEC_CMD}
 
