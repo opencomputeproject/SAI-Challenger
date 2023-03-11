@@ -25,9 +25,9 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
     - uses: actions/checkout@v3
-    - name: submodules update
+    - name: Update submodules
       run: git submodule update --init
-    - name: build server docker image
+    - name: Build server docker image
       run: ./build.sh -i server
 
   build-sc-client:
@@ -35,9 +35,9 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
     - uses: actions/checkout@v3
-    - name: submodules update
+    - name: Update submodules
       run: git submodule update --init
-    - name: build client docker image
+    - name: Build client docker image
       run: ./build.sh -i client
-    - name: build client thrift docker image
+    - name: Build client docker image with SAI thrift
       run: ./build.sh -i client -s thrift

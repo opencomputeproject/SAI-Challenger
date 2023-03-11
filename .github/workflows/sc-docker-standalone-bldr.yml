@@ -24,9 +24,15 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
     - uses: actions/checkout@v3
-    - name: submodules update
+    - name: Update submodules
       run: git submodule update --init
-    - name: build standalone docker image
+    - name: Build standalone docker image
       run: ./build.sh -i standalone
-    - name: build standalone docker thrift image
+    - name: Start SAI-C in standalone mode
+      run: ./run.sh -i standalone
+    - name: Wait for SAI-C services to come up
+      run: sleep 10s
+    - name: Run tests
+      run: ./exec.sh --no-tty pytest --testbed=saivs_standalone -v -k "test_l2_basic"
+    - name: Build standalone docker image with SAI thrift
       run: ./build.sh -i standalone -s thrift
