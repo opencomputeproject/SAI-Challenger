@@ -290,7 +290,8 @@ class Sai():
         # TODO: Check how to map these types into the struct or list
         unsupported_types = [
                                 "sai_port_eye_values_list_t", "sai_prbs_rx_state_t",
-                                "sai_port_err_status_list_t", "sai_fabric_port_reachability_t"
+                                "sai_port_err_status_list_t", "sai_fabric_port_reachability_t",
+                                "sai_port_lane_latch_status_list_t", "sai_latch_status_t"
                             ]
         if attr_type == "sai_object_list_t":
             status, data = self.get(obj, [attr, "1:oid:0x0"], do_assert)
@@ -341,7 +342,7 @@ class Sai():
         elif attr_type == "sai_u32_range_t" or attr_type == "sai_s32_range_t":
             status, data = self.get(obj, [attr, "0,0"], do_assert)
         elif attr_type in unsupported_types:
-            status, data = "not supported", None
+            status, data = f"SAI-C internal failure. Unsupported type {attr_type}", None
         elif attr_type.startswith("sai_") or attr_type == "" or attr_type == "char":
             status, data = self.get(obj, [attr, ""], do_assert)
         else:
@@ -370,7 +371,10 @@ class Sai():
             if status == "SAI_STATUS_NOT_IMPLEMENTED" or status == "SAI_STATUS_ATTR_NOT_IMPLEMENTED_0":
                 pytest.skip("not implemented")
 
-        assert status == "SAI_STATUS_SUCCESS"
+        if status.startswith("SAI-C internal failure"):
+            pytest.xfail(status)
+
+        assert status == "SAI_STATUS_SUCCESS", f"Operation failed due to {status}"
 
     def make_list(self, length, elem):
         return "{}:".format(length) + (elem + ",") * (length - 1) + elem
