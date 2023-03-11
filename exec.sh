@@ -72,6 +72,9 @@ while [[ $# -gt 0 ]]; do
         *)
             if [ -z "${EXEC_CMD}" ]; then
                 EXEC_CMD=${1}
+            elif [[ ${1} = *" "* ]]; then
+                # parameter contains spaces
+                EXEC_CMD="${EXEC_CMD} \"${1}\""
             else
                 EXEC_CMD="${EXEC_CMD} ${1}"
             fi
@@ -158,5 +161,4 @@ elif [ "${IMAGE_TYPE}" = "server" ]; then
 else
     CONTAINER="${PREFIX}-client-run"
 fi
-docker exec ${TTY} ${CONTAINER} ${EXEC_CMD}
-
+docker exec ${TTY} ${CONTAINER} bash -c "${EXEC_CMD}"
