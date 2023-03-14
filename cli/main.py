@@ -268,7 +268,7 @@ def set(oid, attr, value):
 # 'create' command
 @cli.command()
 @click.argument('obj_type', metavar='<SAI object type>', required=True, type=str)
-@click.argument('attrs', metavar='<attr> <value>', required=True, type=str, nargs=-1)
+@click.argument('attrs', metavar='<attr> <value>', required=False, type=str, nargs=-1)
 def create(obj_type, attrs):
     """Create SAI object"""
 
