@@ -172,7 +172,7 @@ class Sai():
 
     @switch_oid.setter
     def switch_oid(self, value):
-        self.command_processor.objects_registry['SWITCH_ID'] = dict(type='SAI_OBJECT_TYPE_SWITCH', oid=value, key=None)
+        self.create_alias('SWITCH_ID', 'SAI_OBJECT_TYPE_SWITCH', value)
         self._switch_oid = value
 
     def process_commands(self, commands):
@@ -403,3 +403,52 @@ class Sai():
                       "attached_core_port_index": "", "speed": "", "num_voq": ""}] * length
         }
         return json.dumps(attr_value).replace(" ", "")
+
+    def create_alias(self, alias, obj_type, oid, key=None):
+        '''
+        Create new alias or update existing alias for a given oid or key.
+        This alias can be used in data-driven configuration that
+        should be applied by process_commands() API.
+        '''
+        self.command_processor.objects_registry[alias] = dict(type=obj_type, oid=oid, key=key)
+
+    def remove_alias(self, alias):
+        '''
+        Remove alias.
+        '''
+        self.command_processor.objects_registry.pop(alias, None)
+
+    def objects_discovery(self):
+        '''
+        This method discovers existing objects and
+        creates the aliases as follows:
+            DEFAULT_1Q_BRIDGE_ID
+            DEFAULT_VLAN_ID
+            DEFAULT_VIRTUAL_ROUTER_ID
+            PORT_{idx}
+            BRIDGE_PORT_{idx}
+        '''
+        dot1q_br_oid = self.get(self.switch_oid, ["SAI_SWITCH_ATTR_DEFAULT_1Q_BRIDGE_ID", "oid:0x0"]).oid()
+        self.create_alias('DEFAULT_1Q_BRIDGE_ID', 'SAI_OBJECT_TYPE_BRIDGE', dot1q_br_oid)
+        oid = self.get(self.switch_oid, ["SAI_SWITCH_ATTR_DEFAULT_VLAN_ID", "oid:0x0"]).oid()
+        self.create_alias('DEFAULT_VLAN_ID', 'SAI_OBJECT_TYPE_VLAN', oid)
+        oid = self.get(self.switch_oid, ["SAI_SWITCH_ATTR_DEFAULT_VIRTUAL_ROUTER_ID", "oid:0x0"]).oid()
+        self.create_alias('DEFAULT_VIRTUAL_ROUTER_ID', 'SAI_OBJECT_TYPE_VIRTUAL_ROUTER', oid)
+
+        port_num = self.get(self.switch_oid, ["SAI_SWITCH_ATTR_NUMBER_OF_ACTIVE_PORTS", ""]).uint32()
+        if port_num > 0:
+            port_oids = self.get(self.switch_oid,
+                                 ["SAI_SWITCH_ATTR_PORT_LIST", self.make_list(port_num, "oid:0x0")]).oids()
+            for idx, oid in enumerate(port_oids):
+                self.create_alias(f"PORT_{idx}", 'SAI_OBJECT_TYPE_PORT', oid)
+
+
+            status, data = self.get(dot1q_br_oid, ["SAI_BRIDGE_ATTR_PORT_LIST", "1:oid:0x0"], False)
+            bport_num = data.uint32()
+            assert (status == "SAI_STATUS_BUFFER_OVERFLOW")
+            assert (bport_num > 0)
+
+            dot1q_bp_oids = self.get(dot1q_br_oid,
+                                     ["SAI_BRIDGE_ATTR_PORT_LIST", self.make_list(bport_num, "oid:0x0")]).oids()
+            for idx, oid in enumerate(dot1q_bp_oids):
+                self.create_alias(f"BRIDGE_PORT_{idx}", 'SAI_OBJECT_TYPE_BRIDGE_PORT', oid)
