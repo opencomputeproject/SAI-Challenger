@@ -1,5 +1,7 @@
 import json
 import logging
+import subprocess
+import time
 from functools import wraps
 from saichallenger.common.sai_client.sai_client import SaiClient
 from saichallenger.common.sai_client.sai_thrift_client.sai_thrift_utils import *
@@ -14,17 +16,15 @@ class SaiThriftClient(SaiClient):
     """Thrift SAI client implementation to wrap low level SAI calls"""
 
     def __init__(self, cfg):
-        self.config = cfg
-        self.thrift_transport = TSocket.TSocket(cfg['ip'], cfg['port'])
-        self.thrift_transport = TTransport.TBufferedTransport(self.thrift_transport)
-        protocol = TBinaryProtocol.TBinaryProtocol(self.thrift_transport)
-        self.thrift_transport.open()
-        self.thrift_client = sai_rpc.Client(protocol)
+        self.config = cfg.copy()
+        self.thrift_transport = None
+        self.thrift_client = None
         self.sai_type_map = {}
         self.rec2vid = {}
 
     def __del__(self):
-        self.thrift_transport.close()
+        if self.thrift_transport:
+            self.thrift_transport.close()
 
     @staticmethod
     def obj_to_items(obj):
@@ -173,6 +173,20 @@ class SaiThriftClient(SaiClient):
         return status, result
 
     def cleanup(self):
-        # TODO define
-        ...
+        if self.thrift_transport:
+            self.thrift_transport.close()
 
+        # Handle cleanup for saivs target
+        if self.config["saivs"]:
+            # Handle cleanup for saivs target running in standalone mode
+            if self.config["ip"] in ["localhost", "127.0.0.1"]:
+                subprocess.run(["supervisorctl", "restart", "saiserver"])
+                time.sleep(1)
+
+        # TODO: Handle cleanup in generic way..
+
+        self.thrift_transport = TSocket.TSocket(self.config['ip'], self.config['port'])
+        self.thrift_transport = TTransport.TBufferedTransport(self.thrift_transport)
+        protocol = TBinaryProtocol.TBinaryProtocol(self.thrift_transport)
+        self.thrift_transport.open()
+        self.thrift_client = sai_rpc.Client(protocol)
