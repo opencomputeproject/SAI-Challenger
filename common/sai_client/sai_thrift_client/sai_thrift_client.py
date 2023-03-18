@@ -190,3 +190,7 @@ class SaiThriftClient(SaiClient):
         protocol = TBinaryProtocol.TBinaryProtocol(self.thrift_transport)
         self.thrift_transport.open()
         self.thrift_client = sai_rpc.Client(protocol)
+
+    def flush_fdb_entries(self, obj, attrs=None):
+        attr_kwargs = dict(ThriftConverter.convert_attributes_to_thrift(attrs))
+        result = sai_adapter.sai_thrift_flush_fdb_entries(self.thrift_client, **attr_kwargs)

@@ -100,7 +100,14 @@ class ThriftConverter():
         """
         "SAI_SWITCH_ATTR_PORT_LIST" => "objlist"
         """
-        return SaiMetadata[attr_name]
+        if attr_name == 'SAI_FDB_FLUSH_ATTR_ENTRY_TYPE':
+            return "s32"
+        elif attr_name == 'SAI_FDB_FLUSH_ATTR_BRIDGE_PORT_ID':
+            return "oid"
+        elif attr_name == 'SAI_FDB_FLUSH_ATTR_BV_ID':
+            return "oid"
+        else:
+            return SaiMetadata[attr_name]
 
     @staticmethod
     def sai_object_list(object_list):
