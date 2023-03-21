@@ -24,7 +24,7 @@ def test_default_vrf(npu, dataplane):
     npu.set(vrf_oid, ["SAI_VIRTUAL_ROUTER_ATTR_ADMIN_V4_STATE", "true"])
 
     admin_v4_state = npu.get(vrf_oid, ["SAI_VIRTUAL_ROUTER_ATTR_ADMIN_V4_STATE", "true"]).to_json()
-    assert admin_v4_state[1] == 'true'
+    assert admin_v4_state[1].lower() == 'true'
 
     # Get multiple VRF attributes
     if not npu.libsaivs:
