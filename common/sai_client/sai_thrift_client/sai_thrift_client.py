@@ -194,3 +194,44 @@ class SaiThriftClient(SaiClient):
     def flush_fdb_entries(self, obj, attrs=None):
         attr_kwargs = dict(ThriftConverter.convert_attributes_to_thrift(attrs))
         result = sai_adapter.sai_thrift_flush_fdb_entries(self.thrift_client, **attr_kwargs)
+
+    def bulk_create(self, obj, keys, attrs, do_assert=True):
+        # TODO: Provide proper implementation once Thrift bulk API is available
+        statuses = [None] * len(keys)
+        for idx, key in enumerate(keys):
+            attr = attrs[0] if len(attrs) == 1 else attrs[idx]
+            if do_assert == False:
+                status, _ = self.create("SAI_OBJECT_TYPE_" + obj.name + ":" + json.dumps(key), attr, do_assert)
+                statuses.append(status)
+                if status != "SAI_STATUS_SUCCESS":
+                    return "SAI_STATUS_FAILURE", statuses
+            else:
+                self.create("SAI_OBJECT_TYPE_" + obj.name + ":" + json.dumps(key), attr, do_assert)
+        return "SAI_STATUS_SUCCESS", statuses
+
+    def bulk_remove(self, obj, keys, do_assert=True):
+        # TODO: Provide proper implementation once Thrift bulk API is available
+        statuses = [None] * len(keys)
+        for key in keys:
+            if do_assert == False:
+                status, _ = self.remove("SAI_OBJECT_TYPE_" + obj.name + ":" + json.dumps(key), do_assert)
+                statuses.append(status)
+                if status != "SAI_STATUS_SUCCESS":
+                    return "SAI_STATUS_FAILURE", statuses
+            else:
+                self.remove("SAI_OBJECT_TYPE_" + obj.name + ":" + json.dumps(key), do_assert)
+        return "SAI_STATUS_SUCCESS", statuses
+
+    def bulk_set(self, obj, keys, attrs, do_assert=True):
+        # TODO: Provide proper implementation once Thrift bulk API is available
+        statuses = [None] * len(keys)
+        for idx, key in enumerate(keys):
+            attr = attrs[0] if len(attrs) == 1 else attrs[idx]
+            if do_assert == False:
+                status, _ = self.set("SAI_OBJECT_TYPE_" + obj.name + ":" + json.dumps(key), attr, do_assert)
+                statuses.append(status)
+                if status != "SAI_STATUS_SUCCESS":
+                    return "SAI_STATUS_FAILURE", statuses
+            else:
+                self.set("SAI_OBJECT_TYPE_" + obj.name + ":" + json.dumps(key), attr, do_assert)
+        return "SAI_STATUS_SUCCESS", statuses
