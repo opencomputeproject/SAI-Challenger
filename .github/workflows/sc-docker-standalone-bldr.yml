@@ -35,7 +35,7 @@ jobs:
     - name: Wait for SAI-C services to come up
       run: sleep 10s
     - name: Run tests
-      run: ./exec.sh --no-tty pytest --testbed=saivs_standalone -v -k "test_l2_basic"
+      run: ./exec.sh --no-tty pytest --testbed=saivs_standalone -v test_l2_basic.py -v test_vrf.py -v test_dc_t1.py
     - name: Run sairedis tests
       run: ./exec.sh --no-tty pytest --testbed=saivs_standalone -v -k "test_sairec"
     - name: Run unit tests
@@ -48,5 +48,4 @@ jobs:
     - name: Wait for SAI-C services to come up
       run: sleep 10s
     - name: Run thrift tests
-      run: ./exec.sh --no-tty -s thrift pytest --testbed=saivs_thrift_standalone -v test_l2_basic.py -v test_vrf.py
-
+      run: ./exec.sh --no-tty -s thrift pytest --testbed=saivs_thrift_standalone -v test_l2_basic.py -v test_vrf.py -v test_dc_t1.py
