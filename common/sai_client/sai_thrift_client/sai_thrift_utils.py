@@ -115,8 +115,7 @@ class ThriftConverter():
             return "oid"
         elif attr_name == 'SAI_FDB_FLUSH_ATTR_BV_ID':
             return "oid"
-        else:
-            return SaiMetadata[attr_name]
+        return SaiMetadata[attr_name]
 
     @staticmethod
     def sai_object_list(object_list):
@@ -126,8 +125,7 @@ class ThriftConverter():
         splitted = object_list.split(':', 1)
         count = int(splitted[0])
         idlist = [ ThriftConverter.object_id(item) for item in splitted[1].split(',') ]
-        return sai_thrift_object_list_t(count=count,
-                                        idlist=idlist)
+        return sai_thrift_object_list_t(count=count, idlist=idlist)
 
     @staticmethod
     def sai_u32_list(u32_list):
@@ -148,33 +146,35 @@ class ThriftConverter():
         if '.' in addr_str:
             family = SAI_IP_ADDR_FAMILY_IPV4
             addr = sai_thrift_ip_addr_t(ip4=addr_str)
-        if ':' in addr_str:
+        elif ':' in addr_str:
             family = SAI_IP_ADDR_FAMILY_IPV6
             addr = sai_thrift_ip_addr_t(ip6=addr_str)
-        ip_addr = sai_thrift_ip_address_t(addr_family=family, addr=addr)
+        else:
+            return None
 
-        return ip_addr
+        return sai_thrift_ip_address_t(addr_family=family, addr=addr)
 
     @staticmethod
     def sai_ipprefix(prefix_str):
         """
         "192.168.1.0/24" => sai_thrift_ip_prefix_t(ip='192.168.1.0', mask='255.255.255.0')
         """
-        addr_mask = prefix_str.split('/')
-        if len(addr_mask) != 2:
+        if '/' not in prefix_str:
             print("Invalid IP prefix format")
             return None
 
         if '.' in prefix_str:
             family = SAI_IP_ADDR_FAMILY_IPV4
-            addr = sai_thrift_ip_addr_t(ip4=addr_mask[0])
-            mask = ThriftConverter.num_to_dotted_quad(addr_mask[1])
-            mask = sai_thrift_ip_addr_t(ip4=mask)
-        if ':' in prefix_str:
+            ip = ipaddress.IPv4Network(prefix_str)
+            addr = sai_thrift_ip_addr_t(ip4=str(ip.network_address))
+            mask = sai_thrift_ip_addr_t(ip4=str(ip.netmask))
+        elif ':' in prefix_str:
             family = SAI_IP_ADDR_FAMILY_IPV6
             ip = ipaddress.IPv6Network(prefix_str)
             addr = sai_thrift_ip_addr_t(ip6=ip.network_address.exploded)
             mask = sai_thrift_ip_addr_t(ip6=ip.netmask.exploded)
+        else:
+            return None
 
         ip_prefix = sai_thrift_ip_prefix_t(
             addr_family=family, addr=addr, mask=mask)
@@ -254,34 +254,6 @@ class ThriftConverter():
         return zip_longest(*[iter(iterable)] * n, fillvalue=fillvalue)
 
     @staticmethod
-    def num_to_dotted_quad(address, ipv4=True):
-        """
-        Helper function to convert the ip address
-
-        Args:
-            address (str): IP address
-            ipv4 (bool): determines what IP version is handled
-
-        Returns:
-            str: formatted IP address
-        """
-        import socket
-        if ipv4 is True:
-            mask = (1 << 32) - (1 << 32 >> int(address))
-            return socket.inet_ntop(socket.AF_INET, struct.pack('>L', mask))
-
-        mask = (1 << 128) - (1 << 128 >> int(address))
-        i = 0
-        result = ''
-        for sign in str(hex(mask)[2:]):
-            if (i + 1) % 4 == 0:
-                result = result + sign + ':'
-            else:
-                result = result + sign
-            i += 1
-        return result[:-1]
-
-    @staticmethod
     def convert_to_sai_obj_type(obj_type):
         """
         SaiObjType.PORT        => SaiObjType.PORT
@@ -302,6 +274,7 @@ class ThriftConverter():
                 return None
         elif isinstance(obj_type, int):
             return SaiObjType(obj_type)
+        return None
 
     @staticmethod
     def convert_to_sai_status_str(status):
