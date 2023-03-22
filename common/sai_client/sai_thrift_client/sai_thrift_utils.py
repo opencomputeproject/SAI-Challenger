@@ -1,5 +1,6 @@
 import re
 from itertools import zip_longest
+import ipaddress
 from sai_thrift import sai_headers
 from sai_thrift.ttypes import *
 from sai_thrift import ttypes
@@ -25,6 +26,12 @@ class ThriftConverter():
             return {}
 
         key_t = getattr(ttypes, f'sai_thrift_{object_type}_t')
+        if "vr" in key:
+            key['vr_id'] = key['vr']
+            del key['vr']
+        if "dest" in key:
+            key['destination'] = key['dest']
+            del key['dest']
         return { object_type: key_t(**ThriftConverter.convert_key_values_to_thrift(object_type, key)) }
 
     def convert_attributes_from_thrift(attributes):
@@ -76,6 +83,8 @@ class ThriftConverter():
             return ThriftConverter.sai_ipprefix(value)
         if value_type in [ 'objlist' ]:
             return ThriftConverter.sai_object_list(value)
+        if value_type in [ 'u32list' ]:
+            return ThriftConverter.sai_u32_list(value)
 
         # TODO: add more string->thrift converters here
 
@@ -121,6 +130,16 @@ class ThriftConverter():
                                         idlist=idlist)
 
     @staticmethod
+    def sai_u32_list(u32_list):
+        """
+        "4:1,2,3,4" => sai_thrift_u32_list_t(count=4, idlist=[1,2,3,4])
+        """
+        splitted = u32_list.split(':', 1)
+        count = int(splitted[0])
+        u32list = [ int(item) for item in splitted[1].split(',') ]
+        return sai_thrift_u32_list_t(count=count, uint32list=u32list)
+
+    @staticmethod
     def sai_ipaddress(addr_str):
         """
         "192.168.0.1" => sai_thrift_ip_address_t('192.168.0.1'...)
@@ -153,9 +172,9 @@ class ThriftConverter():
             mask = sai_thrift_ip_addr_t(ip4=mask)
         if ':' in prefix_str:
             family = SAI_IP_ADDR_FAMILY_IPV6
-            addr = sai_thrift_ip_addr_t(ip6=addr_mask[0])
-            mask = ThriftConverter.num_to_dotted_quad(int(addr_mask[1]), ipv4=False)
-            mask = sai_thrift_ip_addr_t(ip6=mask)
+            ip = ipaddress.IPv6Network(prefix_str)
+            addr = sai_thrift_ip_addr_t(ip6=ip.network_address.exploded)
+            mask = sai_thrift_ip_addr_t(ip6=ip.netmask.exploded)
 
         ip_prefix = sai_thrift_ip_prefix_t(
             addr_family=family, addr=addr, mask=mask)
