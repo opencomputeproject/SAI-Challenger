@@ -1,8 +1,9 @@
-import ipaddress
 import pytest
-import time
-from saichallenger.common.sai_data import SaiObjType
-from ptf.testutils import simple_tcp_packet, send_packet, verify_packets, verify_packet, verify_no_packet_any, verify_no_packet, verify_any_packet_any_port
+from ptf.testutils import simple_tcp_packet, send_packet, verify_packets
+
+@pytest.fixture(scope="module", autouse=True)
+def discovery(npu):
+     npu.objects_discovery()
 
 def test_l2_trunk_to_trunk_vlan_dd(npu, dataplane):
     """
@@ -18,70 +19,42 @@ def test_l2_trunk_to_trunk_vlan_dd(npu, dataplane):
     vlan_id = "10"
     macs = ['00:11:11:11:11:11', '00:22:22:22:22:22']
 
-    create_vlan = {
-                "name": "vlan_10",
-                "op": "create",
-                "type": "SAI_OBJECT_TYPE_VLAN",
-                "attributes": [
-                    "SAI_VLAN_ATTR_VLAN_ID", vlan_id
-                ]
-    }
-    vlan_oid = npu.command_processor.process_command(create_vlan)
-    create_vlan_member1 = {
-                "name": "vlan_member1",
-                "op": "create",
-                "type": "SAI_OBJECT_TYPE_VLAN_MEMBER",
-                "attributes": [
-                    "SAI_VLAN_MEMBER_ATTR_VLAN_ID", vlan_oid,
-                    "SAI_VLAN_MEMBER_ATTR_BRIDGE_PORT_ID", npu.dot1q_bp_oids[0],
-                    "SAI_VLAN_MEMBER_ATTR_VLAN_TAGGING_MODE", "SAI_VLAN_TAGGING_MODE_TAGGED"
-                ]
-    }
-    npu.command_processor.process_command(create_vlan_member1)
-    create_vlan_member2 = {
-                "name": "vlan_member2",
-                "op": "create",
-                "type": "SAI_OBJECT_TYPE_VLAN_MEMBER",
-                "attributes": [
-                    "SAI_VLAN_MEMBER_ATTR_VLAN_ID", vlan_oid,
-                    "SAI_VLAN_MEMBER_ATTR_BRIDGE_PORT_ID", npu.dot1q_bp_oids[1],
-                    "SAI_VLAN_MEMBER_ATTR_VLAN_TAGGING_MODE", "SAI_VLAN_TAGGING_MODE_TAGGED"
-                ]
-    }
-    npu.command_processor.process_command(create_vlan_member2)
-    create_fdb1 = {
-                "name": "fdb1",
-                "op": "create",
-                "type": "SAI_OBJECT_TYPE_FDB_ENTRY",
-                "key": {
-                    "bv_id": vlan_oid,
-                    "mac_address": macs[0],
-                    "switch_id" : npu.switch_oid
-                },
-                "attributes": [
-                    "SAI_FDB_ENTRY_ATTR_TYPE", "SAI_FDB_ENTRY_TYPE_STATIC",
-                    "SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID", npu.dot1q_bp_oids[0],
-                    "SAI_FDB_ENTRY_ATTR_PACKET_ACTION", "SAI_PACKET_ACTION_FORWARD"
-                ]
-    }
-    npu.command_processor.process_command(create_fdb1)
-    create_fdb2 = {
-                "name": "fdb2",
-                "op": "create",
-                "type": "SAI_OBJECT_TYPE_FDB_ENTRY",
-                "key": {
-                    "bv_id": vlan_oid,
-                    "mac_address": macs[1],
-                    "switch_id" : npu.switch_oid
-                },
-                "attributes": [
-                    "SAI_FDB_ENTRY_ATTR_TYPE", "SAI_FDB_ENTRY_TYPE_STATIC",
-                    "SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID", npu.dot1q_bp_oids[1],
-                    "SAI_FDB_ENTRY_ATTR_PACKET_ACTION", "SAI_PACKET_ACTION_FORWARD"
-                ]
-    }
-    npu.command_processor.process_command(create_fdb2)
+    cmds = [{
+        "name": "vlan_10",
+        "op": "create",
+        "type": "SAI_OBJECT_TYPE_VLAN",
+        "attributes": [
+            "SAI_VLAN_ATTR_VLAN_ID", vlan_id
+        ]
+    }]
 
+    for idx, mac in enumerate(macs):
+        cmds.append({
+            "name": f"vlan_member_{idx}",
+            "op": "create",
+            "type": "SAI_OBJECT_TYPE_VLAN_MEMBER",
+            "attributes": [
+                "SAI_VLAN_MEMBER_ATTR_VLAN_ID", "$vlan_10",
+                "SAI_VLAN_MEMBER_ATTR_BRIDGE_PORT_ID", f"$BRIDGE_PORT_{idx}",
+                "SAI_VLAN_MEMBER_ATTR_VLAN_TAGGING_MODE", "SAI_VLAN_TAGGING_MODE_TAGGED"
+            ]
+        })
+        cmds.append({
+            "name": f"fdb_{idx}",
+            "op": "create",
+            "type": "SAI_OBJECT_TYPE_FDB_ENTRY",
+            "key": {
+                "bv_id": "$vlan_10",
+                "mac_address": mac,
+                "switch_id" : "$SWITCH_ID"
+            },
+            "attributes": [
+                "SAI_FDB_ENTRY_ATTR_TYPE", "SAI_FDB_ENTRY_TYPE_STATIC",
+                "SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID", f"$BRIDGE_PORT_{idx}",
+                "SAI_FDB_ENTRY_ATTR_PACKET_ACTION", "SAI_PACKET_ACTION_FORWARD"
+            ]
+        })
+    npu.process_commands(cmds)
     try:
         if npu.run_traffic:
             pkt = simple_tcp_packet(eth_dst=macs[1],
@@ -95,38 +68,4 @@ def test_l2_trunk_to_trunk_vlan_dd(npu, dataplane):
             send_packet(dataplane, 0, pkt)
             verify_packets(dataplane, pkt, [1])
     finally:
-        remove_fdb2 = {
-                "name": "fdb2",
-                "op": "remove",
-                "type": "SAI_OBJECT_TYPE_FDB_ENTRY"
-        }
-        res = npu.command_processor.process_command(remove_fdb2)
-        assert res == "SAI_STATUS_SUCCESS"
-        remove_fdb1 = {
-                "name": "fdb1",
-                "op": "remove",
-                "type": "SAI_OBJECT_TYPE_FDB_ENTRY"
-        }
-        res = npu.command_processor.process_command(remove_fdb1)
-        assert res == "SAI_STATUS_SUCCESS"
-        remove_vlan_member2 = {
-                "name": "vlan_member2",
-                "op": "remove",
-                "type": "SAI_OBJECT_TYPE_VLAN_MEMBER"
-        }
-        res = npu.command_processor.process_command(remove_vlan_member2)
-        assert res == "SAI_STATUS_SUCCESS"
-        remove_vlan_member1 = {
-                "name": "vlan_member1",
-                "op": "remove",
-                "type": "SAI_OBJECT_TYPE_VLAN_MEMBER"
-        }
-        res = npu.command_processor.process_command(remove_vlan_member1)
-        assert res == "SAI_STATUS_SUCCESS"
-        remove_vlan = {
-                "name": "vlan_10",
-                "op": "remove",
-                "type": "SAI_OBJECT_TYPE_VLAN"
-        }
-        res = npu.command_processor.process_command(remove_vlan)
-        assert res == "SAI_STATUS_SUCCESS"
+        npu.process_commands(cmds, cleanup=True)
