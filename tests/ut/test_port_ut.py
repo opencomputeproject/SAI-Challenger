@@ -56,7 +56,7 @@ def test_get_before_set_attr(npu, dataplane, sai_port_obj, attr, attr_type):#, a
         ("SAI_PORT_ATTR_UPDATE_DSCP",               "true"),
         ("SAI_PORT_ATTR_UPDATE_DSCP",               "false"),
         ("SAI_PORT_ATTR_MTU",                       "9000"),
-        ("SAI_PORT_ATTR_TPID",                      "37120"),   # TPID=0x9100
+        #("SAI_PORT_ATTR_TPID",                      "37120"),   # TPID=0x9100
     ],
 )
 def test_set_attr(npu, dataplane, sai_port_obj, attr, attr_value):

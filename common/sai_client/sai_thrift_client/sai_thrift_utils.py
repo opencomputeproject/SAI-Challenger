@@ -83,8 +83,8 @@ class ThriftConverter():
             return ThriftConverter.sai_ipprefix(value)
         if value_type in [ 'objlist' ]:
             return ThriftConverter.sai_object_list(value)
-        if value_type in [ 'u32list' ]:
-            return ThriftConverter.sai_u32_list(value)
+        if value_type in [ 'u8list', 'u16list', 'u32list', 's8list', 's16list', 's32list' ]:
+            return ThriftConverter.sai_int_list(value_type, value)
 
         # TODO: add more string->thrift converters here
 
@@ -128,14 +128,15 @@ class ThriftConverter():
         return sai_thrift_object_list_t(count=count, idlist=idlist)
 
     @staticmethod
-    def sai_u32_list(u32_list):
+    def sai_int_list(value_type, value_data):
         """
-        "4:1,2,3,4" => sai_thrift_u32_list_t(count=4, idlist=[1,2,3,4])
+        "4:1,2,3,4" => sai_thrift_{type}_list_t(count=4, {type}list=[1,2,3,4])
         """
-        splitted = u32_list.split(':', 1)
+        splitted = value_data.split(':', 1)
         count = int(splitted[0])
-        u32list = [ int(item) for item in splitted[1].split(',') ]
-        return sai_thrift_u32_list_t(count=count, uint32list=u32list)
+        thrift_list = [ int(item) for item in splitted[1].split(',') ]
+        sai_thrift_class = getattr(ttypes, 'sai_thrift_{}_list_t'.format(value_type.rstrip("list")))
+        return sai_thrift_class(count, thrift_list)
 
     @staticmethod
     def sai_ipaddress(addr_str):
@@ -227,6 +228,8 @@ class ThriftConverter():
             return ThriftConverter.from_sai_object_list(value)
         elif value_type == "oid":
             return "oid:" + hex(value)
+        elif value_type in [ 'u8list', 'u16list', 'u32list', 's8list', 's16list', 's32list' ]:
+            return ThriftConverter.from_sai_int_list(value_type, value)
 
         # TODO: Add more thrift->string convertes here
 
@@ -240,6 +243,19 @@ class ThriftConverter():
         result = f'{object_list.count}:'
         for ii in range(object_list.count):
             result += "oid:" + hex(object_list.idlist[ii])
+            result += ","
+        return result[:-1]
+
+    @staticmethod
+    def from_sai_int_list(value_type, object_list):
+        """
+        sai_thrift_{type}_list_t(count=2, {type}list=[1,2]) => "2:1,2"
+        """
+        prefix = "uint" if value_type.startswith("u") else "int"
+        listvar = getattr(object_list, prefix + value_type[1:])
+        result = f'{object_list.count}:'
+        for ii in range(object_list.count):
+            result += str(listvar[ii])
             result += ","
         return result[:-1]
 
