@@ -200,6 +200,9 @@ class SaiData:
         return cntrs_dict
 
     def value(self):
+        if self.to_json()[1].lower() in ["true", "false"]:
+            # Thrift to Redis compatibility
+            return self.to_json()[1].lower()
         return self.to_json()[1]
 
     def uint32(self):
