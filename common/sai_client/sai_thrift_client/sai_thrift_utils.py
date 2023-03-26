@@ -87,7 +87,6 @@ class ThriftConverter():
             return ThriftConverter.sai_int_list(value_type, value)
 
         # TODO: add more string->thrift converters here
-
         raise NotImplementedError
 
     @staticmethod
@@ -224,16 +223,23 @@ class ThriftConverter():
         """
         sai_thrift_ip_address_t('192.168.0.1'...), "ipaddr" => "192.168.0.1"
         """
-        if value_type in [ 'objlist' ]:
+        if value_type in [ 's8', 'u8', 's16', 'u16',
+                           's32', 'u32', 's64', 'u64',
+                           'ptr', 'mac', 'ipv4', 'ipv6',
+                           'chardata' ]:
+            return str(value)
+        elif value_type in [ 'booldata' ]:
+            return str(value).lower()
+        elif value_type in [ 'objlist' ]:
             return ThriftConverter.from_sai_object_list(value)
         elif value_type == "oid":
             return "oid:" + hex(value)
-        elif value_type in [ 'u8list', 'u16list', 'u32list', 's8list', 's16list', 's32list' ]:
+        elif value_type in [ 'u8list', 'u16list', 'u32list',
+                             's8list', 's16list', 's32list' ]:
             return ThriftConverter.from_sai_int_list(value_type, value)
 
         # TODO: Add more thrift->string convertes here
-
-        return str(value)
+        raise NotImplementedError
 
     @staticmethod
     def from_sai_object_list(object_list):
