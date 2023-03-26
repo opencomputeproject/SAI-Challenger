@@ -135,7 +135,7 @@ class ThriftConverter():
         splitted = value_data.split(':', 1)
         count = int(splitted[0])
         thrift_list = [ int(item) for item in splitted[1].split(',') ]
-        sai_thrift_class = getattr(ttypes, 'sai_thrift_{}_list_t'.format(value_type.rstrip("list")))
+        sai_thrift_class = getattr(ttypes, 'sai_thrift_{}_list_t'.format(value_type[:-4]))
         return sai_thrift_class(count, thrift_list)
 
     @staticmethod
