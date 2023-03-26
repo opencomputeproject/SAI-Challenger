@@ -46,7 +46,7 @@ class ThriftConverter():
                 continue
             result_attrs.append(name)
             result_attrs.append(ThriftConverter.convert_value_from_thrift(value, ThriftConverter.get_attribute_type(name)))
-
+        #print(f"====TK====res={result_attrs}")
         return result_attrs
 
 
@@ -264,7 +264,8 @@ class ThriftConverter():
         elif value_type in [ 'u8list', 'u16list', 'u32list',
                              's8list', 's16list', 's32list' ]:
             return ThriftConverter.from_sai_int_list(value_type, value)
-
+        elif value_type in [  'u32range' , 's32range', 'u16range' ]:
+            return ThriftConverter.from_sai_int_range(value_type, value)
         # TODO: Add more thrift->string convertes here
         raise NotImplementedError
 
@@ -291,6 +292,21 @@ class ThriftConverter():
             result += str(listvar[ii])
             result += ","
         return result[:-1]
+    
+    @staticmethod
+    def from_sai_int_range(value_type, object_list):
+        print(f"===TK777===value_type={value_type}, object_list={object_list}")
+        """
+        sai_thrift_{}_range_t(min=1, max=7) => {type}"1,7"
+        """
+        prefix = "uint" if value_type.startswith("u") else "int"
+        #listvar = getattr(object_list, prefix + value_type[1:])
+        #result = f'{object_list.count}:'
+        
+        #for ii in range(object_list.count):
+        #    result += str(listvar[ii])
+        #    result += ","
+        #return result[:-1]
 
 # AUXILARY
 
