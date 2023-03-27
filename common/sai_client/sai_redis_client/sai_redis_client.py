@@ -128,9 +128,9 @@ class SaiRedisClient(SaiClient):
         if type(obj) == SaiObjType:
             vid = self.alloc_vid(obj)
             obj = "SAI_OBJECT_TYPE_" + obj.name + ":" + vid
-        elif type(obj) == str and obj.startswith("SAI_OBJECT_TYPE_") and ":{" not in obj:
-                vid = self.alloc_vid(SaiObjType[obj.lstrip("SAI_OBJECT_TYPE_")])
-                obj = obj + ":" + vid
+        elif type(obj) == str and obj.startswith("SAI_OBJECT_TYPE_") and ":" not in obj:
+            vid = self.alloc_vid(SaiObjType[obj.replace("SAI_OBJECT_TYPE_", "")])
+            obj = obj + ":" + vid
         else:
             # NOTE: The sai_deserialize_route_entry() from sonic-sairedis does not tolerate
             # spaces in the route entry key:

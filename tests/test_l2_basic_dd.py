@@ -54,7 +54,7 @@ def test_l2_trunk_to_trunk_vlan_dd(npu, dataplane):
                 "SAI_FDB_ENTRY_ATTR_PACKET_ACTION", "SAI_PACKET_ACTION_FORWARD"
             ]
         })
-    npu.process_commands(cmds)
+    status = [*npu.process_commands(cmds)]
     try:
         if npu.run_traffic:
             pkt = simple_tcp_packet(eth_dst=macs[1],
@@ -68,4 +68,4 @@ def test_l2_trunk_to_trunk_vlan_dd(npu, dataplane):
             send_packet(dataplane, 0, pkt)
             verify_packets(dataplane, pkt, [1])
     finally:
-        npu.process_commands(cmds, cleanup=True)
+        status = [*npu.process_commands(cmds, cleanup=True)]
