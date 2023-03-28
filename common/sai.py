@@ -49,7 +49,7 @@ class CommandProcessor:
 
         if substituted_command['key'] is None:
             substituted_command['key'] = command.get(
-                "key",
+                "oid",
                 self.objects_registry.get(store_name, dict(oid=None))["oid"]
             )
 
@@ -175,8 +175,21 @@ class Sai():
         self.create_alias('SWITCH_ID', 'SAI_OBJECT_TYPE_SWITCH', value)
         self._switch_oid = value
 
-    def process_commands(self, commands):
-        yield from map(self.command_processor.process_command, commands)
+    def process_commands(self, commands, cleanup=False):
+        if cleanup:
+            cleanup_commands = []
+            for command in reversed(commands):
+                if command['op'] == 'create':
+                    cleanup_commands.append(
+                        {
+                            'name': command.get('name'),
+                            'key': command.get('key'),
+                            'op': 'remove'
+                        }
+                    )
+            yield from map(self.command_processor.process_command, cleanup_commands)
+        else:
+            yield from map(self.command_processor.process_command, commands)
 
     def apply_rec(self, fname):
         dut = self.cfg.get("dut", None)
