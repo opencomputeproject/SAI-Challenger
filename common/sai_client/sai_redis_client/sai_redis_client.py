@@ -98,6 +98,9 @@ class SaiRedisClient(SaiClient):
         # Remove spaces from the key string.
         # Required by sai_serialize_route_entry() in sairedis.
         obj = obj.replace(' ', '')
+        if "bv_id" in obj:
+            obj = obj.replace("bv_id", "bvid")
+            obj = obj.replace("mac_address", "mac")
 
         self.r.lpush("ASIC_STATE_KEY_VALUE_OP_QUEUE", obj, attrs, op)
         self.r.publish("ASIC_STATE_CHANNEL@1", "G")
@@ -125,6 +128,9 @@ class SaiRedisClient(SaiClient):
         if type(obj) == SaiObjType:
             vid = self.alloc_vid(obj)
             obj = "SAI_OBJECT_TYPE_" + obj.name + ":" + vid
+        elif type(obj) == str and obj.startswith("SAI_OBJECT_TYPE_") and ":" not in obj:
+            vid = self.alloc_vid(SaiObjType[obj.replace("SAI_OBJECT_TYPE_", "")])
+            obj = obj + ":" + vid
         else:
             # NOTE: The sai_deserialize_route_entry() from sonic-sairedis does not tolerate
             # spaces in the route entry key:

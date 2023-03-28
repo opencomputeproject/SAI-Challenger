@@ -99,3 +99,5 @@ jobs:
     - name: Run unit tests
       run: ./exec.sh --no-tty -i client pytest --testbed=saivs_client_server -v -k \
            "test_acl_ut or test_bridge_ut or test_switch_ut or test_vrf_ut or test_port_ut.py"
+    - name: Run thift data-driven tests
+      run: ./exec.sh --no-tty -i client pytest --testbed=saivs_client_server -v test_l2_basic_dd.py

@@ -41,6 +41,8 @@ jobs:
     - name: Run unit tests
       run: ./exec.sh --no-tty pytest --testbed=saivs_standalone -v -k \
            "test_acl_ut or test_bridge_ut or test_switch_ut or test_vrf_ut or test_port_ut.py"
+    - name: Run data-driven tests
+      run: ./exec.sh --no-tty pytest --testbed=saivs_standalone -v test_l2_basic_dd.py
     - name: Build standalone docker image with SAI thrift
       run: ./build.sh -i standalone -s thrift
     - name: Start SAI-C in standalone mode with SAI thrift
@@ -49,3 +51,5 @@ jobs:
       run: sleep 10s
     - name: Run thrift tests
       run: ./exec.sh --no-tty -s thrift pytest --testbed=saivs_thrift_standalone -v test_l2_basic.py -v test_vrf.py -v test_dc_t1.py
+    - name: Run thift data-driven tests
+      run: ./exec.sh --no-tty -s thrift pytest --testbed=saivs_thrift_standalone -v test_l2_basic_dd.py
