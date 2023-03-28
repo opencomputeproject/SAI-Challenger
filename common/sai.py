@@ -132,14 +132,7 @@ class CommandProcessor:
                 }
             return obj
 
-        if obj_id is None:
-            # We need this to be able to remove/set/get by entry name
-            assert store_name is not None, "Entry name is undefined"
-            entry = self.objects_registry.get(store_name)
-            assert entry is not None, f"Entry {store_name} does not exist"
-            obj_id = entry["oid"] if entry["oid"] else entry["type"] + ":" + entry["key"]
-
-        if operation == "remove":
+        elif operation == "remove":
             try:
                 return self.sai.remove(obj_id)
             except Exception:
