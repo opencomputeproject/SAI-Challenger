@@ -46,7 +46,7 @@ class ThriftConverter():
                 continue
             result_attrs.append(name)
             result_attrs.append(ThriftConverter.convert_value_from_thrift(value, ThriftConverter.get_attribute_type(name)))
-        #print(f"====TK====res={result_attrs}")
+
         return result_attrs
 
 
@@ -117,8 +117,6 @@ class ThriftConverter():
         elif attr_name == 'SAI_FDB_FLUSH_ATTR_BRIDGE_PORT_ID':
             return "oid"
         elif attr_name == 'SAI_FDB_FLUSH_ATTR_BV_ID':
-            return "oid"
-        elif attr_name == 'SAI_PORT_ATTR_FABRIC_ISOLATE':
             return "oid"
         return SaiMetadata[attr_name]
 
@@ -215,7 +213,7 @@ class ThriftConverter():
         "16"       => 16
         "oid:0x10" => 16
         """
-        if oid == None:
+        if oid == None or oid == 'null':
             return 0
         if isinstance(oid, str) and oid.startswith('oid:0x'):
             return int(oid[4:], 16)
@@ -264,8 +262,7 @@ class ThriftConverter():
         elif value_type in [ 'u8list', 'u16list', 'u32list',
                              's8list', 's16list', 's32list' ]:
             return ThriftConverter.from_sai_int_list(value_type, value)
-        elif value_type in [  'u32range' , 's32range', 'u16range' ]:
-            return ThriftConverter.from_sai_int_range(value_type, value)
+
         # TODO: Add more thrift->string convertes here
         raise NotImplementedError
 
@@ -274,6 +271,8 @@ class ThriftConverter():
         """
         sai_thrift_object_list_t(count=2, idlist=[1,2]) => "2:oid:0x1,oid:0x2"
         """
+        if object_list.count == 0:
+            return '0:null'
         result = f'{object_list.count}:'
         for ii in range(object_list.count):
             result += "oid:" + hex(object_list.idlist[ii])
@@ -292,21 +291,6 @@ class ThriftConverter():
             result += str(listvar[ii])
             result += ","
         return result[:-1]
-    
-    @staticmethod
-    def from_sai_int_range(value_type, object_list):
-        print(f"===TK777===value_type={value_type}, object_list={object_list}")
-        """
-        sai_thrift_{}_range_t(min=1, max=7) => {type}"1,7"
-        """
-        prefix = "uint" if value_type.startswith("u") else "int"
-        #listvar = getattr(object_list, prefix + value_type[1:])
-        #result = f'{object_list.count}:'
-        
-        #for ii in range(object_list.count):
-        #    result += str(listvar[ii])
-        #    result += ","
-        #return result[:-1]
 
 # AUXILARY
 
