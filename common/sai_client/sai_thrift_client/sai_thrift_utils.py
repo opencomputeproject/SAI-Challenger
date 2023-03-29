@@ -1,6 +1,7 @@
 import re
 from itertools import zip_longest
 import ipaddress
+import json
 from sai_thrift import sai_headers
 from sai_thrift.ttypes import *
 from sai_thrift import ttypes
@@ -85,7 +86,10 @@ class ThriftConverter():
             return ThriftConverter.sai_object_list(value)
         if value_type in [ 'u8list', 'u16list', 'u32list', 's8list', 's16list', 's32list' ]:
             return ThriftConverter.sai_int_list(value_type, value)
-
+        if value_type in [ 'u32range' , 's32range', 'u16range' ]:
+            return ThriftConverter.sai_int_range(value_type, value)
+        if value_type in [ 'maplist' ]:
+            return ThriftConverter.sai_map_list(value)
         # TODO: add more string->thrift converters here
         raise NotImplementedError
 
@@ -114,6 +118,8 @@ class ThriftConverter():
             return "oid"
         elif attr_name == 'SAI_FDB_FLUSH_ATTR_BV_ID':
             return "oid"
+        elif attr_name == 'SAI_PORT_ATTR_FABRIC_ISOLATE':
+            return "oid"
         return SaiMetadata[attr_name]
 
     @staticmethod
@@ -136,6 +142,27 @@ class ThriftConverter():
         thrift_list = [ int(item) for item in splitted[1].split(',') ]
         sai_thrift_class = getattr(ttypes, 'sai_thrift_{}_list_t'.format(value_type[:-4]))
         return sai_thrift_class(count, thrift_list)
+
+    @staticmethod
+    def sai_int_range(value_type, range):
+        """
+        "1,7" => sai_thrift_{}_range_t(min=1, max=7)
+        """
+        splitted = range.split(',')
+        sai_thrift_class = getattr(ttypes, 'sai_thrift_{}_range_t'.format(value_type[:-5]))
+        return sai_thrift_class(min=splitted[0], max=splitted[1])
+
+    @staticmethod
+    def sai_map_list(value):
+        """
+        {"count":1,"list":[{"key":0,"value":0}]} =>  sai_thrift_map_list_t(count=1, maplist=[{"key":0,"value":0}])
+        """
+        thrift_list = []
+        val = json.loads(value)
+        cnt = val["count"]
+        thrift_list = val["list"]
+        prio_to_pg = sai_thrift_map_t(thrift_list)
+        map_list = sai_thrift_map_list_t(maplist=[prio_to_pg], count=cnt)
 
     @staticmethod
     def sai_ipaddress(addr_str):
