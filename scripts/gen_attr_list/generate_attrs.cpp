@@ -160,13 +160,11 @@ nlohmann::json attribute(const sai_object_type_info_t *obj_type_info)
 nlohmann::json enums(const sai_object_type_info_t *obj_type_info)
 {
     nlohmann::json j;
-    auto pname = (*obj_type_info).enummetadata->valuesnames;
-    auto pvalue = (*obj_type_info).enummetadata->values;
-    while (*pname)
+    for (size_t index = 0; index < obj_type_info->enummetadata->valuescount; index++)
     {
-        j[*pname] = *pvalue;
-        pname++;
-        pvalue++;
+        auto name = obj_type_info->enummetadata->valuesnames[index];
+        auto value = obj_type_info->enummetadata->values[index];
+        j[name] = value;
     }
 
     return j;
@@ -175,15 +173,20 @@ nlohmann::json enums(const sai_object_type_info_t *obj_type_info)
 int main()
 {
     nlohmann::json json;
+    nlohmann::json enum_values;
     const sai_object_type_info_t *const *obj_type_info = sai_metadata_all_object_type_infos;
     std::string enum_list;
     while (*(++obj_type_info))
     {
+        if ((*obj_type_info)->enummetadata->valuescount)
+        {
+            enum_values = enums(*obj_type_info);
+        }
         json.push_back(nlohmann::json{
             { "name", (*obj_type_info)->objecttypename },
             { "description", description((*obj_type_info)->objecttypename) },
             { "attributes", attribute(*obj_type_info) },
-            { "enums", enums(*obj_type_info) } });
+            { "values",  enum_values } });
         enum_list.clear();
     }
     std::cout << json.dump() << std::endl;
