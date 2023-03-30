@@ -118,8 +118,6 @@ class ThriftConverter():
             return "oid"
         elif attr_name == 'SAI_FDB_FLUSH_ATTR_BV_ID':
             return "oid"
-        elif attr_name == 'SAI_PORT_ATTR_FABRIC_ISOLATE':
-            return "oid"
         return SaiMetadata[attr_name]
 
     @staticmethod
@@ -215,7 +213,7 @@ class ThriftConverter():
         "16"       => 16
         "oid:0x10" => 16
         """
-        if oid == None:
+        if oid == None or oid == 'null':
             return 0
         if isinstance(oid, str) and oid.startswith('oid:0x'):
             return int(oid[4:], 16)
@@ -273,6 +271,8 @@ class ThriftConverter():
         """
         sai_thrift_object_list_t(count=2, idlist=[1,2]) => "2:oid:0x1,oid:0x2"
         """
+        if object_list.count == 0:
+            return '0:null'
         result = f'{object_list.count}:'
         for ii in range(object_list.count):
             result += "oid:" + hex(object_list.idlist[ii])
