@@ -157,16 +157,34 @@ nlohmann::json attribute(const sai_object_type_info_t *obj_type_info)
     return obj_info;
 }
 
+nlohmann::json enums(const sai_object_type_info_t *obj_type_info)
+{
+    nlohmann::json j;
+    auto pname = (*obj_type_info).enummetadata->valuesnames;
+    auto pvalue = (*obj_type_info).enummetadata->values;
+    while (*pname)
+    {
+        j[*pname] = *pvalue;
+        pname++;
+        pvalue++;
+    }
+
+    return j;
+}
+
 int main()
 {
     nlohmann::json json;
     const sai_object_type_info_t *const *obj_type_info = sai_metadata_all_object_type_infos;
+    std::string enum_list;
     while (*(++obj_type_info))
     {
         json.push_back(nlohmann::json{
             { "name", (*obj_type_info)->objecttypename },
             { "description", description((*obj_type_info)->objecttypename) },
-            { "attributes", attribute(*obj_type_info) } });
+            { "attributes", attribute(*obj_type_info) },
+            { "enums", enums(*obj_type_info) } });
+        enum_list.clear();
     }
     std::cout << json.dump() << std::endl;
     return 0;

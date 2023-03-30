@@ -46,7 +46,9 @@ RUN cd /sai/gen_attr_list \
         && cmake .. \
         && make -j$(nproc) \
         && mkdir -p /etc/sai \
-        && ./attr_list_generator > /etc/sai/sai.json
+        && ./attr_list_generator > /etc/sai/sai.json.tmp \
+        && python -mjson.tool /etc/sai/sai.json.tmp > /etc/sai/sai.json \
+        && rm /etc/sai/sai.json.tmp
 
 # Setup supervisord
 COPY scripts/redis_start.sh   /usr/bin/redis_start.sh
