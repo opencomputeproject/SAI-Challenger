@@ -121,6 +121,19 @@ nlohmann::json attribute_properties_flags(const sai_attr_metadata_t *meta)
     return flags;
 }
 
+nlohmann::json enums(const sai_enum_metadata_t *meta)
+{
+    nlohmann::json j;
+    for (size_t index = 0; index < meta->valuescount; index++)
+    {
+        auto name = meta->valuesnames[index];
+        auto value = meta->values[index];
+        j[name] = value;
+    }
+
+    return j;
+}
+
 nlohmann::json attribute_properties(const sai_attr_metadata_t *meta)
 {
     nlohmann::json json{
@@ -140,6 +153,10 @@ nlohmann::json attribute_properties(const sai_attr_metadata_t *meta)
         }
         json["objects"] = j;
     }
+    if (meta->isenum || meta->isenumlist)
+    {
+        json["values"] = enums(meta->enummetadata);
+    }
 
     return json;
 }
@@ -149,45 +166,25 @@ nlohmann::json attribute(const sai_object_type_info_t *obj_type_info)
     nlohmann::json obj_info;
     for (size_t index = 0; index < obj_type_info->attrmetadatalength; index++)
     {
+        auto attr = obj_type_info->attrmetadata[index];
         obj_info.push_back(nlohmann::json{
-            { "name", obj_type_info->attrmetadata[index]->attridname },
-            { "properties", attribute_properties(obj_type_info->attrmetadata[index]) } });
+            { "name", attr->attridname },
+            { "properties", attribute_properties(attr) } });
     }
 
     return obj_info;
 }
 
-nlohmann::json enums(const sai_object_type_info_t *obj_type_info)
-{
-    nlohmann::json j;
-    for (size_t index = 0; index < obj_type_info->enummetadata->valuescount; index++)
-    {
-        auto name = obj_type_info->enummetadata->valuesnames[index];
-        auto value = obj_type_info->enummetadata->values[index];
-        j[name] = value;
-    }
-
-    return j;
-}
-
 int main()
 {
     nlohmann::json json;
-    nlohmann::json enum_values;
     const sai_object_type_info_t *const *obj_type_info = sai_metadata_all_object_type_infos;
-    std::string enum_list;
     while (*(++obj_type_info))
     {
-        if ((*obj_type_info)->enummetadata->valuescount)
-        {
-            enum_values = enums(*obj_type_info);
-        }
         json.push_back(nlohmann::json{
             { "name", (*obj_type_info)->objecttypename },
             { "description", description((*obj_type_info)->objecttypename) },
-            { "attributes", attribute(*obj_type_info) },
-            { "values",  enum_values } });
-        enum_list.clear();
+            { "attributes", attribute(*obj_type_info) } });
     }
     std::cout << json.dump() << std::endl;
     return 0;
