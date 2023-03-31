@@ -121,6 +121,19 @@ nlohmann::json attribute_properties_flags(const sai_attr_metadata_t *meta)
     return flags;
 }
 
+nlohmann::json enums(const sai_enum_metadata_t *meta)
+{
+    nlohmann::json j;
+    for (size_t index = 0; index < meta->valuescount; index++)
+    {
+        auto name = meta->valuesnames[index];
+        auto value = meta->values[index];
+        j[name] = value;
+    }
+
+    return j;
+}
+
 nlohmann::json attribute_properties(const sai_attr_metadata_t *meta)
 {
     nlohmann::json json{
@@ -140,6 +153,10 @@ nlohmann::json attribute_properties(const sai_attr_metadata_t *meta)
         }
         json["objects"] = j;
     }
+    if (meta->isenum || meta->isenumlist)
+    {
+        json["values"] = enums(meta->enummetadata);
+    }
 
     return json;
 }
@@ -149,9 +166,10 @@ nlohmann::json attribute(const sai_object_type_info_t *obj_type_info)
     nlohmann::json obj_info;
     for (size_t index = 0; index < obj_type_info->attrmetadatalength; index++)
     {
+        auto attr = obj_type_info->attrmetadata[index];
         obj_info.push_back(nlohmann::json{
-            { "name", obj_type_info->attrmetadata[index]->attridname },
-            { "properties", attribute_properties(obj_type_info->attrmetadata[index]) } });
+            { "name", attr->attridname },
+            { "properties", attribute_properties(attr) } });
     }
 
     return obj_info;
