@@ -160,6 +160,9 @@ class SaiThriftClient(SaiClient):
         if oid is not None:
             oid = ThriftConverter.object_id(oid)
 
+        if obj_type is None:
+            obj_type = self.get_object_type(oid)
+
         obj_type_name = self.get_object_type(oid, default=obj_type).name.lower()
         object_key = ThriftConverter.convert_key_to_thrift(obj_type_name, key)
         sai_thrift_function = getattr(sai_adapter, f'sai_thrift_{operation}_{obj_type_name}_attribute')
@@ -177,7 +180,7 @@ class SaiThriftClient(SaiClient):
                 status = ThriftConverter.convert_to_sai_status_str(thrift_attr_value)
             else:
                 status = ThriftConverter.convert_to_sai_status_str(sai_adapter.status)
-                result.extend(ThriftConverter.convert_attributes_from_thrift(thrift_attr_value))
+                result.extend(ThriftConverter.convert_attributes_from_thrift(thrift_attr_value, attr, obj_type))
 
         return status, result
 
