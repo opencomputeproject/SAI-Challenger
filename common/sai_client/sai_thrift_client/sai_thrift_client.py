@@ -21,6 +21,12 @@ class SaiThriftClient(SaiClient):
         self.thrift_client = None
         self.sai_type_map = {}
         self.rec2vid = {}
+        # We need it here to make SAI CLI work for Thrift RPC
+        self.thrift_transport = TSocket.TSocket(self.config['ip'], self.config['port'])
+        self.thrift_transport = TTransport.TBufferedTransport(self.thrift_transport)
+        protocol = TBinaryProtocol.TBinaryProtocol(self.thrift_transport)
+        self.thrift_transport.open()
+        self.thrift_client = sai_rpc.Client(protocol)
 
     def __del__(self):
         if self.thrift_transport:
@@ -120,6 +126,9 @@ class SaiThriftClient(SaiClient):
             except Exception as e:
                 raise Exception
         return SaiObjType(0)
+
+    def vid_to_type(self, vid):
+        return "SAI_OBJECT_TYPE_" + self.get_object_type(vid).name
 
     def _operate(self, operation, attrs=(), oid=None, obj_type=None, key=None):
         if oid is not None and key is not None:
@@ -235,3 +244,6 @@ class SaiThriftClient(SaiClient):
             else:
                 self.set("SAI_OBJECT_TYPE_" + obj.name + ":" + json.dumps(key), attr, do_assert)
         return "SAI_STATUS_SUCCESS", statuses
+
+    def get_object_key(self, obj_type=None):
+        return dict()
