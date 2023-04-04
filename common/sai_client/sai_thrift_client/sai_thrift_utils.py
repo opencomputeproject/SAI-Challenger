@@ -90,8 +90,9 @@ class ThriftConverter():
             return ThriftConverter.sai_int_range(value_type, value)
         if value_type in [ 'maplist' ]:
             return ThriftConverter.sai_map_list(value)
+
         # TODO: add more string->thrift converters here
-        raise NotImplementedError
+        raise NotImplementedError(f"{value_type}, {value}")
 
     @staticmethod
     def convert_key_values_to_thrift(object_type, key):
@@ -155,19 +156,17 @@ class ThriftConverter():
         """
         {"count":1,"list":[{"key":0,"value":0}]} =>  sai_thrift_map_list_t(count=1, maplist=[{"key":0,"value":0}])
         """
-        thrift_list = []
         val = json.loads(value)
-        cnt = val["count"]
-        thrift_list = val["list"]
-        prio_to_pg = sai_thrift_map_t(thrift_list)
-        map_list = sai_thrift_map_list_t(maplist=[prio_to_pg], count=cnt)
+        maplist = []
+        for entry in val["list"]:
+            maplist.append(sai_thrift_map_t(key=entry["key"], value=entry["value"]))
+        return sai_thrift_map_list_t(maplist=maplist, count=val["count"])
 
     @staticmethod
     def sai_ipaddress(addr_str):
         """
         "192.168.0.1" => sai_thrift_ip_address_t('192.168.0.1'...)
         """
-
         if '.' in addr_str:
             family = SAI_IP_ADDR_FAMILY_IPV4
             addr = sai_thrift_ip_addr_t(ip4=addr_str)
@@ -262,9 +261,13 @@ class ThriftConverter():
         elif value_type in [ 'u8list', 'u16list', 'u32list',
                              's8list', 's16list', 's32list' ]:
             return ThriftConverter.from_sai_int_list(value_type, value)
+        elif value_type in [ 'u32range' , 's32range', 'u16range' ]:
+            return f"{value.min},{value.max}"
+        elif value_type in [ 'maplist' ]:
+            raise NotImplementedError(f"{value_type}, {value}")
 
         # TODO: Add more thrift->string convertes here
-        raise NotImplementedError
+        raise NotImplementedError(f"{value_type}, {value}")
 
     @staticmethod
     def from_sai_object_list(object_list):
