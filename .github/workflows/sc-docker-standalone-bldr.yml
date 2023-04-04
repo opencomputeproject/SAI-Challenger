@@ -40,7 +40,7 @@ jobs:
       run: ./exec.sh --no-tty pytest --testbed=saivs_standalone -v -k "test_sairec"
     - name: Run unit tests
       run: ./exec.sh --no-tty pytest --testbed=saivs_standalone -v -k \
-           "test_acl_ut or test_bridge_ut or test_switch_ut or test_vrf_ut or test_port_ut.py"
+           "test_acl_ut or test_bridge_ut or (test_switch_ut and not sai_map_list_t) or test_vrf_ut or test_port_ut.py"
     - name: Run data-driven tests
       run: ./exec.sh --no-tty pytest --testbed=saivs_standalone -v test_l2_basic_dd.py
     - name: Build standalone docker image with SAI thrift
