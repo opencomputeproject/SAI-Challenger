@@ -219,15 +219,15 @@ class Sai():
     def get(self, obj, attrs, do_assert=True):
         return self.sai_client.get(obj, attrs, do_assert)
 
-    # BULK (TODO remove do_assert, "oid:" and handle oid
-    def bulk_create(self, obj, keys, attrs, do_assert=True):
-        return self.sai_client.bulk_create(obj, keys, attrs, do_assert)
+    # BULK
+    def bulk_create(self, obj_type, keys, attrs, obj_count=0, do_assert=True):
+        return self.sai_client.bulk_create(obj_type, keys, attrs, obj_count, do_assert)
 
-    def bulk_remove(self, obj, keys, do_assert=True):
-        return self.sai_client.bulk_remove(obj, keys, do_assert)
+    def bulk_remove(self, obj_type, keys, do_assert=True):
+        return self.sai_client.bulk_remove(obj_type, keys, do_assert)
 
-    def bulk_set(self, obj, keys, attrs, do_assert=True):
-        return self.sai_client.bulk_set(obj, keys, attrs, do_assert)
+    def bulk_set(self, obj_type, keys, attrs, do_assert=True):
+        return self.sai_client.bulk_set(obj_type, keys, attrs, do_assert)
 
     # Stats
     def get_stats(self, obj, attrs, do_assert=True):
