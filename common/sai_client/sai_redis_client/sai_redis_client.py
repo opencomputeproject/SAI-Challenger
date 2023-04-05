@@ -129,7 +129,7 @@ class SaiRedisClient(SaiClient):
             vid = self.alloc_vid(obj)
             obj = "SAI_OBJECT_TYPE_" + obj.name + ":" + vid
         elif type(obj) == str and obj.startswith("SAI_OBJECT_TYPE_") and ":" not in obj:
-            vid = self.alloc_vid(SaiObjType[obj.replace("SAI_OBJECT_TYPE_", "")])
+            vid = self.alloc_vid(obj)
             obj = obj + ":" + vid
         else:
             # NOTE: The sai_deserialize_route_entry() from sonic-sairedis does not tolerate
@@ -197,11 +197,11 @@ class SaiRedisClient(SaiClient):
 
         return status[2], data
 
-    def bulk_create(self, obj, keys, attrs, do_assert = True):
+    def bulk_create(self, obj_type, keys, attrs, obj_count=0, do_assert=True):
         '''
         Bulk create objects
         Parameters:
-            obj (SaiObjType): The type of objects to be created
+            obj_type (SaiObjType): The type of objects to be created
             keys (list): The list of objects to be created.
                     E.g.:
                     [
@@ -229,29 +229,37 @@ class SaiRedisClient(SaiClient):
             bulk_create(SaiObjType.FDB_ENTRY, [key1, key2, ...], [attrs])
             where, attrsN = [attr1, val1, attr2, val2, ...]
         Returns:
-            The tuple with two elements.
+            The tuple with three elements.
             The first element contains bulk create operation status:
                 * "SAI_STATUS_SUCCESS" on success when all objects were created;
                 * "SAI_STATUS_FAILURE" when any of the objects fails to create;
-            The second element contains the list of statuses of each individual object
+            The second element contains the list of keys or OIDs.
+            The third element contains the list of statuses of each individual object
             creation result.
         '''
-        assert (type(obj) == SaiObjType) or (type(obj) == str and obj.startswith("SAI_OBJECT_TYPE_"))
-        assert len(keys) == len(attrs) or len(attrs) == 1
+        assert (type(obj_type) == SaiObjType) or (type(obj_type) == str and obj_type.startswith("SAI_OBJECT_TYPE_"))
+        assert keys is None or len(keys) == len(attrs) or len(attrs) == 1
 
-        key = "SAI_OBJECT_TYPE_" + obj.name if type(obj) == SaiObjType else obj
-        key = key + ":" + str(len(keys))
+        entries_num = len(keys) if keys else obj_count
+        key = "SAI_OBJECT_TYPE_" + obj_type.name if type(obj_type) == SaiObjType else obj_type
+        key = key + ":" + str(entries_num)
 
         str_attr = ""
         if (len(attrs) == 1):
             str_attr = self.__bulk_attr_serialize(attrs[0])
 
+        out_keys = []
         values = []
-        for i, _ in enumerate(keys):
-            k = keys[i]
-            if type(k) != str:
-                k = json.dumps(k).replace(" ", "")
+        for i in range(entries_num):
+            if keys:
+                k = keys[i]
+                if type(k) != str:
+                    k = json.dumps(k).replace(" ", "")
+            else:
+                k = self.alloc_vid(obj_type)
+            out_keys.append(k)
             values.append(k)
+
             if (len(attrs) > 1):
                 str_attr = self.__bulk_attr_serialize(attrs[i])
             values.append(str_attr)
@@ -270,15 +278,15 @@ class SaiRedisClient(SaiClient):
         if do_assert:
             print(entry_status)
             assert status[2] == 'SAI_STATUS_SUCCESS'
-            return status[2], entry_status
+            return status[2], out_keys, entry_status
 
-        return status[2], entry_status
+        return status[2], out_keys, entry_status
 
-    def bulk_remove(self, obj, keys, do_assert = True):
+    def bulk_remove(self, obj_type, keys, do_assert = True):
         '''
         Bulk remove objects
         Parameters:
-            obj (SaiObjType): The type of objects to be removed
+            obj_type (SaiObjType): The type of objects to be removed
             keys (list): The list of objects to be removed.
                     E.g.:
                     [
@@ -301,9 +309,9 @@ class SaiRedisClient(SaiClient):
             The second element contains the list of statuses of each individual object
             removal result.
         '''
-        assert (type(obj) == SaiObjType) or (type(obj) == str and obj.startswith("SAI_OBJECT_TYPE_"))
+        assert (type(obj_type) == SaiObjType) or (type(obj_type) == str and obj_type.startswith("SAI_OBJECT_TYPE_"))
 
-        key = "SAI_OBJECT_TYPE_" + obj.name if type(obj) == SaiObjType else obj
+        key = "SAI_OBJECT_TYPE_" + obj_type.name if type(obj_type) == SaiObjType else obj_type
         key = key + ":" + str(len(keys))
 
         values = []
@@ -332,11 +340,11 @@ class SaiRedisClient(SaiClient):
 
         return status[2], entry_status
 
-    def bulk_set(self, obj, keys, attrs, do_assert = True):
+    def bulk_set(self, obj_type, keys, attrs, do_assert = True):
         '''
         Bulk set objects attribute
         Parameters:
-            obj (SaiObjType): The type of objects to be updated
+            obj_type (SaiObjType): The type of objects to be updated
             keys (list): The list of objects to be updated.
                     E.g.:
                     [
@@ -368,10 +376,10 @@ class SaiRedisClient(SaiClient):
             The second element contains the list of statuses of each individual object
             set attribute result.
         '''
-        assert (type(obj) == SaiObjType) or (type(obj) == str and obj.startswith("SAI_OBJECT_TYPE_"))
+        assert (type(obj_type) == SaiObjType) or (type(obj_type) == str and obj_type.startswith("SAI_OBJECT_TYPE_"))
         assert len(keys) == len(attrs) or len(attrs) == 1
 
-        key = "SAI_OBJECT_TYPE_" + obj.name if type(obj) == SaiObjType else obj
+        key = "SAI_OBJECT_TYPE_" + obj_type.name if type(obj_type) == SaiObjType else obj_type
         key = key + ":" + str(len(keys))
 
         str_attr = ""
@@ -668,6 +676,10 @@ class SaiRedisClient(SaiClient):
         return oid
 
     def alloc_vid(self, obj_type):
+        if type(obj_type) == str and obj_type.startswith("SAI_OBJECT_TYPE_"):
+            obj_type = SaiObjType[obj_type.replace("SAI_OBJECT_TYPE_", "")]
+        assert type(obj_type) == SaiObjType
+
         vid = None
         if obj_type == SaiObjType.SWITCH:
             if self.r.get("VIDCOUNTER") is None:

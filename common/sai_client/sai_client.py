@@ -59,13 +59,13 @@ class SaiClient:
         raise NotImplementedError
 
     # BULK
-    def bulk_create(self, obj, keys, attrs, do_assert=True):
+    def bulk_create(self, obj_type, keys, attrs, obj_count=0, do_assert=True):
         raise NotImplementedError
 
-    def bulk_remove(self, obj, keys, do_assert=True):
+    def bulk_remove(self, obj_type, keys, do_assert=True):
         raise NotImplementedError
 
-    def bulk_set(self, obj, keys, attrs, do_assert=True):
+    def bulk_set(self, obj_type, keys, attrs, do_assert=True):
         raise NotImplementedError
 
     # Host interface
