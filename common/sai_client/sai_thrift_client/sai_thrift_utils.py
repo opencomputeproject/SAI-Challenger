@@ -45,7 +45,7 @@ class ThriftConverter():
             if not name.startswith('SAI'):
                 continue
             result_attrs.append(name)
-            result_attrs.append(ThriftConverter.convert_value_from_thrift(value, ThriftConverter.get_attribute_type(name), attr_name, obj_type))
+            result_attrs.append(ThriftConverter.convert_value_from_thrift(value, name, obj_type))
 
         return result_attrs
 
@@ -138,7 +138,7 @@ class ThriftConverter():
         """
         splitted = value_data.split(':', 1)
         count = int(splitted[0])
-        thrift_list = [ int(item) for item in splitted[1].split(',') ]
+        thrift_list = [ ThriftConverter.get_enum_by_str(item) for item in splitted[1].split(',') ]
         sai_thrift_class = getattr(ttypes, 'sai_thrift_{}_list_t'.format(value_type[:-4]))
         return sai_thrift_class(count, thrift_list)
 
@@ -242,10 +242,11 @@ class ThriftConverter():
         assert True, "Should not get here"
 
     @staticmethod
-    def convert_value_from_thrift(value, value_type, attr_name=None, obj_type=None):
+    def convert_value_from_thrift(value, attr_name, obj_type=None):
         """
         sai_thrift_ip_address_t('192.168.0.1'...), "ipaddr" => "192.168.0.1"
         """
+        value_type = ThriftConverter.get_attribute_type(attr_name)
         if value_type in [ 's8', 'u8', 's16', 'u16',
                            'u32', 's64', 'u64',
                            'ptr', 'mac', 'ipv4', 'ipv6',
@@ -264,7 +265,7 @@ class ThriftConverter():
             return "oid:" + hex(value)
         elif value_type in [ 'u8list', 'u16list', 'u32list',
                              's8list', 's16list', 's32list' ]:
-            return ThriftConverter.from_sai_int_list(value_type, value)
+            return ThriftConverter.from_sai_int_list(value_type, value, attr_name, obj_type)
         elif value_type in [ 'u32range' , 's32range', 'u16range' ]:
             return f"{value.min},{value.max}"
         elif value_type in [ 'maplist' ]:
@@ -287,7 +288,7 @@ class ThriftConverter():
         return result[:-1]
 
     @staticmethod
-    def from_sai_int_list(value_type, object_list):
+    def from_sai_int_list(value_type, object_list, attr_name, obj_type):
         """
         sai_thrift_{type}_list_t(count=2, {type}list=[1,2]) => "2:1,2"
         """
@@ -295,6 +296,10 @@ class ThriftConverter():
         listvar = getattr(object_list, prefix + value_type[1:])
         result = f'{object_list.count}:'
         for ii in range(object_list.count):
+            if value_type == 's32list':
+                actual_value = ThriftConverter.get_str_by_enum(obj_type, attr_name, listvar[ii])
+                if actual_value != None:
+                    listvar[ii] = actual_value
             result += str(listvar[ii])
             result += ","
         return result[:-1]
@@ -367,8 +372,7 @@ class ThriftConverter():
             if obj_type not in item.values(): continue
             attrs = item.get('attributes')
             for attr in attrs:
-                attr_name = attr_name.upper()
-                if attr_name in attr.get('name'):
+                if attr_name == attr.get('name'):
                     return attr
         return None
 
@@ -379,9 +383,16 @@ class ThriftConverter():
         if meta is None:
             return None
         if meta['properties'].get('values') == None:
-            return str(enum_value)
+            return None
         for k, v in meta['properties']['values'].items():
             if v == enum_value:
                 return k
 
         return None
+
+    @staticmethod
+    def get_enum_by_str(value):
+        """Get enum member value by enum member name"""
+        if isinstance(value, str) and value.startswith('SAI_'):
+            return getattr(sai_headers, value, None)
+        return int(value)
