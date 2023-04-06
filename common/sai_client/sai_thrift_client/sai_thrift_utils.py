@@ -35,7 +35,7 @@ class ThriftConverter():
             del key['dest']
         return { object_type: key_t(**ThriftConverter.convert_key_values_to_thrift(object_type, key)) }
 
-    def convert_attributes_from_thrift(attributes, attr_name, obj_type):
+    def convert_attributes_from_thrift(attributes, obj_type):
         """
         TODO:
         [ ("SAI_SWITCH_ATTR_PORT_LIST", sai_thrift_object_list_t(...)), ("port_list", sai_thrift_object_list_t(...)) ] => [ "SAI_SWITCH_ATTR_PORT_LIST", "2:0x0,0x0" }
@@ -90,6 +90,8 @@ class ThriftConverter():
             return ThriftConverter.sai_int_range(value_type, value)
         if value_type in [ 'maplist' ]:
             return ThriftConverter.sai_map_list(value)
+        if value_type in [ 'aclcapability' ]:
+            return ThriftConverter.sai_acl_capability(value)
 
         # TODO: add more string->thrift converters here
         raise NotImplementedError(f"{value_type}, {value}")
@@ -161,6 +163,16 @@ class ThriftConverter():
         for entry in val["list"]:
             maplist.append(sai_thrift_map_t(key=entry["key"], value=entry["value"]))
         return sai_thrift_map_list_t(maplist=maplist, count=val["count"])
+
+    @staticmethod
+    def sai_acl_capability(value):
+        """
+        false:1:0 => sai_thrift_acl_capability_t(is_action_list_mandatory="false",
+            action_list=sai_thrift_s32_list_t(count=1, int32list=[0]))
+        """
+        splitted = value.split(':', 1)
+        thrift_list = ThriftConverter.sai_int_list('s32list', splitted[1])
+        return sai_thrift_acl_capability_t(is_action_list_mandatory=splitted[0], action_list=thrift_list)
 
     @staticmethod
     def sai_ipaddress(addr_str):
@@ -270,6 +282,8 @@ class ThriftConverter():
             return f"{value.min},{value.max}"
         elif value_type in [ 'maplist' ]:
             raise NotImplementedError(f"{value_type}, {value}")
+        elif value_type in [ 'aclcapability' ]:
+            return ThriftConverter.from_sai_acl_capability(value_type, value, attr_name, obj_type)
 
         # TODO: Add more thrift->string convertes here
         raise NotImplementedError(f"{value_type}, {value}")
@@ -288,7 +302,7 @@ class ThriftConverter():
         return result[:-1]
 
     @staticmethod
-    def from_sai_int_list(value_type, object_list, attr_name, obj_type):
+    def from_sai_int_list(value_type, object_list, attr_name=None, obj_type=None):
         """
         sai_thrift_{type}_list_t(count=2, {type}list=[1,2]) => "2:1,2"
         """
@@ -296,13 +310,23 @@ class ThriftConverter():
         listvar = getattr(object_list, prefix + value_type[1:])
         result = f'{object_list.count}:'
         for ii in range(object_list.count):
-            if value_type == 's32list':
+            if value_type == 's32list' and attr_name is not None:
                 actual_value = ThriftConverter.get_str_by_enum(obj_type, attr_name, listvar[ii])
                 if actual_value != None:
                     listvar[ii] = actual_value
             result += str(listvar[ii])
             result += ","
         return result[:-1]
+
+    @staticmethod
+    def from_sai_acl_capability(value_type, object_list, attr_name, obj_type):
+        """
+        sai_thrift_s32_list_t(count=1, int32list=[0, 1] => "false:1:0"
+        """
+        is_action_list_mandatory = getattr(object_list, 'is_action_list_mandatory')
+        action_list = getattr(object_list, 'action_list')
+        listvar = ThriftConverter.from_sai_int_list('s32list', action_list)
+        return f'{is_action_list_mandatory}'.lower() + ':' + listvar
 
 # AUXILARY
 
