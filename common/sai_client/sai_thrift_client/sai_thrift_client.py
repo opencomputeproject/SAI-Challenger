@@ -98,6 +98,8 @@ class SaiThriftClient(SaiClient):
                 assert False, f"get({obj}, {attrs}, True) operation failed!"
             if attrs[1].startswith("1:"):
                 return "SAI_STATUS_BUFFER_OVERFLOW", SaiData('["", "128"]')
+            if attrs[0].startswith('SAI_SWITCH_ATTR_ACL_STAGE'):
+                return "SAI_STATUS_BUFFER_OVERFLOW", SaiData('["", "false:512:0"]')
             return status, None
         try:
             result = json.dumps(raw_result)
@@ -180,7 +182,7 @@ class SaiThriftClient(SaiClient):
                 status = ThriftConverter.convert_to_sai_status_str(thrift_attr_value)
             else:
                 status = ThriftConverter.convert_to_sai_status_str(sai_adapter.status)
-                result.extend(ThriftConverter.convert_attributes_from_thrift(thrift_attr_value, attr, obj_type))
+                result.extend(ThriftConverter.convert_attributes_from_thrift(thrift_attr_value, obj_type))
 
         return status, result
 
