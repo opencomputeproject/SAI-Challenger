@@ -92,6 +92,8 @@ class ThriftConverter():
             return ThriftConverter.sai_map_list(value)
         if value_type in [ 'aclcapability' ]:
             return ThriftConverter.sai_acl_capability(value)
+        if value_type in [ 'aclresource' ]:
+            return ThriftConverter.sai_acl_resource(value)
 
         # TODO: add more string->thrift converters here
         raise NotImplementedError(f"{value_type}, {value}")
@@ -173,6 +175,19 @@ class ThriftConverter():
         splitted = value.split(':', 1)
         thrift_list = ThriftConverter.sai_int_list('s32list', splitted[1])
         return sai_thrift_acl_capability_t(is_action_list_mandatory=splitted[0], action_list=thrift_list)
+
+    @staticmethod
+    def sai_acl_resource(value):
+        """
+        """
+        val = json.loads(value)
+        resourcelist = []
+        for r in val["list"]:
+            avail_num = int(r["avail_num"]) if r["avail_num"].isdigit() else None
+            bind_point = ThriftConverter.get_enum_by_str(r["bind_point"])
+            stage = ThriftConverter.get_enum_by_str(r["stage"])
+            resourcelist.append(sai_thrift_acl_resource_t(avail_num=avail_num, bind_point=bind_point, stage=stage))
+        return sai_thrift_acl_resource_list_t(count=val["count"], resourcelist=resourcelist)
 
     @staticmethod
     def sai_ipaddress(addr_str):
@@ -284,6 +299,8 @@ class ThriftConverter():
             raise NotImplementedError(f"{value_type}, {value}")
         elif value_type in [ 'aclcapability' ]:
             return ThriftConverter.from_sai_acl_capability(value_type, value, attr_name, obj_type)
+        elif value_type in [ 'aclresource' ]:
+            return ThriftConverter.from_sai_acl_resource(value_type, value, attr_name, obj_type)
 
         # TODO: Add more thrift->string convertes here
         raise NotImplementedError(f"{value_type}, {value}")
@@ -327,6 +344,24 @@ class ThriftConverter():
         action_list = getattr(object_list, 'action_list')
         listvar = ThriftConverter.from_sai_int_list('s32list', action_list)
         return f'{is_action_list_mandatory}'.lower() + ':' + listvar
+
+    @staticmethod
+    def from_sai_acl_resource(value_type, resource, attr_name, obj_type):
+        """
+        """
+        result = {
+            "count": resource.count,
+            "list": []
+        }
+        for r in resource.resourcelist:
+            result["list"].append(
+                {
+                    "avail_num": str(r.avail_num),
+                    "bind_point": ThriftConverter.get_str_by_enum(obj_type, attr_name, r.bind_point),
+                    "stage": ThriftConverter.get_str_by_enum(obj_type, attr_name, r.stage)
+                }
+            )
+        return json.dumps(result).replace(" ", "")
 
 # AUXILARY
 
@@ -407,7 +442,7 @@ class ThriftConverter():
         if meta is None:
             return None
         if meta['properties'].get('values') == None:
-            return None
+            return str(enum_value)
         for k, v in meta['properties']['values'].items():
             if v == enum_value:
                 return k
@@ -419,4 +454,4 @@ class ThriftConverter():
         """Get enum member value by enum member name"""
         if isinstance(value, str) and value.startswith('SAI_'):
             return getattr(sai_headers, value, None)
-        return int(value)
+        return int(value) if value.isdigit() else None
