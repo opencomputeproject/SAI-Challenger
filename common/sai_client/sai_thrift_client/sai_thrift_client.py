@@ -96,10 +96,14 @@ class SaiThriftClient(SaiClient):
         if len(raw_result) == 0:
             if do_assert:
                 assert False, f"get({obj}, {attrs}, True) operation failed!"
+            if status != "SAI_STATUS_BUFFER_OVERFLOW":
+                return status, None
             if attrs[1].startswith("1:"):
-                return "SAI_STATUS_BUFFER_OVERFLOW", SaiData('["", "128"]')
+                return status, SaiData('["", "128"]')
             if attrs[0].startswith('SAI_SWITCH_ATTR_ACL_STAGE'):
-                return "SAI_STATUS_BUFFER_OVERFLOW", SaiData('["", "false:512:0"]')
+                return status, SaiData('["", "false:512:0"]')
+            if attrs[0].startswith("SAI_SWITCH_ATTR_AVAILABLE_ACL_"):
+                return status, SaiData(json.dumps([None, '{"count":64,"list":null}']))
             return status, None
         try:
             result = json.dumps(raw_result)
