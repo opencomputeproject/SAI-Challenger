@@ -74,26 +74,28 @@ class ThriftConverter():
             return 0 if value == '' else int(value)
         if value_type in [ 'booldata' ]:
             return value.lower() == "true" or value == "0"
-        if value_type in [ 'mac', 'ipv4', 'ipv6', 'chardata' ]:
+        elif value_type in [ 'mac', 'ipv4', 'ipv6', 'chardata' ]:
             return str(value)
-        if value_type in [ 'oid' ]:
+        elif value_type in [ 'oid' ]:
             return ThriftConverter.object_id(value)
-        if value_type in [ 'ipaddr' ]:
+        elif value_type in [ 'ipaddr' ]:
             return ThriftConverter.sai_ipaddress(value)
-        if value_type in [ 'ipprefix' ]:
+        elif value_type in [ 'ipprefix' ]:
             return ThriftConverter.sai_ipprefix(value)
-        if value_type in [ 'objlist' ]:
+        elif value_type in [ 'objlist' ]:
             return ThriftConverter.sai_object_list(value)
-        if value_type in [ 'u8list', 'u16list', 'u32list', 's8list', 's16list', 's32list' ]:
+        elif value_type in [ 'u8list', 'u16list', 'u32list', 's8list', 's16list', 's32list' ]:
             return ThriftConverter.sai_int_list(value_type, value)
-        if value_type in [ 'u32range' , 's32range', 'u16range' ]:
+        elif value_type in [ 'u32range' , 's32range', 'u16range' ]:
             return ThriftConverter.sai_int_range(value_type, value)
-        if value_type in [ 'maplist' ]:
+        elif value_type in [ 'maplist' ]:
             return ThriftConverter.sai_map_list(value)
-        if value_type in [ 'aclcapability' ]:
+        elif value_type in [ 'aclcapability' ]:
             return ThriftConverter.sai_acl_capability(value)
-        if value_type in [ 'aclresource' ]:
+        elif value_type in [ 'aclresource' ]:
             return ThriftConverter.sai_acl_resource(value)
+        elif value_type in [ 'sysportconfiglist' ]:
+            return ThriftConverter.sai_sysport_config_list(value)
 
         # TODO: add more string->thrift converters here
         raise NotImplementedError(f"{value_type}, {value}")
@@ -185,11 +187,33 @@ class ThriftConverter():
         val = json.loads(value)
         resourcelist = []
         for r in val["list"]:
-            avail_num = int(r["avail_num"]) if r["avail_num"].isdigit() else None
+            avail_num = ThriftConverter.str2digit(r["avail_num"])
             bind_point = ThriftConverter.get_enum_by_str(r["bind_point"])
             stage = ThriftConverter.get_enum_by_str(r["stage"])
             resourcelist.append(sai_thrift_acl_resource_t(avail_num=avail_num, bind_point=bind_point, stage=stage))
         return sai_thrift_acl_resource_list_t(count=val["count"], resourcelist=resourcelist)
+
+    @staticmethod
+    def str2digit(value):
+        return int(value) if value.isdigit() else None
+
+    @staticmethod
+    def sai_sysport_config_list(value):
+        """
+        {"count":1,"list":[{"port_id":"","attached_switch_id":"","attached_core_index":"","attached_core_port_index":"","speed":"","num_voq":""}]} =>
+            sai_thrift_system_port_config_list_t(count=1, [sai_thrift_system_port_config_t( port_id=None, ... )])
+        """
+        val = json.loads(value)
+        configlist = []
+        for r in val["list"]:
+            configlist.append(sai_thrift_system_port_config_t(
+                port_id=ThriftConverter.str2digit(r["port_id"]),
+                attached_switch_id=ThriftConverter.str2digit(r["attached_switch_id"]),
+                attached_core_index=ThriftConverter.str2digit(r["attached_core_index"]),
+                attached_core_port_index=ThriftConverter.str2digit(r["attached_core_port_index"]),
+                speed=ThriftConverter.str2digit(r["speed"]),
+                num_voq=ThriftConverter.str2digit(r["num_voq"])))
+        return sai_thrift_system_port_config_list_t(count=val["count"], configlist=configlist)
 
     @staticmethod
     def sai_ipaddress(addr_str):
@@ -303,6 +327,8 @@ class ThriftConverter():
             return ThriftConverter.from_sai_acl_capability(value_type, value, attr_name, obj_type)
         elif value_type in [ 'aclresource' ]:
             return ThriftConverter.from_sai_acl_resource(value_type, value, attr_name, obj_type)
+        elif value_type in [ 'sysportconfiglist' ]:
+            return ThriftConverter.from_sai_sysport_config_list(value_type, value, attr_name, obj_type)
 
         # TODO: Add more thrift->string convertes here
         raise NotImplementedError(f"{value_type}, {value}")
@@ -363,6 +389,29 @@ class ThriftConverter():
                     "avail_num": str(r.avail_num),
                     "bind_point": ThriftConverter.get_str_by_enum('SAI_OBJECT_TYPE_ACL_TABLE', 'SAI_ACL_TABLE_GROUP_ATTR_ACL_BIND_POINT_TYPE_LIST', r.bind_point),
                     "stage": ThriftConverter.get_str_by_enum('SAI_OBJECT_TYPE_ACL_TABLE', 'SAI_ACL_TABLE_ATTR_ACL_STAGE', r.stage)
+                }
+            )
+        return json.dumps(result).replace(" ", "")
+
+    @staticmethod
+    def from_sai_sysport_config_list(value_type, config, attr_name, obj_type):
+        """
+        sai_thrift_system_port_config_list_t(count=1, [sai_thrift_system_port_config_t( port_id=None, ... )]) =>
+          {"count":1,"list":[{"port_id":"","attached_switch_id":"","attached_core_index":"","attached_core_port_index":"","speed":"","num_voq":""}]}
+        """
+        result = {
+            "count": config.count,
+            "list": []
+        }
+        for r in config.configlist:
+            result["list"].append(
+                {
+                    "port_id": str(r.port_id),
+                    "attached_switch_id": str(r.attached_switch_id),
+                    "attached_core_index": str(r.attached_core_index),
+                    "attached_core_port_index": str(r.attached_core_port_index),
+                    "speed": str(r.speed),
+                    "num_voq": str(r.num_voq)
                 }
             )
         return json.dumps(result).replace(" ", "")
