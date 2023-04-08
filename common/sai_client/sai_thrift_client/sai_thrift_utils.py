@@ -179,6 +179,8 @@ class ThriftConverter():
     @staticmethod
     def sai_acl_resource(value):
         """
+        {"count":1,"list":[{"avail_num":"","bind_point":"","stage":""}]} =>
+            sai_thrift_acl_resource_t(count=1, [sai_thrift_acl_resource_t(stage=None, bind_point=None, avail_num=None)])
         """
         val = json.loads(value)
         resourcelist = []
@@ -342,12 +344,14 @@ class ThriftConverter():
         """
         is_action_list_mandatory = getattr(object_list, 'is_action_list_mandatory')
         action_list = getattr(object_list, 'action_list')
-        listvar = ThriftConverter.from_sai_int_list('s32list', action_list)
+        listvar = ThriftConverter.from_sai_int_list('s32list', action_list, 'SAI_ACL_TABLE_ATTR_ACL_ACTION_TYPE_LIST', 'SAI_OBJECT_TYPE_ACL_TABLE')
         return f'{is_action_list_mandatory}'.lower() + ':' + listvar
 
     @staticmethod
     def from_sai_acl_resource(value_type, resource, attr_name, obj_type):
         """
+        sai_thrift_acl_resource_t(count=1, [sai_thrift_acl_resource_t(stage=None, bind_point=None, avail_num=None)]) =>
+          {"count":1,"list":[{"avail_num":"","bind_point":"","stage":""}]}
         """
         result = {
             "count": resource.count,
@@ -357,8 +361,8 @@ class ThriftConverter():
             result["list"].append(
                 {
                     "avail_num": str(r.avail_num),
-                    "bind_point": ThriftConverter.get_str_by_enum(obj_type, attr_name, r.bind_point),
-                    "stage": ThriftConverter.get_str_by_enum(obj_type, attr_name, r.stage)
+                    "bind_point": ThriftConverter.get_str_by_enum('SAI_OBJECT_TYPE_ACL_TABLE', 'SAI_ACL_TABLE_GROUP_ATTR_ACL_BIND_POINT_TYPE_LIST', r.bind_point),
+                    "stage": ThriftConverter.get_str_by_enum('SAI_OBJECT_TYPE_ACL_TABLE', 'SAI_ACL_TABLE_ATTR_ACL_STAGE', r.stage)
                 }
             )
         return json.dumps(result).replace(" ", "")
