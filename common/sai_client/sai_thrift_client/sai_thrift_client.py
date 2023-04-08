@@ -104,6 +104,8 @@ class SaiThriftClient(SaiClient):
                 return status, SaiData('["", "false:512:0"]')
             if attrs[0].startswith("SAI_SWITCH_ATTR_AVAILABLE_ACL_"):
                 return status, SaiData(json.dumps([None, '{"count":64,"list":null}']))
+            if attrs[0] == "SAI_SWITCH_ATTR_SYSTEM_PORT_CONFIG_LIST":
+                return status, SaiData(json.dumps([None, '{"count":256,"list":null}']))
             return status, None
         try:
             result = json.dumps(raw_result)
@@ -178,6 +180,11 @@ class SaiThriftClient(SaiClient):
         for attr, value in ThriftConverter.convert_attributes_to_thrift(attrs):
             if obj_type_name != "switch":
                 object_key = {obj_type_name + "_oid": oid}
+
+            # The function parameter can not start from digit.
+            # E.g., 1000x_sgmii_slave_autodetect
+            if attr[0].isdigit():
+                attr = '_' + attr
 
             thrift_attr_value = sai_thrift_function(self.thrift_client, **object_key, **{attr: value})
 
