@@ -22,8 +22,6 @@ class SaiRedisClient(SaiClient):
 
         self.r = redis.Redis(host=self.server_ip, port=self.port, db=1)
         self.loglevel_db = redis.Redis(host=self.server_ip, port=self.port, db=3)
-        self.cache = {}
-        self.rec2vid = {}
 
     def cleanup(self):
         '''
@@ -35,8 +33,6 @@ class SaiRedisClient(SaiClient):
         and restart syncd application linked with SAI library.
         '''
         if self.is_dut_mbr:
-            self.cache = {}
-            self.rec2vid = {}
             self.__assert_syncd_running()
             return
 
@@ -57,8 +53,6 @@ class SaiRedisClient(SaiClient):
         self.loglevel_db.hmset('syncd:syncd', {'LOGLEVEL':self.loglevel, 'LOGOUTPUT':'SYSLOG'})
         self.r.shutdown()
         time.sleep(2)
-        self.cache = {}
-        self.rec2vid = {}
         self.__assert_syncd_running()
 
     def set_loglevel(self, sai_api, loglevel):
@@ -520,161 +514,6 @@ class SaiRedisClient(SaiClient):
         oids_by_type[obj_type.name] = oids
         return oids_by_type
 
-    def apply_rec(self, fname):
-        # Since it's expected that sairedis.rec file contains a full configuration,
-        # we must flush both Redis and NPU state before we start.
-        self.cleanup()
-
-        oids = []
-        records = self.__parse_rec(fname)
-        for cnt, record in records.items():
-            print("#{}: {}".format(cnt, record))
-            rec = record[0]
-            if rec[0] == 'c':
-                attrs = []
-                if len(rec) > 2:
-                    for attr in rec[2:]:
-                        attrs += attr.split('=')
-
-                # Update OIDs in the attributes
-                for idx in range(1, len(attrs), 2):
-                    if "oid:" in attrs[idx]:
-                        attrs[idx] = self.rec2vid[attrs[idx]]
-
-                self.create(self.__update_key(rec[0], rec[1]), attrs)
-
-            elif rec[0] == 'C':
-                # record = [["action", "sai-object-type"], ["key", "attr1", "attr2"], ..., [key-n", "attr1", "attr2"]]
-                bulk_keys = []
-                bulk_attrs = []
-                for idx, entry in enumerate(record[1:]):
-                    # New bulk entry
-                    attrs = []
-                    for attr in entry[1:]:
-                        attrs += attr.split('=')
-
-                    # Update OIDs in the attributes
-                    for i in range(1, len(attrs), 2):
-                        if "oid:" in attrs[i] and attrs[i] != "oid:0x0":
-                            attrs[i] = self.rec2vid[attrs[i]]
-
-                    # Convert into "sai-object-type:key"
-                    key = record[0][1] + ":" + record[idx + 1][0]
-                    # Update OIDs in the key
-                    key = self.__update_key(rec[0], key)
-                    # Convert into ["sai-object-type", "key"]
-                    key = key.split(":", 1)[1]
-
-                    if key.startswith("{"):
-                        key = json.loads(key)
-                    bulk_keys.append(key)
-                    bulk_attrs.append(attrs)
-
-                self.bulk_create(record[0][1], bulk_keys, bulk_attrs)
-
-            elif rec[0] == 's':
-                data = rec[2].split('=')
-                if "oid:" in data[1]:
-                    data[1] = self.rec2vid[data[1]]
-
-                self.set(self.__update_key(rec[0], rec[1]), data)
-
-            elif rec[0] == 'S':
-                # record = [["action", "sai-object-type"], ["key", "attr"], ..., [key-n", "attr"]]
-                bulk_keys = []
-                bulk_attrs = []
-                for idx, entry in enumerate(record[1:]):
-                    attr = entry[1].split('=')
-                    if "oid:" in attr[1] and attrs[i] != "oid:0x0":
-                        attr[1] = self.rec2vid[attr[1]]
-
-                    # Convert into "sai-object-type:key"
-                    key = record[0][1] + ":" + record[idx + 1][0]
-                    # Update OIDs in the key
-                    key = self.__update_key(rec[0], key)
-                    # Convert into ["sai-object-type", "key"]
-                    key = key.split(":", 1)[1]
-
-                    if key.startswith("{"):
-                        key = json.loads(key)
-                    bulk_keys.append(key)
-                    bulk_attrs.append(attr)
-
-                self.bulk_set(record[0][1], bulk_keys, bulk_attrs)
-
-            elif rec[0] == 'r':
-                self.remove(self.__update_key(rec[0], rec[1]))
-
-            elif rec[0] == 'R':
-                # record = [["action", "sai-object-type"], ["key"], ..., [key-n"]]
-                bulk_keys = []
-                for idx, entry in enumerate(record[1:]):
-                    # Convert into "sai-object-type:key"
-                    key = record[0][1] + ":" + record[idx + 1][0]
-                    # Update OIDs in the key
-                    key = self.__update_key(rec[0], key)
-                    # Convert into ["sai-object-type", "key"]
-                    key = key.split(":", 1)[1]
-
-                    if key.startswith("{"):
-                        key = json.loads(key)
-                    bulk_keys.append(key)
-
-                self.bulk_remove(record[0][1], bulk_keys)
-
-            elif rec[0] == 'g':
-                attrs = []
-                if len(rec) > 2:
-                    for attr in rec[2:]:
-                        attrs += attr.split('=')
-
-                status, data = self.get(self.__update_key(rec[0], rec[1]), attrs, False)
-                if status == "SAI_STATUS_SUCCESS":
-                    jdata = data.to_json()
-                    for idx in range(1, len(jdata), 2):
-                        if ":oid:" in jdata[idx]:
-                            oids += data.oids(idx)
-                        elif "oid:" in jdata[idx]:
-                            oids.append(data.oid(idx))
-            elif rec[0] == 'G':
-                attrs = []
-                for attr in rec[2:]:
-                    attrs += attr.split('=')
-
-                G_oids = []
-
-                for idx in range(1, len(attrs), 2):
-                    G_output = attrs[idx]
-
-                    if ":oid:" in G_output:
-                        start_idx = G_output.find(":") + 1
-                        G_oids += G_output[start_idx:].split(",")
-                    elif "oid:" in G_output:
-                        G_oids.append(G_output)
-                assert len(oids) == len(G_oids)
-
-                for idx, oid in enumerate(G_oids):
-                    self.rec2vid[oid] = oids[idx]
-                oids = []
-            else:
-                print("Iggnored line {}: {}".format(cnt, rec))
-
-        print("Current SAI objects: {}".format(self.rec2vid))
-
-    def get_vid(self, obj_type, value=None):
-        if obj_type.name not in self.cache:
-            self.cache[obj_type.name] = {}
-
-        if value is None:
-            return self.cache[obj_type.name]
-
-        if value in self.cache[obj_type.name]:
-            return self.cache[obj_type.name][value]
-
-        oid = self.alloc_vid(obj_type)
-        self.cache[obj_type.name][value] = oid
-        return oid
-
     def alloc_vid(self, obj_type):
         if type(obj_type) == str and obj_type.startswith("SAI_OBJECT_TYPE_"):
             obj_type = SaiObjType[obj_type.replace("SAI_OBJECT_TYPE_", "")]
@@ -704,70 +543,6 @@ class SaiRedisClient(SaiClient):
             if numsub[1] >= 1:
                 return
         assert False, "SyncD has not started yet..."
-
-    def __update_oid_key(self, action, key):
-        key_list = key.split(":", 1)
-        vid = key_list[1]
-
-        if action == "c" or action == "C":
-            # Convert object type from string to enum format
-            obj_type = SaiObjType[key_list[0][len("SAI_OBJECT_TYPE_"):]]
-            # Allocate new VID and add it to the map
-            vid = self.get_vid(obj_type, key_list[1])
-            self.rec2vid[key_list[1]] = vid
-        elif action == "g" or action == "s" or action == "S":
-            vid = self.rec2vid[key_list[1]]
-        elif action == "r" or action == "R":
-            vid = self.rec2vid.pop(key_list[1])
-
-        return key_list[0] + ":" + vid
-
-    def __update_entry_key_oids(self, key):
-        oids = []
-        new_key = key
-        key_list = key.split("\"")
-        for k in key_list:
-            if "oid:" in k:
-                oids.append(k)
-        for oid in oids:
-            new_oid = self.rec2vid[oid]
-            new_key = new_key.replace(oid, new_oid)
-        return new_key
-
-    def __update_key(self, action, key):
-        if "{" in key:
-            return self.__update_entry_key_oids(key)
-        else:
-            return self.__update_oid_key(action, key)
-
-    def __parse_rec(self, fname):
-        '''
-        Non-bulk entry format:
-        data|action|sai-object-type:key|attr1|attr2
-
-        Will be converted into:
-        [["action", "sai-object-type:key", "attr1", "attr2"]]
-
-        Bulk entry format:
-        data|action|sai-object-type||key1|attr1|attr2||...||key-n|attr1|attr2
-
-        Will be converted into:
-        [["action", "sai-object-type"], ["key", "attr1", "attr2"], ..., [key-n", "attr1", "attr2"]]
-        '''
-        cnt = 0
-        rec = {}
-        fp = open(fname, 'r')
-        for line in fp:
-            data = []
-            cnt += 1
-            bulk_tokens = line.strip().split("||")
-            for idx, token in enumerate(bulk_tokens):
-                tokens = token.strip().split("|")
-                if idx == 0:
-                    tokens = tokens[1:]
-                data.append(tokens)
-            rec[cnt] = data #if len(data) > 1 else data[0]
-        return rec
 
     def __remote_cmd_operate(self, cmd, args=None):
         self.r.delete("SAI_CHALLENGER_CMD_QUEUE")
