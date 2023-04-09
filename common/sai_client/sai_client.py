@@ -14,9 +14,6 @@ class SaiClient:
     def set_loglevel(self, sai_api, loglevel):
         raise NotImplementedError
 
-    def alloc_vid(self, obj_type):
-        raise NotImplementedError
-
     # CRUD
     def create(self, obj, attrs, do_assert=True):
         """

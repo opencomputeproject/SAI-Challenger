@@ -178,7 +178,7 @@ class SaiThriftClient(SaiClient):
         result = []
 
         for attr, value in ThriftConverter.convert_attributes_to_thrift(attrs):
-            if obj_type_name != "switch":
+            if key is None and obj_type_name != "switch":
                 object_key = {obj_type_name + "_oid": oid}
 
             # The function parameter can not start from digit.
@@ -225,16 +225,20 @@ class SaiThriftClient(SaiClient):
         out_keys = []
         entries_num = len(keys) if keys else obj_count
         statuses = [None] * entries_num
+
+        if type(obj_type) == SaiObjType:
+            obj_type = "SAI_OBJECT_TYPE_" + obj_type.name
+
         for i in range(entries_num):
             attr = attrs[0] if len(attrs) == 1 else attrs[i]
             if do_assert == False:
-                status, vid = self.create("SAI_OBJECT_TYPE_" + obj_type.name + ":" + json.dumps(keys[i]), attr, do_assert)
+                status, vid = self.create(obj_type + ":" + json.dumps(keys[i]), attr, do_assert)
                 out_keys.append(vid)
                 statuses.append(status)
                 if status != "SAI_STATUS_SUCCESS":
                     return "SAI_STATUS_FAILURE", out_keys, statuses
             else:
-                vid = self.create("SAI_OBJECT_TYPE_" + obj_type.name + ":" + json.dumps(keys[i]), attr, do_assert)
+                vid = self.create(obj_type + ":" + json.dumps(keys[i]), attr, do_assert)
                 out_keys.append(vid)
                 statuses.append("SAI_STATUS_SUCCESS")
         return "SAI_STATUS_SUCCESS", out_keys, statuses
@@ -242,28 +246,36 @@ class SaiThriftClient(SaiClient):
     def bulk_remove(self, obj_type, keys, do_assert=True):
         # TODO: Provide proper implementation once Thrift bulk API is available
         statuses = [None] * len(keys)
+
+        if type(obj_type) == SaiObjType:
+            obj_type = "SAI_OBJECT_TYPE_" + obj_type.name
+
         for key in keys:
             if do_assert == False:
-                status, _ = self.remove("SAI_OBJECT_TYPE_" + obj_type.name + ":" + json.dumps(key), do_assert)
+                status, _ = self.remove(obj_type + ":" + json.dumps(key), do_assert)
                 statuses.append(status)
                 if status != "SAI_STATUS_SUCCESS":
                     return "SAI_STATUS_FAILURE", statuses
             else:
-                self.remove("SAI_OBJECT_TYPE_" + obj_type.name + ":" + json.dumps(key), do_assert)
+                self.remove(obj_type + ":" + json.dumps(key), do_assert)
         return "SAI_STATUS_SUCCESS", statuses
 
     def bulk_set(self, obj_type, keys, attrs, do_assert=True):
         # TODO: Provide proper implementation once Thrift bulk API is available
         statuses = [None] * len(keys)
+
+        if type(obj_type) == SaiObjType:
+            obj_type = "SAI_OBJECT_TYPE_" + obj_type.name
+
         for i in range(len(keys)):
             attr = attrs[0] if len(attrs) == 1 else attrs[i]
             if do_assert == False:
-                status, _ = self.set("SAI_OBJECT_TYPE_" + obj_type.name + ":" + json.dumps(keys[i]), attr, do_assert)
+                status, _ = self.set(obj_type + ":" + json.dumps(keys[i]), attr, do_assert)
                 statuses.append(status)
                 if status != "SAI_STATUS_SUCCESS":
                     return "SAI_STATUS_FAILURE", statuses
             else:
-                self.set("SAI_OBJECT_TYPE_" + obj_type.name + ":" + json.dumps(keys[i]), attr, do_assert)
+                self.set(obj_type + ":" + json.dumps(keys[i]), attr, do_assert)
         return "SAI_STATUS_SUCCESS", statuses
 
     def get_object_key(self, obj_type=None):
