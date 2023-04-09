@@ -14,7 +14,7 @@ class SaiClient:
     def set_loglevel(self, sai_api, loglevel):
         raise NotImplementedError
 
-    def apply_rec(self, fname):
+    def alloc_vid(self, obj_type):
         raise NotImplementedError
 
     # CRUD
