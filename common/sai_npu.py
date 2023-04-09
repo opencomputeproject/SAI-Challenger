@@ -42,7 +42,7 @@ class SaiNpu(Sai):
         sw_attr.append("SAI_SWITCH_TYPE_NPU")
 
         self.switch_oid = self.create(SaiObjType.SWITCH, sw_attr)
-        self.sai_client.rec2vid[self.switch_oid] = self.switch_oid
+        self.rec2vid[self.switch_oid] = self.switch_oid
 
         # Default .1Q bridge
         self.dot1q_br_oid = self.get(self.switch_oid, ["SAI_SWITCH_ATTR_DEFAULT_1Q_BRIDGE_ID", "oid:0x0"]).oid()
