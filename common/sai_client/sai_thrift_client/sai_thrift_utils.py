@@ -71,7 +71,7 @@ class ThriftConverter():
                 actual_value = getattr(sai_headers, value, None)
                 if actual_value != None:
                     return actual_value
-            return 0 if value == '' else int(value)
+            return 0 if value == '' else int(value, 0)
         if value_type in [ 'booldata' ]:
             return value.lower() == "true" or value == "0"
         elif value_type in [ 'mac', 'ipv4', 'ipv6', 'chardata' ]:
@@ -242,12 +242,12 @@ class ThriftConverter():
 
         if '.' in prefix_str:
             family = SAI_IP_ADDR_FAMILY_IPV4
-            ip = ipaddress.IPv4Network(prefix_str)
+            ip = ipaddress.IPv4Network(prefix_str, strict=False)
             addr = sai_thrift_ip_addr_t(ip4=str(ip.network_address))
             mask = sai_thrift_ip_addr_t(ip4=str(ip.netmask))
         elif ':' in prefix_str:
             family = SAI_IP_ADDR_FAMILY_IPV6
-            ip = ipaddress.IPv6Network(prefix_str)
+            ip = ipaddress.IPv6Network(prefix_str, strict=False)
             addr = sai_thrift_ip_addr_t(ip6=ip.network_address.exploded)
             mask = sai_thrift_ip_addr_t(ip6=ip.netmask.exploded)
         else:
