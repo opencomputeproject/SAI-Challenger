@@ -196,20 +196,6 @@ class Sai():
     def alloc_vid(self, obj_type):
         return self.sai_client.alloc_vid(obj_type)
 
-    def get_vid(self, obj_type, value=None):
-        if obj_type.name not in self.cache:
-            self.cache[obj_type.name] = {}
-
-        if value is None:
-            return self.cache[obj_type.name]
-
-        if value in self.cache[obj_type.name]:
-            return self.cache[obj_type.name][value]
-
-        oid = self.alloc_vid(obj_type)
-        self.cache[obj_type.name][value] = oid
-        return oid
-
     def apply_rec(self, fname):
         dut = self.cfg.get("dut", None)
         if dut:
@@ -508,7 +494,10 @@ class Sai():
                     if "oid:" in attrs[idx]:
                         attrs[idx] = self.rec2vid[attrs[idx]]
 
-                self.create(self.__update_key(rec[0], rec[1]), attrs)
+                key = self.create(self.__update_key(rec[0], rec[1]), attrs)
+                if "{" not in key:
+                    key_list = rec[1].split(":", 1)
+                    self.rec2vid[key_list[1]] = key
 
             elif rec[0] == 'C':
                 # record = [["action", "sai-object-type"], ["key", "attr1", "attr2"], ..., [key-n", "attr1", "attr2"]]
@@ -633,11 +622,8 @@ class Sai():
         vid = key_list[1]
 
         if action == "c" or action == "C":
-            # Convert object type from string to enum format
-            obj_type = SaiObjType[key_list[0][len("SAI_OBJECT_TYPE_"):]]
-            # Allocate new VID and add it to the map
-            vid = self.get_vid(obj_type, key_list[1])
-            self.rec2vid[key_list[1]] = vid
+            # Return object's type in "SAI_OBJECT_TYPE_XXXX" format
+            return key_list[0]
         elif action == "g" or action == "s" or action == "S":
             vid = self.rec2vid[key_list[1]]
         elif action == "r" or action == "R":
