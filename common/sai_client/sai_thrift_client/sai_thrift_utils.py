@@ -11,12 +11,12 @@ from saichallenger.common.sai_data import SaiObjType, SaiStatus
 
 
 class ThriftConverter():
-    def convert_attributes_to_thrift(attributes, obj_type):
+    def convert_attributes_to_thrift(attributes):
         """
         [ "SAI_SWITCH_ATTR_PORT_LIST", "2:oid:0x0,oid:0x0" ] => { "port_list": sai_thrift_object_list_t(count=2, idlist=[0x0, 0x0]) }
         """
         for name, value in ThriftConverter.chunks(attributes, 2):
-            yield ThriftConverter.convert_attribute_name_to_thrift(name), ThriftConverter.convert_value_to_thrift(value, name, obj_type)
+            yield ThriftConverter.convert_attribute_name_to_thrift(name), ThriftConverter.convert_value_to_thrift(value, attr_name=name)
 
     def convert_key_to_thrift(object_type, key = None):
         """
@@ -59,13 +59,11 @@ class ThriftConverter():
         return re.search('SAI_.*_ATTR_(.*)', attr).group(1).lower()
 
     @staticmethod
-    def convert_value_to_thrift(value, attr_name, obj_type=None):
+    def convert_value_to_thrift(value, attr_name=None, value_type=None):
         """
         "100", "s32" => 100
         """
-        if attr_name == None or attr_name == 'UTF8':
-            value_type = ThriftConverter.get_value_type_by_thrift_spec(attr_name)
-        else:
+        if value_type is None:
             value_type = ThriftConverter.get_attribute_type(attr_name)
 
         if value_type in [ 's8', 'u8', 's16', 'u16', 's32',
@@ -102,9 +100,9 @@ class ThriftConverter():
         elif value_type in [ 'sysportconfiglist' ]:
             return ThriftConverter.sai_sysport_config_list(value)
         if value_type in [ 'aclaction' ]:
-            return ThriftConverter.sai_acl_action(value, attr_name, obj_type)
+            return ThriftConverter.sai_acl_action(value, attr_name)
         if value_type in [ 'aclfield' ]:
-            return ThriftConverter.sai_acl_field(value, attr_name, obj_type)
+            return ThriftConverter.sai_acl_field(value, attr_name)
 
         # TODO: add more string->thrift converters here
         raise NotImplementedError(f"{value_type}, {value}")
@@ -120,7 +118,7 @@ class ThriftConverter():
         for spec_entry in key_spec[1:]:
             key_attr_name = spec_entry[2]
             key_attr_type = spec_entry[3]
-            result[key_attr_name] = ThriftConverter.convert_value_to_thrift(key[key_attr_name], key_attr_type)
+            result[key_attr_name] = ThriftConverter.convert_value_to_thrift(key[key_attr_name], value_type=ThriftConverter.get_value_type_by_thrift_spec(key_attr_type))
         return result
 
     @staticmethod
@@ -203,48 +201,38 @@ class ThriftConverter():
         return sai_thrift_acl_resource_list_t(count=val["count"], resourcelist=resourcelist)
 
     @staticmethod
-    def sai_acl_action(value, attr_name, obj_type):
+    def sai_acl_action(value, attr_name):
         attribute_value = ""
-        generic_type = ThriftConverter.get_generic_type(obj_type, attr_name)
-        if generic_type == 's32':
-            attribute_value = sai_thrift_attribute_value_t(aclfield=sai_thrift_acl_action_data_t(
-                parameter=sai_thrift_acl_action_parameter_t(s32=ThriftConverter.get_enum_by_str(value))))
-        elif generic_type == 'oid':
-            attribute_value = sai_thrift_attribute_value_t(aclfield=sai_thrift_acl_action_data_t(
-                parameter=sai_thrift_acl_action_parameter_t(oid=ThriftConverter.object_id(value))))
-        else:
-            raise NotImplementedError(f"{value} {attr_name}")
+        gen_val_type, _ = ThriftConverter.get_generic_type(attr_name)
 
-        if attribute_value is not None:
-            attribute = sai_thrift_attribute_t(id=ThriftConverter.get_enum_by_str(attr_name), value=attribute_value)
-            return attribute
-        return None
+        if gen_val_type is None:
+            return None
+
+        kw_val = {gen_val_type : ThriftConverter.get_enum_by_str(value)}
+        aclfield = sai_thrift_acl_action_data_t(parameter=sai_thrift_acl_action_parameter_t(**kw_val))
+        attribute_value = sai_thrift_attribute_value_t(aclfield=aclfield)
+        return sai_thrift_attribute_t(id=ThriftConverter.get_enum_by_str(attr_name), value=attribute_value)
 
     @staticmethod
-    def sai_acl_field(value, attr_name, obj_type):
+    def sai_acl_field(value, attr_name):
         attribute_value = ""
-        generic_type = ThriftConverter.get_generic_type(obj_type, attr_name)
-        if generic_type == 'ip4':
-            # value 192.168.0.8&mask:255.255.255.255
-            ipaddr = value.split("&")[0]
-            mask = value.split(":")[1]
-            attribute_value = sai_thrift_attribute_value_t(aclfield=sai_thrift_acl_field_data_t(data=sai_thrift_acl_field_data_data_t(ip4=ipaddr),
-                                                                                                mask=sai_thrift_acl_field_data_mask_t(ip4=mask)))
-        # u8, u16, u32
-        elif generic_type[0] == 'u':
-            # value 2048&mask:0xffff
-            val = int(value.split("&")[0])
-            mask = int(value.split(":")[1], 16)
-            attribute_value = sai_thrift_attribute_value_t(aclfield=sai_thrift_acl_field_data_t(data=sai_thrift_acl_field_data_data_t(u32=val),
-                                                                                                mask=sai_thrift_acl_field_data_mask_t(u32=mask)))
-        else:
-            raise NotImplementedError(f"{value} {attr_name}")
+        gen_val_type, gen_val_mask  = ThriftConverter.get_generic_type(attr_name)
 
-        if attribute_value is not None:
-            attribute = sai_thrift_attribute_t(id=ThriftConverter.get_enum_by_str(attr_name), value=attribute_value)
-            return attribute
-        return None
+        if gen_val_type is None or gen_val_mask is None:
+            return None
 
+        val = value.split("&")[0]
+        mask = value.split("mask:")[1]
+        if gen_val_type[0] == 's' or gen_val_type[0] == 'u':
+            val = int(val, 0)
+            mask = int(mask, 16)
+        kw_val = {gen_val_type : val}
+        kw_mask = {gen_val_mask : mask}
+        data = sai_thrift_acl_field_data_data_t(**kw_val)
+        mask = sai_thrift_acl_field_data_mask_t(**kw_mask)
+        aclfield = sai_thrift_acl_field_data_t(data=data, mask=mask)
+        attribute_value = sai_thrift_attribute_value_t(aclfield=aclfield)
+        return sai_thrift_attribute_t(id=ThriftConverter.get_enum_by_str(attr_name), value=attribute_value)
 
     @staticmethod
     def str2digit(value):
@@ -567,30 +555,26 @@ class ThriftConverter():
         return int(value) if value.isdigit() else None
 
     @staticmethod
-    def get_generic_type(obj_type, attr_name):
+    def get_generic_type(attr_name):
         """Get attribute generic type"""
+        obj_type = SaiObjType[attr_name.split("SAI_")[1].split("_ATTR")[0]]
+        generic_types = {
+            "bool"              : ( "bool",   None ),
+            "sai_uint8_t"       : ( "u8",     "u16" ),
+            "sai_int8_t"        : ( "s8",     "u16" ),
+            "sai_uint16_t"      : ( "u16",    "u32" ),
+            "sai_int16_t"       : ( "s16",    "u32" ),
+            "sai_uint32_t"      : ( "u32",    "u64" ),
+            "sai_int32_t"       : ( "s32",    "u64" ),
+            "sai_uint64_t"      : ( "u64",    "u64" ),
+            "sai_mac_t"         : ( "mac",    "mac" ),
+            "sai_ipv4_t"        : ( "ip4",    "ip4" ),
+            "sai_ipv6_t"        : ( "ip6",    "ip6" ),
+            "sai_object_id_t"   : ( "oid",     None ),
+            "sai_object_list_t" : ( "objlist", None ),
+            "sai_u8_list_t"     : ( "u8list", "u8list" ),
+        }
         meta = ThriftConverter.get_sai_meta(obj_type, attr_name)
         if meta is None:
             return None
-        return ThriftConverter.get_generic_short(meta['properties'].get('genericType'))
-        #return meta['properties'].get('genericType')
-
-    @staticmethod
-    def get_generic_short(value):
-        generic_types = {
-            "bool"              : "bool",
-            "sai_uint8_t"       : "u8",
-            "sai_int8_t"        : "s8",
-            "sai_uint16_t"      : "u16",
-            "sai_int16_t"       : "s16",
-            "sai_uint32_t"      : "u32",
-            "sai_int32_t"       : "s32",
-            "sai_uint64_t"      : "u64",
-            "sai_mac_t"         : "mac",
-            "sai_ipv4_t"        : "ip4",
-            "sai_ipv6_t"        : "ip6",
-            "sai_object_id_t"   : "oid",
-            "sai_object_list_t" : "objlist",
-            "sai_u8_list_t"     : "u8list"
-        }
-        return generic_types.get(value)
+        return generic_types[meta['properties'].get('genericType')]
