@@ -151,7 +151,7 @@ class SaiThriftClient(SaiClient):
             object_key[f'{obj_type_name}_oid'] = oid
         sai_thrift_function = getattr(sai_adapter, f'sai_thrift_{operation}_{obj_type_name}')
 
-        attr_kwargs = dict(ThriftConverter.convert_attributes_to_thrift(attrs))
+        attr_kwargs = dict(ThriftConverter.convert_attributes_to_thrift(attrs, obj_type))
 
         result = sai_thrift_function(self.thrift_client, **object_key, **attr_kwargs)
         status = ThriftConverter.convert_to_sai_status_str(sai_adapter.status)
@@ -177,7 +177,7 @@ class SaiThriftClient(SaiClient):
 
         result = []
 
-        for attr, value in ThriftConverter.convert_attributes_to_thrift(attrs):
+        for attr, value in ThriftConverter.convert_attributes_to_thrift(attrs, obj_type):
             if key is None and obj_type_name != "switch":
                 object_key = {obj_type_name + "_oid": oid}
 
