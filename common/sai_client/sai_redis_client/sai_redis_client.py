@@ -90,7 +90,7 @@ class SaiRedisClient(SaiClient):
             return []
 
         # Remove spaces from the key string.
-        # Required by sai_serialize_route_entry() in sairedis.
+        # Required by sai_deserialize_route_entry() in sonic-sairedis.
         obj = obj.replace(' ', '')
         if "bv_id" in obj:
             obj = obj.replace("bv_id", "bvid")
@@ -126,11 +126,8 @@ class SaiRedisClient(SaiClient):
             vid = self.alloc_vid(obj)
             obj = obj + ":" + vid
         else:
-            # NOTE: The sai_deserialize_route_entry() from sonic-sairedis does not tolerate
-            # spaces in the route entry key:
-            # {"dest":"0.0.0.0/0","switch_id":"oid:0x21000000000000","vr":"oid:0x3000000000022"}
-            # For more details, please refer to sai_deserialize_route_entry() implementation.
-            obj = obj.replace(" ", "")
+            # Key-based objects (route, fdb, nat, etc.)
+            vid = json.loads(obj.split(":", 1)[1])
 
         if type(attrs) != str:
             attrs = json.dumps(attrs)
@@ -160,7 +157,6 @@ class SaiRedisClient(SaiClient):
             assert self.vid_to_rid(obj), f"Unable to retrieve RID by VID {obj}"
             obj = self.vid_to_type(obj) + ":" + obj
         assert obj.startswith("SAI_OBJECT_TYPE_")
-        obj = obj.replace(" ", "")
 
         if type(attr) != str:
             attr = json.dumps(attr)
@@ -175,7 +171,6 @@ class SaiRedisClient(SaiClient):
             assert self.vid_to_rid(obj), f"Unable to retrieve RID by VID {obj}"
             obj = self.vid_to_type(obj) + ":" + obj
         assert obj.startswith("SAI_OBJECT_TYPE_")
-        obj = obj.replace(" ", "")
 
         if type(attrs) != str:
             attrs = json.dumps(attrs)
