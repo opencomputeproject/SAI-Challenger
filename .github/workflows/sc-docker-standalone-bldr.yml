@@ -19,8 +19,8 @@ on:
       - 'run.sh'
       - 'exec.sh'
       - '.dockerignore'
-  
-jobs:   
+
+jobs:
   build-sc-stadalone-thrift:
     name: Build SAI Challenger standalone image
     runs-on: ubuntu-20.04
@@ -54,6 +54,6 @@ jobs:
     - name: Run thift data-driven tests
       run: ./exec.sh --no-tty -s thrift pytest --testbed=saivs_thrift_standalone -v test_l2_basic_dd.py
     - name: Run thrift unit tests
-      run: ./exec.sh --no-tty -s thrift pytest --testbed=saivs_thrift_standalone -v ut/test_vrf_ut.py ut/test_bridge_ut.py
+      run: ./exec.sh --no-tty -s thrift pytest --testbed=saivs_thrift_standalone -v ut/test_vrf_ut.py ut/test_bridge_ut.py ut/test_acl_ut.py
     - name: Run thrift sairedis tests
       run: ./exec.sh --no-tty -s thrift pytest --testbed=saivs_thrift_standalone -v -k "test_sairec"
