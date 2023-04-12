@@ -186,8 +186,12 @@ class SaiThriftClient(SaiClient):
             if attr[0].isdigit():
                 attr = '_' + attr
 
-            thrift_attr_value = sai_thrift_function(self.thrift_client, **object_key, **{attr: value})
-
+            # The sai_thrift_set_XXX functions do not have parameters for the attributes that are CREATE_ONLY.
+            # So, for these attributes, the exception will happened on `set` operation.
+            try:
+                thrift_attr_value = sai_thrift_function(self.thrift_client, **object_key, **{attr: value})
+            except:
+                thrift_attr_value = SaiStatus.FAILURE
             if operation == 'set':
                 # No need to have a list here, since set always takes only one attribute at a time
                 status = ThriftConverter.convert_to_sai_status_str(thrift_attr_value)
