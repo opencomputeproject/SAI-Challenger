@@ -93,6 +93,7 @@ class SaiThriftClient(SaiClient):
     def get(self, obj, attrs, do_assert=True):
         obj_type, oid, key = self.obj_to_items(obj)
         status, raw_result = self._operate_attributes('get', attrs=attrs, oid=oid, obj_type=obj_type, key=key)
+        print(f"==TK3==  obj={obj}, attrs={attrs},  obj_type={obj_type}, oid={oid}, key={key} status={status}, raw_result={raw_result}")
         if len(raw_result) == 0:
             if do_assert:
                 assert False, f"get({obj}, {attrs}, True) operation failed!"
@@ -177,6 +178,7 @@ class SaiThriftClient(SaiClient):
 
         result = []
 
+        print(f"==TK1== operation={operation}  attrs={attrs}, oid={oid}, obj_type={obj_type}, key={key}")
         for attr, value in ThriftConverter.convert_attributes_to_thrift(attrs):
             if key is None and obj_type_name != "switch":
                 object_key = {obj_type_name + "_oid": oid}
@@ -185,9 +187,11 @@ class SaiThriftClient(SaiClient):
             # E.g., 1000x_sgmii_slave_autodetect
             if attr[0].isdigit():
                 attr = '_' + attr
-
-            thrift_attr_value = sai_thrift_function(self.thrift_client, **object_key, **{attr: value})
-
+            print(f"==TK2== operation={operation} object_key={object_key} attr={attr} value={value}")
+            try:
+                thrift_attr_value = sai_thrift_function(self.thrift_client, **object_key, **{attr: value})
+            except:
+                thrift_attr_value = SAI_STATUS_FAILURE
             if operation == 'set':
                 # No need to have a list here, since set always takes only one attribute at a time
                 status = ThriftConverter.convert_to_sai_status_str(thrift_attr_value)
@@ -195,6 +199,7 @@ class SaiThriftClient(SaiClient):
                 status = ThriftConverter.convert_to_sai_status_str(sai_adapter.status)
                 result.extend(ThriftConverter.convert_attributes_from_thrift(thrift_attr_value, obj_type))
 
+        print(f"==TK5== operation={operation} status={status} result={result} thrift_attr_value={thrift_attr_value}")
         return status, result
 
     def cleanup(self):
@@ -217,6 +222,7 @@ class SaiThriftClient(SaiClient):
         self.thrift_client = sai_rpc.Client(protocol)
 
     def flush_fdb_entries(self, obj, attrs=None):
+        obj_type, _, _ = self.obj_to_items(obj)
         attr_kwargs = dict(ThriftConverter.convert_attributes_to_thrift(attrs))
         result = sai_adapter.sai_thrift_flush_fdb_entries(self.thrift_client, **attr_kwargs)
 
