@@ -79,6 +79,22 @@ class TestIngressACL:
                 ],
                 "SAI_PACKET_ACTION_DROP",       "9985"
             ),
+            (
+                [
+                    ["SAI_ACL_ENTRY_ATTR_FIELD_ETHER_TYPE",     "2048",     "0xffff"],
+                    ["SAI_ACL_ENTRY_ATTR_FIELD_SRC_IPV6",       "2000::1",  "ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff"],
+                    ["SAI_ACL_ENTRY_ATTR_FIELD_IP_PROTOCOL",    "17",       "0xff"],
+                ],
+                "SAI_PACKET_ACTION_FORWARD",    "9987"
+            ),
+            (
+                [
+                    ["SAI_ACL_ENTRY_ATTR_FIELD_DST_MAC",        "00:26:dd:14:c4:ee", "ff:ff:ff:ff:ff:ff"],
+                    ["SAI_ACL_ENTRY_ATTR_FIELD_ETHER_TYPE",     "2048",     "0xffff"],
+                    ["SAI_ACL_ENTRY_ATTR_FIELD_IP_PROTOCOL",    "17",       "0xff"],
+                ],
+                "SAI_PACKET_ACTION_FORWARD",    "9987"
+            ),
         ]
     )
     @pytest.mark.dependency(depends=['TestIngressACL::test_create_table'])

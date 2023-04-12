@@ -217,6 +217,7 @@ class SaiThriftClient(SaiClient):
         self.thrift_client = sai_rpc.Client(protocol)
 
     def flush_fdb_entries(self, obj, attrs=None):
+        obj_type, _, _ = self.obj_to_items(obj)
         attr_kwargs = dict(ThriftConverter.convert_attributes_to_thrift(attrs))
         result = sai_adapter.sai_thrift_flush_fdb_entries(self.thrift_client, **attr_kwargs)
 
