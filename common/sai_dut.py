@@ -159,7 +159,7 @@ class SaiDutSonic(SaiDut):
         r.flushdb()
         self.ssh.exec_command("docker start syncd")
 
-    def _assert_redis_is_available(self, tout=30):
+    def _assert_redis_is_available(self, tout=45):
         start_time = time.time()
         r = redis.Redis(host=self.server_ip, port=self.port, db=0)
         while True:
