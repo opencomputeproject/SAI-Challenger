@@ -17,6 +17,7 @@ class SaiRedisClient(SaiClient):
         self.loglevel = cfg["loglevel"]
         self.port = cfg["port"]
         self.libsaivs = cfg["saivs"]
+        self.asic_channel = "ASIC_STATE_CHANNEL"
 
         self.is_dut_mbr = cfg.get("mode") is not None
 
@@ -75,6 +76,7 @@ class SaiRedisClient(SaiClient):
 
         self.loglevel_db.sadd(sai_api + "_KEY_SET", sai_api)
         self.loglevel_db.hset("_" + sai_api + ":" + sai_api, "LOGLEVEL", loglevel)
+        self.loglevel_db.publish(sai_api + "_CHANNEL", "G")
         self.loglevel_db.publish(sai_api + "_CHANNEL@3", "G")
 
     def operate(self, obj, attrs, op):
@@ -97,7 +99,7 @@ class SaiRedisClient(SaiClient):
             obj = obj.replace("mac_address", "mac")
 
         self.r.lpush("ASIC_STATE_KEY_VALUE_OP_QUEUE", obj, attrs, op)
-        self.r.publish("ASIC_STATE_CHANNEL@1", "G")
+        self.r.publish(self.asic_channel, "G")
 
         status = []
         attempts = self.attempts
@@ -534,8 +536,15 @@ class SaiRedisClient(SaiClient):
     def __assert_syncd_running(self, tout=30):
         for i in range(tout):
             time.sleep(1)
+            numsub = self.r.execute_command('PUBSUB', 'NUMSUB', 'ASIC_STATE_CHANNEL')
+            if numsub[1] >= 1:
+                # SONiC 202205 or newer detected
+                self.asic_channel = "ASIC_STATE_CHANNEL"
+                return
             numsub = self.r.execute_command('PUBSUB', 'NUMSUB', 'ASIC_STATE_CHANNEL@1')
             if numsub[1] >= 1:
+                # SONiC 202111 or older detected
+                self.asic_channel = "ASIC_STATE_CHANNEL@1"
                 return
         assert False, "SyncD has not started yet..."
 
