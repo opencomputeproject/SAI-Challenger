@@ -17,7 +17,7 @@ class SaiRedisClient(SaiClient):
         self.loglevel = cfg["loglevel"]
         self.port = cfg["port"]
         self.libsaivs = cfg["saivs"]
-        self.asic_channel = "ASIC_STATE_CHANNEL"
+        self.asic_channel = None
 
         self.is_dut_mbr = cfg.get("mode") is not None
 
@@ -80,6 +80,9 @@ class SaiRedisClient(SaiClient):
         self.loglevel_db.publish(sai_api + "_CHANNEL@3", "G")
 
     def operate(self, obj, attrs, op):
+        if self.asic_channel is None:
+            self.__assert_syncd_running()
+
         self.r.delete("GETRESPONSE_KEY_VALUE_OP_QUEUE")
 
         tout = 0.01
@@ -534,18 +537,19 @@ class SaiRedisClient(SaiClient):
         return rid
 
     def __assert_syncd_running(self, tout=30):
-        for i in range(tout):
-            time.sleep(1)
+        for i in range(tout + 1):
             numsub = self.r.execute_command('PUBSUB', 'NUMSUB', 'ASIC_STATE_CHANNEL')
             if numsub[1] >= 1:
-                # SONiC 202205 or newer detected
+                # SONiC 202111 or older detected
                 self.asic_channel = "ASIC_STATE_CHANNEL"
                 return
             numsub = self.r.execute_command('PUBSUB', 'NUMSUB', 'ASIC_STATE_CHANNEL@1')
             if numsub[1] >= 1:
-                # SONiC 202111 or older detected
+                # SONiC 202205 or newer detected
                 self.asic_channel = "ASIC_STATE_CHANNEL@1"
                 return
+            if i < tout:
+                time.sleep(1)
         assert False, "SyncD has not started yet..."
 
     def __remote_cmd_operate(self, cmd, args=None):

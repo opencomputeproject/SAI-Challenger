@@ -1,4 +1,5 @@
 import json
+import time
 
 from saichallenger.common.sai import Sai
 from saichallenger.common.sai_data import SaiData, SaiObjType
@@ -78,6 +79,14 @@ class SaiNpu(Sai):
         # Update SKU
         if self.sku_config is not None:
             self.set_sku_mode(self.sku_config)
+
+        # Wait for ports oper up state
+        if self.run_traffic:
+            cpu_port_oid = self.get(self.switch_oid, ["SAI_SWITCH_ATTR_CPU_PORT", "oid:0x0"]).oid()
+            for port_oid in self.port_oids:
+                admin_state = self.get(port_oid, ["SAI_PORT_ATTR_ADMIN_STATE", "true"]).value()
+                if port_oid != cpu_port_oid and admin_state == "true":
+                    self.assert_port_oper_up(port_oid)
 
     def cleanup(self):
         super().cleanup()
@@ -265,3 +274,13 @@ class SaiNpu(Sai):
         for oid in self.dot1q_bp_oids:
             if oid not in default_vlan_bp:
                 self.create_vlan_member(self.default_vlan_oid, bp_oid, "SAI_VLAN_TAGGING_MODE_UNTAGGED")
+
+    def assert_port_oper_up(self, port_oid, tout=15):
+        for i in range(tout):
+            status, data = self.get_by_type(port_oid, "SAI_PORT_ATTR_OPER_STATUS", "")
+            assert status == "SAI_STATUS_SUCCESS"
+            if data.value() == "SAI_PORT_OPER_STATUS_UP":
+                return
+            if i + 1 < tout:
+                time.sleep(1)
+        assert False, f"The port {port_oid} is still down after {tout} seconds..."
