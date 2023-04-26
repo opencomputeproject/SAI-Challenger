@@ -135,7 +135,7 @@ class SaiTestbed():
             self.npu.append(asic)
         for dpu_cfg in self.meta.config.get("dpu", []):
             if dpu_cfg["client"]["config"].get("mode", None):
-                dpu_cfg["client"]["config"]["alias"] = npu_cfg["alias"]
+                dpu_cfg["client"]["config"]["alias"] = dpu_cfg["alias"]
                 dut = self.spawn_dut(dpu_cfg["client"]["config"])
                 self.dut.append(dut)
                 dpu_cfg["dut"] = dut
