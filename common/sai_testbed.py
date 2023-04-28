@@ -7,6 +7,7 @@ import logging
 from saichallenger.common.sai_dut import SaiDut
 from saichallenger.common.sai_npu import SaiNpu
 from saichallenger.common.sai_dpu import SaiDpu
+from saichallenger.common.sai_phy import SaiPhy
 from saichallenger.common.sai_dataplane.sai_dataplane import SaiDataPlane
 
 
@@ -88,6 +89,8 @@ class SaiTestbed():
                     asic = asic_mod.SaiNpuImpl(params)
                 elif asic_type == "dpu":
                     asic = asic_mod.SaiDpuImpl(params)
+                elif asic_type == "phy":
+                    asic = asic_mod.SaiPhyImpl(params)
                 else:
                     assert False, f"Failed to instantiate {asic_type} module"
             except Exception as e:
@@ -98,6 +101,8 @@ class SaiTestbed():
                 asic = SaiNpu(params)
             elif asic_type == "dpu":
                 asic = SaiDpu(params)
+            elif asic_type == "phy":
+                asic = SaiPhy(params)
             else:
                 assert False, f"Failed to instantiate default {asic_type} module"
         return asic
@@ -142,6 +147,15 @@ class SaiTestbed():
             dpu_cfg["traffic"] = self.with_traffic
             asic = self.spawn_asic(self.base_dir, dpu_cfg, "dpu")
             self.dpu.append(asic)
+        for phy_cfg in self.meta.config.get("phy", []):
+            if phy_cfg["client"]["config"].get("mode", None):
+                phy_cfg["client"]["config"]["alias"] = phy_cfg["alias"]
+                dut = self.spawn_dut(phy_cfg["client"]["config"])
+                self.dut.append(dut)
+                phy_cfg["dut"] = dut
+            phy_cfg["traffic"] = self.with_traffic
+            asic = self.spawn_asic(self.base_dir, phy_cfg, "phy")
+            self.phy.append(asic)
         for dataplane_cfg in self.meta.config.get("dataplane"):
             dataplane_cfg["traffic"] = self.with_traffic
             dp = self.spawn_dataplane(dataplane_cfg)
@@ -160,6 +174,8 @@ class SaiTestbed():
             npu.reset()
         for dpu in self.dpu:
             dpu.reset()
+        for phy in self.phy:
+            phy.reset()
         if not self.skip_dataplane:
             for dp in self.dataplane:
                 dp.init()

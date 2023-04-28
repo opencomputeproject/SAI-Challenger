@@ -4,6 +4,7 @@ import pytest
 curdir = os.path.dirname(os.path.realpath(__file__))
 
 from saichallenger.common.sai_npu import SaiNpu
+from saichallenger.common.sai_phy import SaiPhy
 from saichallenger.common.sai_testbed import SaiTestbed
 
 _previous_test_failed = False
@@ -121,6 +122,24 @@ def dpu(exec_params, testbed_instance):
         dpu.reset()
     return dpu
 
+@pytest.fixture(scope="session")
+def phy(exec_params, testbed_instance):
+    if testbed_instance is not None:
+        if len(testbed_instance.phy) == 1:
+            return testbed_instance.phy[0]
+        return None
+
+    phy = None
+    exec_params["asic_dir"] = None
+
+    if exec_params["asic"] == "generic":
+        phy = SaiPhy(exec_params)
+    else:
+        phy = SaiTestbed.spawn_asic(f"{curdir}/..", exec_params, "phy")
+
+    if phy is not None:
+        phy.reset()
+    return phy
 
 @pytest.fixture(scope="session")
 def dataplane_instance(exec_params, testbed_instance):
