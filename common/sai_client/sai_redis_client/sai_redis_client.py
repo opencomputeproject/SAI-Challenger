@@ -135,7 +135,11 @@ class SaiRedisClient(SaiClient):
             vid = json.loads(obj.split(":", 1)[1])
 
         if type(attrs) != str:
+            for i, attr in enumerate(attrs):
+                if type(attr) != str:
+                    attrs[i] = json.dumps(attr)
             attrs = json.dumps(attrs)
+
         status = self.operate(obj, attrs, "Screate")
         status[2] = status[2].decode("utf-8")
         if do_assert:
