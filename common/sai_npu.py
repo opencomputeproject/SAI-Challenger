@@ -223,30 +223,20 @@ class SaiNpu(Sai):
             # Lanes
             lanes = port["lanes"]
             lanes = str(lanes.count(',') + 1) + ":" + lanes
-            port_attr.append("SAI_PORT_ATTR_HW_LANE_LIST")
-            port_attr.append(lanes)
+            port_attr.extend(["SAI_PORT_ATTR_HW_LANE_LIST", lanes])
 
             # Speed
             speed = port["speed"] if "speed" in port else sku["speed"]
-            port_attr.append("SAI_PORT_ATTR_SPEED")
-            port_attr.append(speed)
+            port_attr.extend(["SAI_PORT_ATTR_SPEED", speed])
 
             # Autoneg
-            autoneg = port["autoneg"] if "autoneg" in port else sku["autoneg"]
+            autoneg = port["autoneg"] if "autoneg" in port else sku.get("autoneg", "off")
             autoneg = "true" if autoneg == "on" else "false"
-            port_attr.append("SAI_PORT_ATTR_AUTO_NEG_MODE")
-            port_attr.append(autoneg)
+            port_attr.extend(["SAI_PORT_ATTR_AUTO_NEG_MODE", autoneg])
 
             # FEC
-            fec = port["fec"] if "fec" in port else sku["fec"]
-            if fec == "rs":
-                fec = "SAI_PORT_FEC_MODE_RS"
-            elif fec == "fc":
-                fec = "SAI_PORT_FEC_MODE_FC"
-            else:
-                fec = "SAI_PORT_FEC_MODE_NONE"
-            port_attr.append("SAI_PORT_ATTR_FEC_MODE")
-            port_attr.append(fec)
+            fec = port["fec"] if "fec" in port else sku.get("fec", "none")
+            port_attr.extend(["SAI_PORT_ATTR_FEC_MODE", "SAI_PORT_FEC_MODE_" + fec.upper()])
 
             port_oid = self.create(SaiObjType.PORT, port_attr)
             self.port_oids.append(port_oid)
