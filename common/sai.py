@@ -143,7 +143,14 @@ class CommandProcessor:
                     del self.objects_registry[store_name]
 
         elif operation == "get":
-            return self.sai.get(obj_id, attrs)
+            obj_type = self.sai.vid_to_type(obj_id)
+            results = []
+            for attr in attrs:
+                attr_type = self.sai.get_obj_attr_type(obj_type, attr)
+                status, data = self.sai.get_by_type(obj_id, attr, attr_type)
+                assert status == "SAI_STATUS_SUCCESS", f"Failed to retrieve {attr}: {status}"
+                results.append(data)
+            return results
 
         elif operation == "set":
             return self.sai.set(obj_id, attrs)
