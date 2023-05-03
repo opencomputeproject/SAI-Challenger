@@ -72,19 +72,18 @@ def test_l2_trunk_to_trunk_vlan_dd(npu, dataplane):
             "name": "vlan_10",
             "op": "get",
             "attributes": [
-                "SAI_VLAN_ATTR_MAX_LEARNED_ADDRESSES", ""
+                "SAI_VLAN_ATTR_MAX_LEARNED_ADDRESSES",
+                "SAI_VLAN_ATTR_MEMBER_LIST"
             ]
-        },
-        {
-            "name": "vlan_10",
-            "op": "get",
-            "attributes": ["SAI_VLAN_ATTR_MEMBER_LIST", "2:oid:0x0,oid:0x0"]
         }
     ]
     status = [*npu.process_commands(cmds2)]
+    # command #0
     assert status[0] == "SAI_STATUS_SUCCESS"
-    assert status[1].value() == vlan_learned_max
-    assert len(status[2].oids()) == 2
+    # command #1, attribute #0
+    assert status[1][0].value() == vlan_learned_max
+    # command #1, attribute #1
+    assert len(status[1][1].oids()) == 2
 
     try:
         if npu.run_traffic:
