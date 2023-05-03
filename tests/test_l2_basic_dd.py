@@ -13,12 +13,14 @@ def test_l2_trunk_to_trunk_vlan_dd(npu, dataplane):
     #1. Create a VLAN 10
     #2. Add two ports as tagged members to the VLAN
     #3. Setup static FDB entries for port 1 and port 2
-    #4. Get vlan tagged mode for created vlan member
-    #5. Set vlan tagged mode for created vlan member
-    #6. Send a simple vlan tag (10) packet on port 1 and verify packet on port 2
-    #7. Clean up configuration
+    #4. Set max learned addresses
+    #5. Get max learned addresses
+    #6. Get vlan member list
+    #7. Send a simple vlan tag (10) packet on port 1 and verify packet on port 2
+    #8. Clean up configuration
     """
     vlan_id = "10"
+    vlan_learned_max = "512"
     macs = ['00:11:11:11:11:11', '00:22:22:22:22:22']
 
     cmds = [{
@@ -60,27 +62,29 @@ def test_l2_trunk_to_trunk_vlan_dd(npu, dataplane):
 
     cmds2 = [
         {
-            "name": "vlan_member_0",
-            "op": "get",
-            "attributes": ["SAI_VLAN_MEMBER_ATTR_VLAN_TAGGING_MODE", ""]
-        },
-        {
-            "name": "vlan_member_0",
+            "name": "vlan_10",
             "op": "set",
             "attributes": [
-                "SAI_VLAN_MEMBER_ATTR_VLAN_TAGGING_MODE", "SAI_VLAN_TAGGING_MODE_UNTAGGED"
+                "SAI_VLAN_ATTR_MAX_LEARNED_ADDRESSES", vlan_learned_max
             ]
         },
         {
-            "name": "vlan_member_0",
+            "name": "vlan_10",
             "op": "get",
-            "attributes": ["SAI_VLAN_MEMBER_ATTR_VLAN_TAGGING_MODE", ""]
+            "attributes": [
+                "SAI_VLAN_ATTR_MAX_LEARNED_ADDRESSES", ""
+            ]
+        },
+        {
+            "name": "vlan_10",
+            "op": "get",
+            "attributes": ["SAI_VLAN_ATTR_MEMBER_LIST", "2:oid:0x0,oid:0x0"]
         }
     ]
     status = [*npu.process_commands(cmds2)]
-    assert status[0].value() == "SAI_VLAN_TAGGING_MODE_TAGGED"
-    assert status[1] == "SAI_STATUS_SUCCESS"
-    assert status[2].value() == "SAI_VLAN_TAGGING_MODE_UNTAGGED"
+    assert status[0] == "SAI_STATUS_SUCCESS"
+    assert status[1].value() == vlan_learned_max
+    assert len(status[2].oids()) == 2
 
     try:
         if npu.run_traffic:
@@ -95,5 +99,4 @@ def test_l2_trunk_to_trunk_vlan_dd(npu, dataplane):
             send_packet(dataplane, 0, pkt)
             verify_packets(dataplane, pkt, [1])
     finally:
-        status = [*npu.process_commands(cmds2, cleanup=True)]
         status = [*npu.process_commands(cmds, cleanup=True)]
