@@ -13,8 +13,10 @@ def test_l2_trunk_to_trunk_vlan_dd(npu, dataplane):
     #1. Create a VLAN 10
     #2. Add two ports as tagged members to the VLAN
     #3. Setup static FDB entries for port 1 and port 2
-    #4. Send a simple vlan tag (10) packet on port 1 and verify packet on port 2
-    #5. Clean up configuration
+    #4. Get vlan tagged mode for created vlan member
+    #5. Set vlan tagged mode for created vlan member
+    #6. Send a simple vlan tag (10) packet on port 1 and verify packet on port 2
+    #7. Clean up configuration
     """
     vlan_id = "10"
     macs = ['00:11:11:11:11:11', '00:22:22:22:22:22']
@@ -55,6 +57,31 @@ def test_l2_trunk_to_trunk_vlan_dd(npu, dataplane):
             ]
         })
     status = [*npu.process_commands(cmds)]
+
+    cmds2 = [
+        {
+            "name": "vlan_member_0",
+            "op": "get",
+            "attributes": ["SAI_VLAN_MEMBER_ATTR_VLAN_TAGGING_MODE", ""]
+        },
+        {
+            "name": "vlan_member_0",
+            "op": "set",
+            "attributes": [
+                "SAI_VLAN_MEMBER_ATTR_VLAN_TAGGING_MODE", "SAI_VLAN_TAGGING_MODE_UNTAGGED"
+            ]
+        },
+        {
+            "name": "vlan_member_0",
+            "op": "get",
+            "attributes": ["SAI_VLAN_MEMBER_ATTR_VLAN_TAGGING_MODE", ""]
+        }
+    ]
+    status = [*npu.process_commands(cmds2)]
+    assert status[0].value() == "SAI_VLAN_TAGGING_MODE_TAGGED"
+    assert status[1] == "SAI_STATUS_SUCCESS"
+    assert status[2].value() == "SAI_VLAN_TAGGING_MODE_UNTAGGED"
+
     try:
         if npu.run_traffic:
             pkt = simple_tcp_packet(eth_dst=macs[1],
@@ -68,4 +95,5 @@ def test_l2_trunk_to_trunk_vlan_dd(npu, dataplane):
             send_packet(dataplane, 0, pkt)
             verify_packets(dataplane, pkt, [1])
     finally:
+        status = [*npu.process_commands(cmds2, cleanup=True)]
         status = [*npu.process_commands(cmds, cleanup=True)]
