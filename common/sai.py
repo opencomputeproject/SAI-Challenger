@@ -89,7 +89,8 @@ class CommandProcessor:
         '''
         Command examples:
             {
-                "OP" : "create",
+                "name": "vip1"
+                "op" : "create",
                 "type" : "SAI_OBJECT_TYPE_VIP_ENTRY",
                 "key" : {
                     "switch_id" : "$SWITCH_ID",
@@ -99,19 +100,28 @@ class CommandProcessor:
             }
 
             {
-                "OP" : "create",
+                "name": "acl_grp"
+                "op" : "create",
                 "type" : "SAI_OBJECT_TYPE_DASH_ACL_GROUP",
-                "key": "$acl_in_1",
                 "attributes" : [ "SAI_DASH_ACL_GROUP_ATTR_IP_ADDR_FAMILY", "SAI_IP_ADDR_FAMILY_IPV4" ]
             },
         '''
-        command = self.substitute_command_from_object_registry(command)
-
         store_name = command.get("name")
-        operation = command.get("op", 'create')
+        assert store_name, f"Invalid command {command}. Entry name is undefined"
+
+        operation = command.get("op")
+        assert operation, f"Invalid command {command}. Operation type is undefined"
+
+        if operation in ["set", "get", "remove"]:
+            entry = self.objects_registry.get(store_name)
+            assert entry, f"Failed to execute {command}. Unknown object {store_name}"
+
+        command = self.substitute_command_from_object_registry(command)
         attrs = command.get("attributes", [])
-        obj_type = command.get("type")
         obj_key = command.get("key")
+
+        obj_type = command.get("type")
+        assert obj_type, f"Unknown object type for {command}"
 
         if obj_key is None:
             obj_id = obj_type
@@ -125,11 +135,10 @@ class CommandProcessor:
 
         if operation == "create":
             obj = self.sai.create(obj_id, attrs)
-            if isinstance(store_name, str):  # Store to the DB
-                self.objects_registry[store_name] = {
-                    "type": obj_type,
-                    **(dict(oid=obj, key=None) if obj_key is None else dict(oid=None, key=obj))
-                }
+            self.objects_registry[store_name] = {
+                "type": obj_type,
+                **(dict(oid=obj, key=None) if obj_key is None else dict(oid=None, key=obj))
+            }
             return obj
 
         elif operation == "remove":
