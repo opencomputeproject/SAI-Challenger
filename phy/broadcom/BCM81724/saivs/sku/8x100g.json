@@ -1,0 +1,21 @@
+{
+  "port": [
+      {"alias": 1, "lanes": "200,201"},
+      {"alias": 2, "lanes": "202,203"},
+      {"alias": 3, "lanes": "204,205"},
+      {"alias": 4, "lanes": "206,207"},
+      {"alias": 5, "lanes": "208,209,210,211"},
+      {"alias": 6, "lanes": "212,213,214,215"},
+      {"alias": 7, "lanes": "216,217,218,219"},
+      {"alias": 8, "lanes": "220,221,222,223"}
+  ],
+  "connector": [
+      {"system_side": 1, "line_side": 5},
+      {"system_side": 2, "line_side": 6},
+      {"system_side": 3, "line_side": 7},
+      {"system_side": 4, "line_side": 8}
+  ],
+  "autoneg": "off",
+  "speed":   "100000",
+  "fec":     "none"
+}
