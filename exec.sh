@@ -70,14 +70,21 @@ while [[ $# -gt 0 ]]; do
             TTY=""
         ;;
         *)
-            if [ -z "${EXEC_CMD}" ]; then
-                EXEC_CMD=${1}
-            elif [[ ${1} = *" "* ]]; then
-                # parameter contains spaces
-                EXEC_CMD="${EXEC_CMD} \"${1}\""
-            else
-                EXEC_CMD="${EXEC_CMD} ${1}"
-            fi
+            # Starting from the first unknown parameter,
+            # pass all parameters as a docker command.
+            while [[ $# -gt 0 ]]; do
+                if [ -z "${EXEC_CMD}" ]; then
+                    EXEC_CMD=${1}
+                elif [[ ${1} = *" "* ]]; then
+                    # parameter contains spaces
+                    # E.g., pytest -k "access_to_trunk or trunk_to_access"
+                    EXEC_CMD="${EXEC_CMD} \"${1}\""
+                else
+                    EXEC_CMD="${EXEC_CMD} ${1}"
+                fi
+                shift
+            done
+            break
         ;;
     esac
     shift
