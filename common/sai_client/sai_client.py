@@ -1,4 +1,5 @@
 import sys
+import time
 import os
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
@@ -102,3 +103,16 @@ class SaiClient:
         else:
             raise RuntimeError("Appropriate driver wasn't found")
         return sai_client
+
+    def assert_process_running(self, port, ip="localhost", msg="", tout=10):
+        import socket
+        for i in range(tout + 1):
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                try:
+                    s.connect((ip, int(port)))
+                    return
+                except ConnectionRefusedError:
+                    pass
+            if i < tout:
+                time.sleep(1)
+        assert False, msg

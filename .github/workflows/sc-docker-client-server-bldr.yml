@@ -20,7 +20,7 @@ on:
       - 'exec.sh'
       - '.dockerignore'
 
-jobs: 
+jobs:
   build-sc-server:
     name: Build SAI Challenger server image
     runs-on: ubuntu-20.04
@@ -93,8 +93,6 @@ jobs:
       run: ./run.sh -i server -a trident2 -t saivs
     - name: Create veth links between client and server dockers
       run: sudo ./veth-create-host.sh sc-server-trident2-saivs-run sc-client-run
-    - name: Wait for SAI-C server services to come up
-      run: sleep 10s
     - name: Run functional test cases
       run: ./exec.sh --no-tty -i client pytest --testbed=saivs_client_server -v -k "test_l2_basic"
     - name: Run unit tests
