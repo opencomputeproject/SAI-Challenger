@@ -17,6 +17,7 @@ on:
       - 'tests/**'
       - 'setup.py'
       - 'build.sh'
+      - 'exec.sh'
       - '.dockerignore'
 
 jobs: 
