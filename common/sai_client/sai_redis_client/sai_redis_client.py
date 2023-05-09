@@ -50,6 +50,7 @@ class SaiRedisClient(SaiClient):
           5. The supervisord restarts syncd program as per `autorestart`
              option in `supervisord.conf` file.
         '''
+        self.assert_process_running(self.port, self.server_ip, "Redis server has not started yet...")
         self.r.flushall()
         self.loglevel_db.hmset('syncd:syncd', {'LOGLEVEL':self.loglevel, 'LOGOUTPUT':'SYSLOG'})
         self.r.shutdown()
