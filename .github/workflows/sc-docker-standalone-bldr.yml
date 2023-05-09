@@ -32,8 +32,6 @@ jobs:
       run: ./build.sh -i standalone
     - name: Start SAI-C in standalone mode
       run: ./run.sh -i standalone
-    - name: Wait for SAI-C services to come up
-      run: sleep 10s
     - name: Run tests
       run: ./exec.sh --no-tty pytest --testbed=saivs_standalone -v test_l2_basic.py -v test_vrf.py -v test_dc_t1.py
     - name: Run sairedis tests
@@ -47,8 +45,6 @@ jobs:
       run: ./build.sh -i standalone -s thrift
     - name: Start SAI-C in standalone mode with SAI thrift
       run: ./run.sh -i standalone -s thrift
-    - name: Wait for SAI-C services to come up
-      run: sleep 10s
     - name: Run thrift tests
       run: ./exec.sh --no-tty -s thrift pytest --testbed=saivs_thrift_standalone -v test_l2_basic.py -v test_vrf.py -v test_dc_t1.py
     - name: Run thift data-driven tests

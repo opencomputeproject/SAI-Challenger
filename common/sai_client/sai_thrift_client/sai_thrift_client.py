@@ -22,6 +22,9 @@ class SaiThriftClient(SaiClient):
         self.sai_type_map = {}
         self.rec2vid = {}
         # We need it here to make SAI CLI work for Thrift RPC
+        if self.config['saivs'] is "True":
+            self.assert_process_running("6379", self.config['ip'], "Redis server has not started yet...")
+        self.assert_process_running(self.config['port'], self.config['ip'], "Saiserver has not started yet...")
         self.thrift_transport = TSocket.TSocket(self.config['ip'], self.config['port'])
         self.thrift_transport = TTransport.TBufferedTransport(self.thrift_transport)
         protocol = TBinaryProtocol.TBinaryProtocol(self.thrift_transport)
