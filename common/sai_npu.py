@@ -9,6 +9,7 @@ from saichallenger.common.sai_dataplane.sai_hostif_dataplane import SaiHostifDat
 class SaiNpu(Sai):
 
     def __init__(self, cfg):
+        cfg["client"]["config"]["asic_type"] = "npu"
         super().__init__(cfg)
 
         self.switch_oid = "oid:0x0"
