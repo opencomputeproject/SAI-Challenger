@@ -78,7 +78,13 @@ def test_l2_trunk_to_trunk_vlan_dd(npu, dataplane):
             ]
         }
         )
-    status = [*npu.process_commands(cmds)]
+    #status = [*npu.process_commands(cmds)]
+    for command in cmds:
+        print('-'*80)
+        print(command)
+        result = npu.command_processor.process_command(command)
+        print(result)
+
     try:
         location = "https://" + '10.36.78.145' + ":" + str(443)
         api = snappi.api(location=location, ext="ixnetwork")
