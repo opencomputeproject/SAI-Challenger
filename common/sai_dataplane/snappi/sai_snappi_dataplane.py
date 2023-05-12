@@ -36,8 +36,12 @@ class SaiSnappiDataPlane(SaiDataPlane):
         # IxNetwork:    port.location = "<chassisip>;card;port"
         # TRex:         port.location = "localhost:5555"
         for pid, port in enumerate(self.config['port_groups']):
-            location = port.get('location', f"localhost:{BASE_TENGINE_PORT+pid}")
-            self.configuration.ports.port(name=port["name"], location=location)
+            if self.mode == 'ixnet':
+                location = port['location']
+                self.configuration.ports.port(name=port["name"], location=location)
+            else:
+                location = port.get('location', f"localhost:{BASE_TENGINE_PORT+pid}")
+                self.configuration.ports.port(name=port["name"], location=location)
 
         cap = self.configuration.captures.capture(name="c1")[-1]
         cap.port_names = [p.name for p in self.configuration.ports]
