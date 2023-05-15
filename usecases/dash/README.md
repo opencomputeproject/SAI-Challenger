@@ -90,8 +90,8 @@ Install dependencies listed [**here**](https://github.com/chrispsommers/DASH/blo
 
 ## Prepare repository
 ```
-git clone https://github.com/PLVision/DASH.git
-cd DASH && git checkout test-framework-extension
+git clone https://github.com/sonic-net/DASH.git
+cd DASH
 git submodule update --init --recursive
 ```
 
@@ -119,18 +119,19 @@ Run all available VNET tests:
 make run-saichallenger-tests
 ```
 
-Run tests in DASH configuration format with the custom options:
+Run tests in DASH configuration format with the custom options*:
 ```sh
 make run-saichallenger-tests sai_dpu_client_server_snappi.json test_sai_vnet_inbound.py
 make run-saichallenger-tests sai_dpu_client_server_snappi.json test_sai_vnet_outbound_simple.py
 make run-saichallenger-tests sai_dpu_client_server_snappi.json test_sai_vnet_outbound_scale.py
 ```
 
-Run tests in SAI configuration format with custom options:
+Run tests in SAI configuration format with custom options*:
 ```sh
 make run-saichallenger-tests sai_dpu_client_server_snappi.json test_config_vnet_inbound.py
 make run-saichallenger-tests sai_dpu_client_server_snappi.json test_config_vnet_outbound.py
 ```
+*The run-saichallenger-tests target runs two sets of test cases that can be executed separately - run-saichallenger-scale-tests or run-saichallenger-functional-tests.
 
 ## Manually from the docker (developers mode)
 Run the `dash-saichallenger-client-$USER` container.
@@ -140,6 +141,7 @@ make run-saichallenger-client-bash
 
 And execute tests in DASH configuration format (inside the container):
 ```sh
+cd scale/
 pytest -sv --setup=sai_dpu_client_server_snappi.json test_sai_vnet_inbound.py
 pytest -sv --setup=sai_dpu_client_server_snappi.json test_sai_vnet_outbound_simple.py
 pytest -sv --setup=sai_dpu_client_server_snappi.json test_sai_vnet_outbound_scale.py
