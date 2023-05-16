@@ -65,6 +65,9 @@ if [[ "${IMAGE_TYPE}" != "standalone" && \
     exit 1
 fi
 
+# Clean the previous build
+rm -rf .build/
+
 if [[ "${IMAGE_TYPE}" != "client" ]]; then
 
     if [ -z "${ASIC_TYPE}" ]; then
