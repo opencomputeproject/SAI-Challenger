@@ -159,11 +159,12 @@ if [ "${COMMAND}" = "start" ]; then
             --device /dev/net/tun:/dev/net/tun \
             -d ${IMG_NAME}
     elif [ "${IMAGE_TYPE}" = "server" ]; then
-        docker run --name sc-server-${ASIC_TYPE}-${TARGET}-run \
+        IMG_NAME=$(echo "sc-server-${ASIC_TYPE}-${TARGET}" | tr '[:upper:]' '[:lower:]')
+        docker run --name ${IMG_NAME}-run \
             --cap-add=NET_ADMIN \
             ${OPTS} \
             --device /dev/net/tun:/dev/net/tun \
-            -d sc-server-${ASIC_TYPE}-${TARGET}
+            -d ${IMG_NAME}
     else
         docker run --name ${PREFIX}-client-run \
             -v $(pwd):/sai-challenger \
