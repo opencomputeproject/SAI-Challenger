@@ -40,8 +40,7 @@ class SaiNpu(Sai):
         sw_attr = attr.copy()
         sw_attr.append("SAI_SWITCH_ATTR_INIT_SWITCH")
         sw_attr.append("true")
-        sw_attr.append("SAI_SWITCH_ATTR_TYPE")
-        sw_attr.append("SAI_SWITCH_TYPE_NPU")
+        # @default SAI_SWITCH_TYPE_NPU
 
         self.switch_oid = self.create(SaiObjType.SWITCH, sw_attr)
         self.rec2vid[self.switch_oid] = self.switch_oid
