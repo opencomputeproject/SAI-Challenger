@@ -27,27 +27,24 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Update submodules
-      run: git submodule update --init --recursive
-    #- name: Build standalone docker image
-    #  run: ./build.sh -i standalone
-    #- name: Start SAI-C in standalone mode
-    #  run: ./run.sh -i standalone
-    #- name: Run tests
-    #  run: ./exec.sh --no-tty pytest --testbed=saivs_standalone -v test_l2_basic.py -v test_vrf.py -v test_dc_t1.py
-    #- name: Run sairedis tests
-    #  run: ./exec.sh --no-tty pytest --testbed=saivs_standalone -v -k "test_sairec"
-    #- name: Run unit tests
-    #  run: ./exec.sh --no-tty pytest --testbed=saivs_standalone -v -k \
-    #       "test_acl_ut or test_bridge_ut or (test_switch_ut and not sai_map_list_t) or test_vrf_ut or test_port_ut.py"
-    #- name: Run data-driven tests
-    #  run: ./exec.sh --no-tty pytest --testbed=saivs_standalone -v test_l2_basic_dd.py
+      run: git submodule update --init
+    - name: Build standalone docker image
+      run: ./build.sh -i standalone
+    - name: Start SAI-C in standalone mode
+      run: ./run.sh -i standalone
+    - name: Run tests
+      run: ./exec.sh --no-tty pytest --testbed=saivs_standalone -v test_l2_basic.py -v test_vrf.py -v test_dc_t1.py
+    - name: Run sairedis tests
+      run: ./exec.sh --no-tty pytest --testbed=saivs_standalone -v -k "test_sairec"
+    - name: Run unit tests
+      run: ./exec.sh --no-tty pytest --testbed=saivs_standalone -v -k \
+           "test_acl_ut or test_bridge_ut or (test_switch_ut and not sai_map_list_t) or test_vrf_ut or test_port_ut.py"
+    - name: Run data-driven tests
+      run: ./exec.sh --no-tty pytest --testbed=saivs_standalone -v test_l2_basic_dd.py
     - name: Build standalone docker image with SAI thrift
       run: ./build.sh -i standalone -s thrift
     - name: Start SAI-C in standalone mode with SAI thrift
       run: ./run.sh -i standalone -s thrift
-    - uses: actions/checkout@v2
-    - name: Setup upterm session
-      uses: lhotari/action-upterm@v1
     - name: Run thrift tests
       run: ./exec.sh --no-tty -s thrift pytest --testbed=saivs_thrift_standalone -v test_l2_basic.py -v test_vrf.py -v test_dc_t1.py
     - name: Run thift data-driven tests
