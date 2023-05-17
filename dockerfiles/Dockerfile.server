@@ -106,7 +106,7 @@ COPY setup.py            /sai-challenger/setup.py
 COPY cli/__init__.py     /sai-challenger/cli/__init__.py
 COPY common              /sai-challenger/common
 COPY topologies          /sai-challenger/topologies
-COPY .build/npu          /sai-challenger/npu
+COPY .build/*            /sai-challenger/
 
 # Deploy a remote commands listener
 COPY scripts/redis-cmd-listener.py   /sai-challenger/scripts/redis-cmd-listener.py
