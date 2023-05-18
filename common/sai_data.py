@@ -2,6 +2,7 @@ import json
 from enum import Enum
 
 
+# This enum is sourced from the sai_object_type_t, which is defined in saitypes.h.
 # TODO: make it dynamically generated from headers
 class SaiObjType(Enum):
     PORT                     =  1
@@ -105,6 +106,8 @@ class SaiObjType(Enum):
     IPSEC                    = 99
     IPSEC_PORT               = 100
     IPSEC_SA                 = 101
+
+    # DASH extensions
     TABLE_BITMAP_CLASSIFICATION_ENTRY  = 102
     TABLE_BITMAP_ROUTER_ENTRY          = 103
     TABLE_META_TUNNEL_ENTRY  = 104
