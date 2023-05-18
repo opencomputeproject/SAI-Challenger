@@ -1,7 +1,7 @@
 import json
 from enum import Enum
 
-
+# This enum is sourced from the sai_object_type_t, which is defined in saitypes.h.
 # TODO: make it dynamically generated from headers
 class SaiObjType(Enum):
     PORT                     =  1
@@ -105,21 +105,27 @@ class SaiObjType(Enum):
     IPSEC                    = 99
     IPSEC_PORT               = 100
     IPSEC_SA                 = 101
-    TABLE_BITMAP_CLASSIFICATION_ENTRY  = 102
-    TABLE_BITMAP_ROUTER_ENTRY          = 103
-    TABLE_META_TUNNEL_ENTRY  = 104
-    DASH_ACL_GROUP           = 105
-    DASH_ACL_RULE            = 106
-    DIRECTION_LOOKUP_ENTRY   = 107
-    ENI_ETHER_ADDRESS_MAP_ENTRY        = 108
-    ENI                      = 109
-    VIP_ENTRY                = 110
-    INBOUND_ROUTING_ENTRY    = 111
-    OUTBOUND_CA_TO_PA_ENTRY  = 112
-    OUTBOUND_ROUTING_ENTRY   = 113
-    VNET                     = 114
-    PA_VALIDATION_ENTRY      = 115
-    EXTENSIONS_RANGE_END     = 116
+    GENERIC_PROGRAMMABLE     = 102
+    ARS_PROFILE              = 103
+    ARS                      = 104
+
+    # Subsequent entries are sourced from the sai_object_type_extensions_t,
+    # which is defined in experimental/saitypesextensions.h.
+    TABLE_BITMAP_CLASSIFICATION_ENTRY  = 105
+    TABLE_BITMAP_ROUTER_ENTRY          = 106
+    TABLE_META_TUNNEL_ENTRY  = 107
+    DASH_ACL_GROUP           = 108
+    DASH_ACL_RULE            = 109
+    DIRECTION_LOOKUP_ENTRY   = 110
+    ENI_ETHER_ADDRESS_MAP_ENTRY        = 111
+    ENI                      = 112
+    INBOUND_ROUTING_ENTRY    = 113
+    OUTBOUND_CA_TO_PA_ENTRY  = 114
+    OUTBOUND_ROUTING_ENTRY   = 115
+    VNET                     = 116
+    PA_VALIDATION_ENTRY      = 117
+    VIP_ENTRY                = 118
+    EXTENSIONS_RANGE_END     = 119
 
 
 class SaiStatus(Enum):
