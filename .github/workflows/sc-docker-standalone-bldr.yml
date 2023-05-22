@@ -19,6 +19,7 @@ on:
       - 'run.sh'
       - 'exec.sh'
       - '.dockerignore'
+      - 'sai.env'
 
 jobs:
   build-sc-stadalone-thrift:
