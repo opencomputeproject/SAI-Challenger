@@ -19,6 +19,7 @@ on:
       - 'build.sh'
       - 'exec.sh'
       - '.dockerignore'
+      - 'sai.env'
 
 jobs:
   build-sc-server:
