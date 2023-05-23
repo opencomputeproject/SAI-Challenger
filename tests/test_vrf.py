@@ -9,7 +9,7 @@ from ptf.testutils import simple_tcp_packet, send_packet, verify_packets, verify
 def skip_all(testbed_instance):
     testbed = testbed_instance
     if testbed is not None and len(testbed.npu) != 1:
-        pytest.skip("invalid for \"{}\" testbed".format(testbed.meta.name))
+        pytest.skip("invalid for \"{}\" testbed".format(testbed.name))
 
 
 def test_default_vrf(npu, dataplane):
