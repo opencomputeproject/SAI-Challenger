@@ -18,6 +18,10 @@ RUN apt install -y ${SAIGEN_DEPS} \
         && cd SAI \
         && . /sai/sai.env \
         && git checkout ${SAI_ID} \
+        # Comment out headers checker which is broken for SAI v1.9
+        && sed -ri 's/\.\/checkheaders/#\.\/checkheaders/' meta/Makefile \
+        && sed -ri 's/\.\/checkenumlock/#\.\/checkenumlock/' meta/Makefile \
+        && sed -ri 's/\.\/checkancestry/#\.\/checkancestry/' meta/Makefile \
         && cp inc/* /usr/include/sai/ \
         && cp experimental/* /usr/include/sai/ \
         && cd test/saithriftv2/ \

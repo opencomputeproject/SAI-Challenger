@@ -11,7 +11,7 @@ port_attrs_updated = {}
 def skip_all(testbed_instance):
     testbed = testbed_instance
     if testbed is not None and len(testbed.phy) != 1:
-        pytest.skip("invalid for \"{}\" testbed".format(testbed.meta.name))
+        pytest.skip("invalid for \"{}\" testbed".format(testbed.name))
 
 
 @pytest.fixture(scope="module")
