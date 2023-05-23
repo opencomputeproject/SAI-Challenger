@@ -1,0 +1,20 @@
+{
+    "name": "Tofino-vSwitch",
+    "category": "router",
+    "description": "Tofino vSwitch is base on SAI Challenger server and allows user to run Intel Tofino simulator as a virtual SAI switch.",
+    "vendor_name": "PLVision",
+    "vendor_url": "https://plvision.eu/",
+    "product_name": "SAI Challenger",
+    "product_url": "https://github.com/opencomputeproject/SAI-Challenger",
+    "registry_version": 3,
+    "status": "experimental",
+    "maintainer": "Andriy Kokhan",
+    "maintainer_email": "andriy.kokhan@gmail.com",
+    "usage": "There is no default configuration present. To configure Tofino simulator as a SAI L2 switch with all ports added to the default VLAN, in the auxiliary console execute 'sai init 32x25g' command",
+    "first_port_name": "eth1",
+    "docker": {
+        "adapters": 33,
+        "image": "sc-server-tofino-model",
+        "console_type": "telnet"
+    }
+}

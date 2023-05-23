@@ -1,6 +1,13 @@
 import pytest
-from sai import SaiObjType
-from ptf.testutils import simple_tcp_packet, send_packet, verify_packets
+from saichallenger.common.sai_data import SaiObjType
+from saichallenger.common.sai_dataplane.utils.ptf_testutils import simple_tcp_packet, send_packet, verify_packets
+
+
+@pytest.fixture(scope="module", autouse=True)
+def skip_all(testbed_instance):
+    testbed = testbed_instance
+    if testbed is not None and len(testbed.npu) != 1:
+        pytest.skip("invalid for \"{}\" testbed".format(testbed.name))
 
 
 @pytest.fixture(scope="module")
@@ -20,20 +27,26 @@ def sai_hostif_obj(npu):
     return hostif_oid
 
 
+@pytest.fixture(scope="function")
+def hostif_dataplane(npu):
+    hostifs = {
+        "100": "Ethernet0"
+    }
+    hostif_dataplane = npu.hostif_dataplane_start(hostifs)
+    yield hostif_dataplane
+    npu.hostif_dataplane_stop()
+
+
 @pytest.mark.dependency()
 def test_netdev_create(npu, sai_hostif_obj):
     assert npu.remote_iface_exists("Ethernet0") == True
 
 
 @pytest.mark.dependency(depends=['test_netdev_create'])
-def test_netdev_pkt(npu, dataplane, sai_hostif_obj):
+def test_netdev_pkt(npu, dataplane, sai_hostif_obj, hostif_dataplane):
     if not npu.libsaivs:
         pytest.skip("valid for saivs only")
 
-    hostifs = {
-        "100": "Ethernet0"
-    }
-    hostif_dataplane = npu.hostif_dataplane_start(hostifs)
     assert hostif_dataplane is not None
 
     pkt = simple_tcp_packet(eth_dst='00:00:00:11:11:11',
@@ -47,10 +60,9 @@ def test_netdev_pkt(npu, dataplane, sai_hostif_obj):
     npu.hostif_pkt_listen()
     verify_packets(hostif_dataplane, pkt, [100])
 
-    npu.hostif_dataplane_stop()
-
 
 @pytest.mark.dependency(depends=['test_netdev_create'])
 def test_netdev_remove(npu, sai_hostif_obj):
     npu.remove(sai_hostif_obj)
     assert npu.remote_iface_exists("Ethernet0") == False
+

@@ -1,0 +1,38 @@
+{
+
+"phy": [
+  {
+    "alias": "vs",
+    "asic": "BCM81724",
+    "target": "saivs",
+    "sku": "8x100g",
+    "client": {
+      "type": "redis",
+      "config": {
+          "ip": "localhost",
+          "port": "6379",
+          "loglevel": "NOTICE"
+      }
+    }
+  }
+],
+
+"dataplane": [
+  {
+    "alias": "ptf",
+    "type": "ptf",
+    "mode": "eth",
+    "port_groups": [
+      {"alias": 0, "name": "veth1"},
+      {"alias": 1, "name": "veth2"},
+      {"alias": 2, "name": "veth3"},
+      {"alias": 3, "name": "veth4"},
+      {"alias": 4, "name": "veth5"},
+      {"alias": 5, "name": "veth6"},
+      {"alias": 6, "name": "veth7"},
+      {"alias": 7, "name": "veth8"}
+    ]
+  }
+]
+
+}

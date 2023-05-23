@@ -1,0 +1,103 @@
+name: sc-docker-client-server-bldr
+
+on:
+  pull_request:
+    types: [ opened, synchronize, reopened ]
+    branches: [ "**" ]
+    paths:
+      - '.github/workflows/sc-docker-client-server-bldr.yml'
+      - 'dockerfiles/Dockerfile.client'
+      - 'dockerfiles/Dockerfile.saithrift-client'
+      - 'dockerfiles/Dockerfile.server'
+      - 'npu/broadcom/BCM56850/saivs/Dockerfile.server'
+      - 'common/**'
+      - 'cli/**'
+      - 'scripts/**'
+      - 'configs/**'
+      - 'tests/**'
+      - 'setup.py'
+      - 'build.sh'
+      - 'exec.sh'
+      - '.dockerignore'
+      - 'sai.env'
+
+jobs:
+  build-sc-server:
+    name: Build SAI Challenger server image
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v3
+    - name: Update submodules
+      run: git submodule update --init
+    - name: Build server docker image
+      run: ./build.sh -i server
+    - name: Save server docker image
+      run: docker save sc-server-trident2-saivs > sc-server.tar
+    - name: Upload server image for run-sc-tests job
+      uses: actions/upload-artifact@v3
+      with:
+        name: Server Image
+        path: sc-server.tar
+
+  build-sc-client:
+    name: Build SAI Challenger client image
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v3
+    - name: Update submodules
+      run: git submodule update --init
+    - name: Build client docker image
+      run: ./build.sh -i client
+    - name: Build client docker image with SAI thrift
+      run: ./build.sh -i client -s thrift
+    - name: Save client docker image
+      run: docker save sc-client > sc-client.tar
+    - name: Upload client docker image for run-sc-tests job
+      uses: actions/upload-artifact@v3
+      with:
+        name: Client Image
+        path: sc-client.tar
+
+  run-sc-tests:
+    name: Run SAI Challenger tests in client-server mode
+    needs: [build-sc-client, build-sc-server]
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v3
+    - name: Update submodules.
+      run: git submodule update --init
+    - name: Download client docker image from build-sc-client job
+      uses: actions/download-artifact@v3
+      with:
+        name: Client Image
+    - name: Load client image
+      run: docker load < sc-client.tar
+    - name: Download server docker image from build-sc-server job
+      uses: actions/download-artifact@v3
+      with:
+        name: Server Image
+    - name: Load server image
+      run: docker load < sc-server.tar
+    - name: Delete client image artifact
+      uses: geekyeggo/delete-artifact@v2
+      with:
+        name: Client Image
+    - name: Delete server image artifact
+      uses: geekyeggo/delete-artifact@v2
+      with:
+        name: Server Image
+    - name: Start SAI-C client
+      run: ./run.sh -i client
+    - name: Wait for the client to get the IP address first
+      run: sleep 5s
+    - name: Start SAI-C server
+      run: ./run.sh -i server -a trident2 -t saivs
+    - name: Create veth links between client and server dockers
+      run: sudo ./veth-create-host.sh sc-server-trident2-saivs-run sc-client-run
+    - name: Run functional test cases
+      run: ./exec.sh --no-tty -i client pytest --testbed=saivs_client_server -v -k "test_l2_basic"
+    - name: Run unit tests
+      run: ./exec.sh --no-tty -i client pytest --testbed=saivs_client_server -v -k \
+           "test_acl_ut or test_bridge_ut or (test_switch_ut and not sai_map_list_t) or test_vrf_ut or test_port_ut.py"
+    - name: Run thift data-driven tests
+      run: ./exec.sh --no-tty -i client pytest --testbed=saivs_client_server -v test_l2_basic_dd.py

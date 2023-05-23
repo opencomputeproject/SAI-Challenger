@@ -13,6 +13,8 @@ ASIC_TYPE=""
 ASIC_PATH=""
 TARGET=""
 EXEC_CMD=""
+SAI_INTERFACE="redis"
+TTY="-ti"
 
 print-help() {
     echo
@@ -25,6 +27,10 @@ print-help() {
     echo "     ASIC to be tested"
     echo "  -t TARGET"
     echo "     Target device with this NPU"
+    echo "  -s [redis|thrift]"
+    echo "     SAI interface"
+    echo
+    echo "  --no-tty   Do not allocate a pseudo-TTY"
     echo
     exit 0
 }
@@ -56,12 +62,29 @@ while [[ $# -gt 0 ]]; do
             fi
             shift
         ;;
+        "-s"|"--sai_interface")
+            SAI_INTERFACE="$2"
+            shift
+        ;;
+        "--no-tty")
+            TTY=""
+        ;;
         *)
-            if [ -z "${EXEC_CMD}" ]; then
-                EXEC_CMD=${1}
-            else
-                EXEC_CMD="${EXEC_CMD} ${1}"
-            fi
+            # Starting from the first unknown parameter,
+            # pass all parameters as a docker command.
+            while [[ $# -gt 0 ]]; do
+                if [ -z "${EXEC_CMD}" ]; then
+                    EXEC_CMD=${1}
+                elif [[ ${1} = *" "* ]]; then
+                    # parameter contains spaces
+                    # E.g., pytest -k "access_to_trunk or trunk_to_access"
+                    EXEC_CMD="${EXEC_CMD} \"${1}\""
+                else
+                    EXEC_CMD="${EXEC_CMD} ${1}"
+                fi
+                shift
+            done
+            break
         ;;
     esac
     shift
@@ -119,6 +142,7 @@ print-start-options() {
         echo " ASIC name          : ${ASIC_TYPE}"
         echo " ASIC target        : ${TARGET}"
         echo " Platform path      : ${ASIC_PATH}"
+        echo " SAI interface      : ${SAI_INTERFACE}"
     fi
 
     echo " Container name     : ${CONTAINER}"
@@ -130,13 +154,18 @@ print-start-options() {
 
 trap print-start-options EXIT
 
+if [ "${SAI_INTERFACE}" = "thrift" ]; then
+    PREFIX="sc-thrift"
+else
+    PREFIX="sc"
+fi
+
 # Start Docker container
 if [ "${IMAGE_TYPE}" = "standalone" ]; then
-    CONTAINER="sc-${ASIC_TYPE}-${TARGET}-run"
+    CONTAINER=$(echo "${PREFIX}-${ASIC_TYPE}-${TARGET}-run" | tr '[:upper:]' '[:lower:]')
 elif [ "${IMAGE_TYPE}" = "server" ]; then
     CONTAINER="sc-server-${ASIC_TYPE}-${TARGET}-run"
 else
-    CONTAINER="sc-client-run"
+    CONTAINER="${PREFIX}-client-run"
 fi
-docker exec -ti ${CONTAINER} ${EXEC_CMD}
-
+docker exec ${TTY} ${CONTAINER} bash -c "${EXEC_CMD}"

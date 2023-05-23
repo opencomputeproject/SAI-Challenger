@@ -1,5 +1,12 @@
 import pytest
-from sai import SaiObjType
+from saichallenger.common.sai_data import SaiObjType
+
+
+@pytest.fixture(scope="module", autouse=True)
+def skip_all(testbed_instance):
+    testbed = testbed_instance
+    if testbed is not None and len(testbed.npu) != 1:
+        pytest.skip("invalid for \"{}\" testbed".format(testbed.name))
 
 
 @pytest.fixture(scope="class")
@@ -71,6 +78,22 @@ class TestIngressACL:
                     ["SAI_ACL_ENTRY_ATTR_FIELD_DST_IP",         "192.168.0.8",  "255.255.255.255"],
                 ],
                 "SAI_PACKET_ACTION_DROP",       "9985"
+            ),
+            (
+                [
+                    ["SAI_ACL_ENTRY_ATTR_FIELD_ETHER_TYPE",     "2048",     "0xffff"],
+                    ["SAI_ACL_ENTRY_ATTR_FIELD_SRC_IPV6",       "2000::1",  "ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff"],
+                    ["SAI_ACL_ENTRY_ATTR_FIELD_IP_PROTOCOL",    "17",       "0xff"],
+                ],
+                "SAI_PACKET_ACTION_FORWARD",    "9987"
+            ),
+            (
+                [
+                    ["SAI_ACL_ENTRY_ATTR_FIELD_DST_MAC",        "00:26:dd:14:c4:ee", "ff:ff:ff:ff:ff:ff"],
+                    ["SAI_ACL_ENTRY_ATTR_FIELD_ETHER_TYPE",     "2048",     "0xffff"],
+                    ["SAI_ACL_ENTRY_ATTR_FIELD_IP_PROTOCOL",    "17",       "0xff"],
+                ],
+                "SAI_PACKET_ACTION_FORWARD",    "9987"
             ),
         ]
     )

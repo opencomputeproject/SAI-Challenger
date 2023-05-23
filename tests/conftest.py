@@ -1,303 +1,169 @@
-import logging
-import time
-import pytest
 import os
-import sys
-import imp
-import signal
-import random
-import unittest
-import glob
+import pytest
 
 curdir = os.path.dirname(os.path.realpath(__file__))
-ptfdir = os.path.join(curdir, '../ptf/src')
-sys.path.append(ptfdir)
 
-import ptf
-from ptf import config
-import ptf.ptfutils
+from saichallenger.common.sai_npu import SaiNpu
+from saichallenger.common.sai_phy import SaiPhy
+from saichallenger.common.sai_testbed import SaiTestbed
 
-commondir = os.path.join(curdir, '../common')
-sys.path.append(commondir)
+_previous_test_failed = False
 
-from sai_npu import SaiNpu
-from sai_dataplane import SaiDataPlane
+@pytest.hookimpl(tryfirst=True, hookwrapper=True)
+def pytest_runtest_makereport(item, call):
 
+  outcome = yield
+  rep = outcome.get_result()
 
-##@var DEBUG_LEVELS
-# Map from strings to debugging levels
-DEBUG_LEVELS = {
-    'debug'              : logging.DEBUG,
-    'verbose'            : logging.DEBUG,
-    'info'               : logging.INFO,
-    'warning'            : logging.WARNING,
-    'warn'               : logging.WARNING,
-    'error'              : logging.ERROR,
-    'critical'           : logging.CRITICAL
-}
+  global _previous_test_failed
+  if rep.when == "setup":
+      _previous_test_failed = rep.outcome not in ["passed", "skipped"]
+  elif not _previous_test_failed:
+      _previous_test_failed = rep.outcome not in ["passed", "skipped"]
 
 
-# The default configuration dictionary for PTF
-config_default = {
-    # Miscellaneous options
-    "list"               : False,
-    "list_test_names"    : False,
-    "allow_user"         : False,
+@pytest.fixture
+def prev_test_failed():
+    global _previous_test_failed
+    return _previous_test_failed
 
-    # Test selection options
-    "test_spec"          : "",
-    "test_file"          : None,
-    "test_dir"           : None,
-    "test_order"         : "default",
-    "test_order_seed"    : 0xaba,
-
-    # Switch connection options
-    "platform"           : "eth",
-    "platform_args"      : None,
-    "platform_dir"       : None,
-    "interfaces"         : [
-                                (0,  0, "eth1"),
-                                (0,  1, "eth2"),
-                                (0,  2, "eth3"),
-                                (0,  3, "eth4"),
-                                (0,  4, "eth5"),
-                                (0,  5, "eth6"),
-                                (0,  6, "eth7"),
-                                (0,  7, "eth8"),
-                                (0,  8, "eth9"),
-                                (0,  9, "eth10"),
-                                (0, 10, "eth11"),
-                                (0, 11, "eth12"),
-                                (0, 12, "eth13"),
-                                (0, 13, "eth14"),
-                                (0, 14, "eth15"),
-                                (0, 15, "eth16"),
-                           ],
-    "device_sockets"     : [],  # when using nanomsg
-
-    # Logging options
-    "log_file"           : "ptf.log",
-    "log_dir"            : None,
-    "debug"              : "verbose",
-    "profile"            : False,
-    "profile_file"       : "profile.out",
-    "xunit"              : False,
-    "xunit_dir"          : "xunit",
-
-    # Test behavior options
-    "relax"              : False,
-    "test_params"        : None,
-    "failfast"           : False,
-    "fail_skipped"       : False,
-    "default_timeout"    : 2.0,
-    "default_negative_timeout" : 0.1,
-    "minsize"            : 0,
-    "random_seed"        : None,
-    "disable_ipv6"       : False,
-    "disable_vxlan"      : True,
-    "disable_erspan"     : True,
-    "disable_geneve"     : True,
-    "disable_mpls"       : True,
-    "disable_nvgre"      : True,
-    "disable_igmp"       : False,
-    "qlen"               : 100,
-    "test_case_timeout"  : None,
-
-    # Socket options
-    "socket_recv_size"   : 4096,
-
-    # Other configuration
-    "port_map"           : None,
-}
 
 def pytest_addoption(parser):
     parser.addoption("--sai-server", action="store", default='localhost', help="SAI server IP")
     parser.addoption("--traffic", action="store_true", default=False, help="run tests with traffic")
-    parser.addoption("--saivs", action="store_true", default=False, help="running tests on top of libsaivs")
     parser.addoption("--loglevel", action="store", default='NOTICE', help="syncd logging level")
     parser.addoption("--asic", action="store", default=os.getenv('SC_ASIC'), help="ASIC type")
     parser.addoption("--target", action="store", default=os.getenv('SC_TARGET'), help="The target device with this NPU")
     parser.addoption("--sku", action="store", default=None, help="SKU mode")
+    parser.addoption("--testbed", action="store", default=None, help="Testbed name")
 
 
 @pytest.fixture(scope="session")
 def exec_params(request):
-    config_param = {}
-    config_param["server"] = request.config.getoption("--sai-server")
-    config_param["traffic"] = request.config.getoption("--traffic")
-    config_param["saivs"] = request.config.getoption("--saivs")
-    config_param["loglevel"] = request.config.getoption("--loglevel")
-    config_param["asic"] = request.config.getoption("--asic")
-    config_param["target"] = request.config.getoption("--target")
-    config_param["sku"] = request.config.getoption("--sku")
+    config_param = {
+        # Generic parameters
+        "traffic": request.config.getoption("--traffic"),
+        "testbed": request.config.getoption("--testbed"),
+        # DUT specific parameters
+        "alias": "dut",
+        "asic": request.config.getoption("--asic"),
+        "target": request.config.getoption("--target"),
+        "sku": request.config.getoption("--sku"),
+        "client": {
+            "type": "redis",
+            "config": {
+                "ip": request.config.getoption("--sai-server"),
+                "port": "6379",
+                "loglevel": request.config.getoption("--loglevel")
+            }
+        }
+    }
     return config_param
 
 
-def logging_setup(config):
-    """
-    Set up logging based on config
-    """
-
-    logging.getLogger().setLevel(DEBUG_LEVELS[config["debug"]])
-
-    if config["log_dir"] != None:
-        if os.path.exists(config["log_dir"]):
-            import shutil
-            shutil.rmtree(config["log_dir"])
-        os.makedirs(config["log_dir"])
+@pytest.fixture(scope="session")
+def testbed_instance(exec_params):
+    testbed_name = exec_params.get("testbed", None)
+    if testbed_name is None:
+        yield None
     else:
-        if os.path.exists(config["log_file"]):
-            os.remove(config["log_file"])
+        testbed = SaiTestbed(f"{curdir}/..", testbed_name, exec_params["traffic"])
+        testbed.init()
+        yield testbed
+        testbed.deinit()
 
-    ptf.open_logfile('main')
+
+@pytest.fixture(scope="function")
+def testbed(testbed_instance):
+    if testbed_instance:
+        testbed_instance.setup()
+        yield testbed_instance
+        testbed_instance.teardown()
+    else:
+        yield None
 
 
 @pytest.fixture(scope="session")
-def npu(exec_params):
+def npu(exec_params, testbed_instance):
+    if testbed_instance is not None:
+        if len(testbed_instance.npu) == 1:
+            return testbed_instance.npu[0]
+        return None
+
     npu = None
     exec_params["asic_dir"] = None
 
     if exec_params["asic"] == "generic":
         npu = SaiNpu(exec_params)
     else:
-        asic_dir = None
-        npu_mod = None
-        module_name = "sai_npu"
-
-        try:
-            asic_dir = glob.glob("../platform/**/" + exec_params["asic"] + "/", recursive=True)
-            asic_dir = asic_dir[0]
-            exec_params["asic_dir"] = asic_dir
-        except:
-            logging.critical("Failed to find " + exec_params["asic"] + " NPU folder")
-            sys.exit(1)
-
-        try:
-            npu_mod = imp.load_module(module_name, *imp.find_module(module_name, [asic_dir]))
-        except:
-            logging.info("No {} specific 'sai_npu' module defined..".format(exec_params["asic"]))
-            try:
-                npu_mod = imp.load_module(module_name, *imp.find_module(module_name, [asic_dir + "../"]))
-            except:
-                logging.warn("No platform specific 'sai_npu' module defined..")
-
-        if npu_mod is not None:
-            try:
-                npu = npu_mod.SaiNpuImpl(exec_params)
-            except:
-                logging.critical("Failed to instantiate 'sai_npu' module for {}".format(exec_params["asic"]))
-                sys.exit(1)
-        else:
-            logging.info("Falling back to the default 'sai_npu' module..")
-            npu = SaiNpu(exec_params)
+        npu = SaiTestbed.spawn_asic(f"{curdir}/..", exec_params, "npu")
 
     if npu is not None:
         npu.reset()
     return npu
 
 
-# NOTE: Obsoleted. The `npu` fixture should be used instead.
 @pytest.fixture(scope="session")
-def sai(npu):
-    return npu
+def dpu(exec_params, testbed_instance):
+    if testbed_instance is not None:
+        if len(testbed_instance.dpu) == 1:
+            return testbed_instance.dpu[0]
+        return None
 
+    dpu = None
+    exec_params["asic_dir"] = None
 
-@pytest.fixture(scope="session")
-def dataplane_init():
-    global ptf
-    ptf.config.update(config_default)
-
-    logging_setup(config)
-
-    logging.info("++++++++ " + time.asctime() + " ++++++++")
-
-    # import after logging is configured so that scapy error logs (from importing
-    # packet.py) are silenced and our own warnings are logged properly.
-    import ptf.testutils
-
-    if config["platform_dir"] is None:
-        from ptf import platforms
-        config["platform_dir"] = os.path.dirname(os.path.abspath(platforms.__file__))
-
-    # Allow platforms to import each other
-    sys.path.append(config["platform_dir"])
-
-    # Load the platform module
-    platform_name = config["platform"]
-    logging.info("Importing platform: " + platform_name)
-
-    if platform_name == "nn":
-        try:
-            import nnpy
-        except:
-            logging.critical("Cannot use 'nn' platform if nnpy package is not installed")
-            sys.exit(1)
-
-    platform_mod = None
-    try:
-        platform_mod = imp.load_module(platform_name, *imp.find_module(platform_name, [config["platform_dir"]]))
-    except:
-        logging.warn("Failed to import " + platform_name + " platform module")
-        raise
-
-    try:
-        platform_mod.platform_config_update(config)
-    except:
-        logging.warn("Could not run platform host configuration")
-        raise
-
-    if config["port_map"] is None:
-        logging.critical("Interface port map was not defined by the platform. Exiting.")
-        sys.exit(1)
-
-    logging.debug("Configuration: " + str(config))
-    logging.info("port map: " + str(config["port_map"]))
-
-    ptf.ptfutils.default_timeout = config["default_timeout"]
-    ptf.ptfutils.default_negative_timeout = config["default_negative_timeout"]
-    ptf.testutils.MINSIZE = config['minsize']
-
-    if os.getuid() != 0 and not config["allow_user"] and platform_name != "nn":
-        logging.critical("Super-user privileges required. Please re-run with sudo or as root.")
-        sys.exit(1)
-
-    if config["random_seed"] is not None:
-        logging.info("Random seed: %d" % config["random_seed"])
-        random.seed(config["random_seed"])
+    if exec_params["asic"] == "generic":
+        dpu = SaiDpu(exec_params)
     else:
-        # Generate random seed and report to log file
-        seed = random.randrange(100000000)
-        logging.info("Autogen random seed: %d" % seed)
-        random.seed(seed)
+        dpu = SaiTestbed.spawn_asic(f"{curdir}/..", exec_params, "dpu")
 
-    # Remove python's signal handler which raises KeyboardError. Exiting from an
-    # exception waits for all threads to terminate which might not happen.
-    signal.signal(signal.SIGINT, signal.SIG_DFL)
+    if dpu is not None:
+        dpu.reset()
+    return dpu
 
-    # Set up the dataplane
-    dataplane_instance = ptf.dataplane.DataPlane(config)
-    if config["log_dir"] == None:
-        filename = os.path.splitext(config["log_file"])[0] + '.pcap'
-        dataplane_instance.start_pcap(filename)
+@pytest.fixture(scope="session")
+def phy(exec_params, testbed_instance):
+    if testbed_instance is not None:
+        if len(testbed_instance.phy) == 1:
+            return testbed_instance.phy[0]
+        return None
 
-    for port_id, ifname in config["port_map"].items():
-        device, port = port_id
-        dataplane_instance.port_add(ifname, device, port)
+    phy = None
+    exec_params["asic_dir"] = None
 
-    logging.info("++++++++ " + time.asctime() + " ++++++++")
+    if exec_params["asic"] == "generic":
+        phy = SaiPhy(exec_params)
+    else:
+        phy = SaiTestbed.spawn_asic(f"{curdir}/..", exec_params, "phy")
 
-    yield dataplane_instance
+    if phy is not None:
+        phy.reset()
+    return phy
 
-    # Shutdown the dataplane
-    dataplane_instance.stop_pcap()
-    dataplane_instance.kill()
+@pytest.fixture(scope="session")
+def dataplane_instance(exec_params, testbed_instance):
+    if testbed_instance is not None:
+        if len(testbed_instance.dataplane) > 1:
+            yield None
+        else:
+            yield testbed_instance.dataplane[0]
+    else:
+        cfg = {
+            "type": "ptf",
+            "traffic": exec_params["traffic"]
+        }
+        dp = SaiTestbed.spawn_dataplane(cfg)
+        dp.init()
+        yield dp
+        dp.deinit()
 
 
 @pytest.fixture(scope="function")
-def dataplane(dataplane_init):
-    dataplane = SaiDataPlane(dataplane_init)
-    dataplane.setUp()
-
-    yield dataplane
-
-    dataplane.tearDown()
+def dataplane(dataplane_instance):
+    if dataplane_instance:
+        dataplane_instance.setup()
+        yield dataplane_instance
+        dataplane_instance.teardown()
+    else:
+        yield None

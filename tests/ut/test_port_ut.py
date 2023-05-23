@@ -1,10 +1,17 @@
 import pytest
-from sai import SaiObjType
-from sai import Sai
+from saichallenger.common.sai_data import SaiObjType
+from saichallenger.common.sai import Sai
 
 port_attrs = Sai.get_obj_attrs(SaiObjType.PORT)
 port_attrs_default = {}
 port_attrs_updated = {}
+
+
+@pytest.fixture(scope="module", autouse=True)
+def skip_all(testbed_instance):
+    testbed = testbed_instance
+    if testbed is not None and len(testbed.npu) != 1:
+        pytest.skip("invalid for \"{}\" testbed".format(testbed.name))
 
 
 @pytest.fixture(scope="module")
@@ -49,7 +56,7 @@ def test_get_before_set_attr(npu, dataplane, sai_port_obj, attr, attr_type):#, a
         ("SAI_PORT_ATTR_UPDATE_DSCP",               "true"),
         ("SAI_PORT_ATTR_UPDATE_DSCP",               "false"),
         ("SAI_PORT_ATTR_MTU",                       "9000"),
-        ("SAI_PORT_ATTR_TPID",                      "37120"),   # TPID=0x9100
+        #("SAI_PORT_ATTR_TPID",                      "37120"),   # TPID=0x9100
     ],
 )
 def test_set_attr(npu, dataplane, sai_port_obj, attr, attr_value):

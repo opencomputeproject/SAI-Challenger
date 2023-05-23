@@ -2,8 +2,25 @@
 #include <saimetadata.h>
 #include <algorithm>
 #include <json.hpp>
+#include <map>
 
 constexpr const char *const undefined = "undefined";
+
+std::map<std::string,std::string> sai_types_map = {
+   {"bool",         "bool"},
+   {"macsec_sci",   "bool"},
+   {"macsec_ssci",  "sai_uint32_t"},
+   {"chardata",     "char"},
+   {"int32_list",   "sai_s32_list_t"},
+   {"uint32_list",  "sai_u32_list_t"},
+   {"int16_list",   "sai_s16_list_t"},
+   {"uint16_list",  "sai_u16_list_t"},
+   {"int8_list",    "sai_s8_list_t"},
+   {"uint8_list",   "sai_u8_list_t"},
+   {"int32_range",  "sai_s32_range_t"},
+   {"uint32_range", "sai_u32_range_t"},
+   {undefined,      undefined}
+};
 
 void type_name(nlohmann::json &json, const char *const name);
 
@@ -32,53 +49,10 @@ void type_name(nlohmann::json &json, const char *const name)
         result += std::tolower(ch);
     });
 
-    if (result == "bool" || result == "macsec_sci")
+    auto it = sai_types_map.find(result);
+    if (it != sai_types_map.end())
     {
-        json["type"] = "bool";
-    }
-    else if (result == "macsec_ssci")
-    {
-        json["type"] = "sai_uint32_t";
-    }
-    else if (result == "chardata")
-    {
-        json["type"] = "char";
-    }
-    else if (result == "int32_list")
-    {
-        json["type"] = "sai_s32_list_t";
-    }
-    else if (result == "uint32_list")
-    {
-        json["type"] = "sai_u32_list_t";
-    }
-    else if (result == "int8_list")
-    {
-        json["type"] = "sai_s8_list_t";
-    }
-    else if (result == "uint8_list")
-    {
-        json["type"] = "sai_u8_list_t";
-    }
-    else if (result == "int16_list")
-    {
-        json["type"] = "sai_s16_list_t";
-    }
-    else if (result == "uint16_list")
-    {
-        json["type"] = "sai_u16_list_t";
-    }
-    else if (result == "int32_range")
-    {
-        json["type"] = "sai_s32_range_t";
-    }
-    else if (result == "uint32_range")
-    {
-        json["type"] = "sai_u32_range_t";
-    }
-    else if (result == undefined)
-    {
-        json["type"] = undefined;
+        json["type"] = it->second;
     }
     else if (result.find("acl_field_data") != std::string::npos)
     {
@@ -121,6 +95,19 @@ nlohmann::json attribute_properties_flags(const sai_attr_metadata_t *meta)
     return flags;
 }
 
+nlohmann::json enums(const sai_enum_metadata_t *meta)
+{
+    nlohmann::json j;
+    for (size_t index = 0; index < meta->valuescount; index++)
+    {
+        auto name = meta->valuesnames[index];
+        auto value = meta->values[index];
+        j[name] = value;
+    }
+
+    return j;
+}
+
 nlohmann::json attribute_properties(const sai_attr_metadata_t *meta)
 {
     nlohmann::json json{
@@ -140,6 +127,10 @@ nlohmann::json attribute_properties(const sai_attr_metadata_t *meta)
         }
         json["objects"] = j;
     }
+    if (meta->isenum || meta->isenumlist)
+    {
+        json["values"] = enums(meta->enummetadata);
+    }
 
     return json;
 }
@@ -149,9 +140,10 @@ nlohmann::json attribute(const sai_object_type_info_t *obj_type_info)
     nlohmann::json obj_info;
     for (size_t index = 0; index < obj_type_info->attrmetadatalength; index++)
     {
+        auto attr = obj_type_info->attrmetadata[index];
         obj_info.push_back(nlohmann::json{
-            { "name", obj_type_info->attrmetadata[index]->attridname },
-            { "properties", attribute_properties(obj_type_info->attrmetadata[index]) } });
+            { "name", attr->attridname },
+            { "properties", attribute_properties(attr) } });
     }
 
     return obj_info;

@@ -1,7 +1,15 @@
 import pytest
-from sai import SaiObjType
+from saichallenger.common.sai_data import SaiObjType
 
 TEST_VLAN_ID = "100"
+
+
+@pytest.fixture(scope="module", autouse=True)
+def skip_all(testbed_instance):
+    testbed = testbed_instance
+    if testbed is not None and len(testbed.npu) != 1:
+        pytest.skip("invalid for \"{}\" testbed".format(testbed.name))
+
 
 @pytest.fixture(scope="module")
 def sai_vlan_obj(npu):
@@ -64,7 +72,7 @@ def test_get_before_set_attr(npu, dataplane, sai_vlan_obj, attr, attr_type, attr
     npu.assert_status_success(status)
 
     if attr == "SAI_VLAN_ATTR_STP_INSTANCE":
-        status, data = npu.get_by_type(npu.oid, "SAI_SWITCH_ATTR_DEFAULT_STP_INST_ID", "sai_object_id_t", False)
+        status, data = npu.get_by_type(npu.switch_oid, "SAI_SWITCH_ATTR_DEFAULT_STP_INST_ID", "sai_object_id_t", False)
         assert status == "SAI_STATUS_SUCCESS"
         attr_val = data.oid()
 
@@ -101,7 +109,7 @@ def test_get_before_set_attr(npu, dataplane, sai_vlan_obj, attr, attr_type, attr
 )
 def test_set_attr(npu, dataplane, sai_vlan_obj, attr, attr_value):
     if attr == "SAI_VLAN_ATTR_STP_INSTANCE":
-        status, data = npu.get(npu.oid, ["SAI_SWITCH_ATTR_DEFAULT_STP_INST_ID", attr_value], False)
+        status, data = npu.get(npu.switch_oid, ["SAI_SWITCH_ATTR_DEFAULT_STP_INST_ID", attr_value], False)
         assert status == "SAI_STATUS_SUCCESS"
         attr_value = data.oid()
 

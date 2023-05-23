@@ -1,7 +1,7 @@
 ## GitHub Workflow
 
-We're following basic GitHub Flow. If you have no idea what we're talking 
-about, check out [GitHub's official guide](https://guides.github.com/introduction/flow/). 
+We're following basic GitHub Flow. If you have no idea what we're talking
+about, check out [GitHub's official guide](https://guides.github.com/introduction/flow/).
 Note that merge is only performed by the repository maintainer.
 
 Guide for performing commits:
@@ -17,11 +17,11 @@ Guide for performing commits:
 
 For example:
 
->     Add support of new platform
+>     Add support of new NPU
 >
->     * Adding Dockerfile.<platform name>.server
+>     * Adding Dockerfile.<npu name>.server
 >     * Fixing pytest args
->     * Adding platform specific testcases
+>     * Adding NPU specific testcases
 >
 >       Signed-off-by: user@dev.null
 

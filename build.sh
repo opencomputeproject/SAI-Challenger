@@ -12,6 +12,7 @@ IMAGE_TYPE="standalone"
 ASIC_TYPE=""
 ASIC_PATH=""
 TARGET=""
+SAI_INTERFACE="redis"
 
 print-help() {
     echo
@@ -24,6 +25,8 @@ print-help() {
     echo "     ASIC to be tested"
     echo "  -t TARGET"
     echo "     Target device with this NPU"
+    echo "  -s [redis|thrift]"
+    echo "     SAI interface"
     echo
     exit 0
 }
@@ -47,6 +50,10 @@ while [[ $# -gt 0 ]]; do
             TARGET="$2"
             shift
         ;;
+        "-s"|"--sai_interface")
+            SAI_INTERFACE="$2"
+            shift
+        ;;
     esac
     shift
 done
@@ -57,6 +64,9 @@ if [[ "${IMAGE_TYPE}" != "standalone" && \
     echo "Unknown image type \"${IMAGE_TYPE}\""
     exit 1
 fi
+
+# Clean the previous build
+rm -rf .build/
 
 if [[ "${IMAGE_TYPE}" != "client" ]]; then
 
@@ -97,6 +107,7 @@ print-build-options() {
     echo " ASIC name          : ${ASIC_TYPE}"
     echo " ASIC target        : ${TARGET}"
     echo " Platform path      : ${ASIC_PATH}"
+    echo " SAI interface      : ${SAI_INTERFACE}"     
     echo
     echo "==========================================="
     echo
@@ -106,20 +117,29 @@ trap print-build-options EXIT
 
 # Build base Docker image
 if [ "${IMAGE_TYPE}" = "standalone" ]; then
-    docker build -f Dockerfile -t sc-base .
+    docker build -f dockerfiles/Dockerfile -t sc-base .
 elif [ "${IMAGE_TYPE}" = "server" ]; then
-    docker build -f Dockerfile.server -t sc-server-base .
+    find ${ASIC_PATH}/../ -type f -name \*.py -exec install -D {} .build/{} \;
+    find ${ASIC_PATH}/../ -type f -name \*.json -exec install -D {} .build/{} \;
+    docker build -f dockerfiles/Dockerfile.server -t sc-server-base .
+    rm -rf .build/
 else
-    docker build -f Dockerfile.client -t sc-client .
+    docker build -f dockerfiles/Dockerfile.client -t sc-client .
+    if [ "${SAI_INTERFACE}" = "thrift" ]; then
+        docker build -f dockerfiles/Dockerfile.saithrift-client -t sc-thrift-client .
+    fi
 fi
 
 # Build target Docker image
 pushd "${ASIC_PATH}/${TARGET}"
+IMG_NAME=$(echo "${ASIC_TYPE}-${TARGET}" | tr '[:upper:]' '[:lower:]')
 if [ "${IMAGE_TYPE}" = "standalone" ]; then
-    docker build -f Dockerfile -t sc-${ASIC_TYPE}-${TARGET} .
+    if [ "${SAI_INTERFACE}" = "thrift" ]; then
+        docker build -f Dockerfile.saithrift -t sc-thrift-${IMG_NAME} .
+    else
+        docker build -f Dockerfile -t sc-${IMG_NAME} .
+    fi
 elif [ "${IMAGE_TYPE}" = "server" ]; then
-    docker build -f Dockerfile.server -t sc-server-${ASIC_TYPE}-${TARGET} .
+    docker build -f Dockerfile.server -t sc-server-${IMG_NAME} .
 fi
 popd
-
-
