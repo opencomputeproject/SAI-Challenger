@@ -36,7 +36,7 @@ Where `port_groups` contain two ports: "veth1" and "veth2".
     "alias": "tg",
     "type": "snappi",
     "mode": "ixia_c",
-    "controller": "https://127.0.0.1:443",
+    "controller": "https://127.0.0.1:8443",
     "port_groups": [
       {"alias": 0, "name": "veth1", "speed": "10G"},
       {"alias": 1, "name": "veth2", "speed": "10G"}
