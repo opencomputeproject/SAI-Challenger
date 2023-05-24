@@ -109,8 +109,8 @@ class SaiRedisClient(SaiClient):
         status = []
         attempts = self.attempts
 
-        # Wait upto 3 mins for switch init on HW
-        if not self.libsaivs and obj.startswith("SAI_OBJECT_TYPE_SWITCH") and op == "Screate":
+        # Wait upto 3 mins for switch init
+        if obj.startswith("SAI_OBJECT_TYPE_SWITCH") and op == "Screate":
             tout = 0.5
             attempts = 240
 
