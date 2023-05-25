@@ -206,4 +206,6 @@ class SaiData:
         return self.to_json()[1]
 
     def uint32(self):
-        return int(self.value())
+        v = self.value()
+        assert v.isdigit(), f"Unexpected {self.to_json()[0]} value {v} "
+        return int(v)
