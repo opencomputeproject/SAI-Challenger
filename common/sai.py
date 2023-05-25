@@ -392,6 +392,7 @@ class Sai():
             data = self.get(obj, [attr, in_data])
         else:
             assert status == 'SAI_STATUS_SUCCESS', f"get_list({obj}, {attr}, {value}) --> {status}"
+            assert len(data.to_list()) <= 1, f"Unexpected {attr} value {data.to_list()} "
 
         return data.to_list()
 
