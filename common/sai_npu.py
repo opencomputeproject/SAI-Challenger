@@ -67,14 +67,9 @@ class SaiNpu(Sai):
                                      ["SAI_SWITCH_ATTR_PORT_LIST", self.make_list(port_num, "oid:0x0")]).oids()
 
             # .1Q bridge ports
-            status, data = self.get(self.dot1q_br_oid, ["SAI_BRIDGE_ATTR_PORT_LIST", "1:oid:0x0"], False)
-            bport_num = data.uint32()
-            assert (status == "SAI_STATUS_BUFFER_OVERFLOW")
-            assert (bport_num > 0)
-
-            self.dot1q_bp_oids = self.get(self.dot1q_br_oid,
-                                         ["SAI_BRIDGE_ATTR_PORT_LIST", self.make_list(bport_num, "oid:0x0")]).oids()
-            assert (len(self.dot1q_bp_oids) <= bport_num)
+            self.dot1q_bp_oids = self.get_list(self.dot1q_br_oid, "SAI_BRIDGE_ATTR_PORT_LIST", "oid:0x0")
+            assert len(self.dot1q_bp_oids) > 0
+            assert self.dot1q_bp_oids[0].startswith("oid:")
 
         # Update SKU
         if self.sku_config is not None:
