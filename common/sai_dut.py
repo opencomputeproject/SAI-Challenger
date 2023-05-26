@@ -10,7 +10,7 @@ warnings.filterwarnings("ignore", category=CryptographyDeprecationWarning)
 class SaiDut:
     def __init__(self, cfg):
         self.alias = cfg.get("alias", "default")
-        self.server_ip = cfg["ip"]
+        self.server_ip = cfg.get("ip", "localhost")
         self.username = cfg.get("username", "admin")
         self.password = cfg.get("password", "admin")
         self.ssh = None
@@ -64,7 +64,7 @@ class SaiDut:
     @staticmethod
     def spawn(cfg) -> 'SaiDut':
         sai_dut = None
-        if cfg.get("mode", None) == "sonic":
+        if cfg.get("mode", None) in ["sonic", "sonic-restore"]:
             sai_dut = SaiDutSonic(cfg)
         return sai_dut
 
@@ -72,9 +72,10 @@ class SaiDut:
 class SaiDutSonic(SaiDut):
     def __init__(self, cfg):
         super().__init__(cfg)
-        self.port = cfg["port"]
+        self.port = cfg.get("port", "6379")
         self.username = cfg.get("username", "admin")
         self.password = cfg.get("password", "YourPaSsWoRd")
+        self.mode = cfg.get("mode", None)
         self.ssh = None
 
     def init(self):
@@ -140,11 +141,24 @@ class SaiDutSonic(SaiDut):
         config_db.set("CONFIG_DB_INITIALIZED", "1")
 
     def deinit(self):
+        if self.mode != "sonic-restore":
+            return
+
         # Make SSH connection to SONiC device
         self._connect()
 
+        # Stop SyncD
+        self.ssh.exec_command("docker stop syncd")
+        self.assert_container_state("syncd", is_running=False)
+
+        # Stop Database
+        self.ssh.exec_command("docker stop database")
+        self.assert_container_state("database", is_running=False)
+
         # Enable all SONiC services in the reverse order
-        for service in reverse(["monit", "pmon", "sonic.target", "database"]):
+        services = ["monit", "pmon", "sonic.target", "database"]
+        services.reverse()
+        for service in services:
             if self.service_is_active(service):
                 continue
             self.ssh.exec_command(f"sudo systemctl unmask {service}")

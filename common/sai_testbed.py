@@ -188,6 +188,9 @@ class SaiTestbed():
             for dp in self.dataplane:
                 dp.deinit()
 
+        for dut in self.dut:
+            dut.deinit()
+
     def setup(self):
         """
         per testcase setup
