@@ -6,7 +6,6 @@ from sai_thrift import sai_headers
 from sai_thrift.ttypes import *
 from sai_thrift import ttypes
 from sai_thrift.sai_headers import *
-from saichallenger.common.sai_client.sai_thrift_client.sai_thrift_metadata import SaiMetadata
 from saichallenger.common.sai_data import SaiObjType, SaiStatus
 
 
@@ -134,7 +133,7 @@ class ThriftConverter():
             return "oid"
         elif attr_name == 'SAI_FDB_FLUSH_ATTR_BV_ID':
             return "oid"
-        return SaiMetadata[attr_name]
+        return ThriftConverter.sai_metadata.get(attr_name)
 
     @staticmethod
     def sai_object_list(object_list):
@@ -611,3 +610,24 @@ class ThriftConverter():
         if meta is None:
             return None
         return generic_types[meta['properties'].get('genericType')]
+
+    @staticmethod
+    def generate_metadata():
+        import subprocess
+        import glob
+
+        # Search for thrift adapter
+        sai_thrift_adapter = glob.glob("/usr/local/lib/**/sai_adapter.py", recursive=True)[0]
+
+        # Get attributes from thrift adapter
+        cmd = f"cat {sai_thrift_adapter}"
+        cmd += " | grep -e 'attrs\[\"SAI_.*'"
+        cmd += " | sed 's/ attrs\[//' "
+        cmd += " | sed 's/\] = attr\\.value\\./: \"/'"
+        cmd += " | sed 's/$/\",/'"
+        result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+        assert result.returncode == 0, "Metadata generation failed!"
+
+        # Put attributes to dict
+        data = "{" + result.stdout[:-2] + "}"
+        ThriftConverter.sai_metadata = json.loads(data)
