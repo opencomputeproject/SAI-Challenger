@@ -1,131 +1,48 @@
 import json
-from enum import Enum
+from aenum import Enum, extend_enum
 
-# This enum is sourced from the sai_object_type_t, which is defined in saitypes.h.
-# TODO: make it dynamically generated from headers
+
 class SaiObjType(Enum):
-    PORT                     =  1
-    LAG                      =  2
-    VIRTUAL_ROUTER           =  3
-    NEXT_HOP                 =  4
-    NEXT_HOP_GROUP           =  5
-    ROUTER_INTERFACE         =  6
-    ACL_TABLE                =  7
-    ACL_ENTRY                =  8
-    ACL_COUNTER              =  9
-    ACL_RANGE                = 10
-    ACL_TABLE_GROUP          = 11
-    ACL_TABLE_GROUP_MEMBER   = 12
-    HOSTIF                   = 13
-    MIRROR_SESSION           = 14
-    SAMPLEPACKET             = 15
-    STP                      = 16
-    HOSTIF_TRAP_GROUP        = 17
-    POLICER                  = 18
-    WRED                     = 19
-    QOS_MAP                  = 20
-    QUEUE                    = 21
-    SCHEDULER                = 22
-    SCHEDULER_GROUP          = 23
-    BUFFER_POOL              = 24
-    BUFFER_PROFILE           = 25
-    INGRESS_PRIORITY_GROUP   = 26
-    LAG_MEMBER               = 27
-    HASH                     = 28
-    UDF                      = 29
-    UDF_MATCH                = 30
-    UDF_GROUP                = 31
-    FDB_ENTRY                = 32
-    SWITCH                   = 33
-    HOSTIF_TRAP              = 34
-    HOSTIF_TABLE_ENTRY       = 35
-    NEIGHBOR_ENTRY           = 36
-    ROUTE_ENTRY              = 37
-    VLAN                     = 38
-    VLAN_MEMBER              = 39
-    HOSTIF_PACKET            = 40
-    TUNNEL_MAP               = 41
-    TUNNEL                   = 42
-    TUNNEL_TERM_TABLE_ENTRY  = 43
-    FDB_FLUSH                = 44
-    NEXT_HOP_GROUP_MEMBER    = 45
-    STP_PORT                 = 46
-    RPF_GROUP                = 47
-    RPF_GROUP_MEMBER         = 48
-    L2MC_GROUP               = 49
-    L2MC_GROUP_MEMBER        = 50
-    IPMC_GROUP               = 51
-    IPMC_GROUP_MEMBER        = 52
-    L2MC_ENTRY               = 53
-    IPMC_ENTRY               = 54
-    MCAST_FDB_ENTRY          = 55
-    HOSTIF_USER_DEFINED_TRAP = 56
-    BRIDGE                   = 57
-    BRIDGE_PORT              = 58
-    TUNNEL_MAP_ENTRY         = 59
-    TAM                      = 60
-    SRV6_SIDLIST             = 61
-    PORT_POOL                = 62
-    INSEG_ENTRY              = 63
-    DTEL                     = 64
-    DTEL_QUEUE_REPORT        = 65
-    DTEL_INT_SESSION         = 66
-    DTEL_REPORT_SESSION      = 67
-    DTEL_EVENT               = 68
-    BFD_SESSION              = 69
-    ISOLATION_GROUP          = 70
-    ISOLATION_GROUP_MEMBER   = 71
-    TAM_MATH_FUNC            = 72
-    TAM_REPORT               = 73
-    TAM_EVENT_THRESHOLD      = 74
-    TAM_TEL_TYPE             = 75
-    TAM_TRANSPORT            = 76
-    TAM_TELEMETRY            = 77
-    TAM_COLLECTOR            = 78
-    TAM_EVENT_ACTION         = 79
-    TAM_EVENT                = 80
-    NAT_ZONE_COUNTER         = 81
-    NAT_ENTRY                = 82
-    TAM_INT                  = 83
-    COUNTER                  = 84
-    DEBUG_COUNTER            = 85
-    PORT_CONNECTOR           = 86
-    PORT_SERDES              = 87
-    MACSEC                   = 88
-    MACSEC_PORT              = 89
-    MACSEC_FLOW              = 90
-    MACSEC_SC                = 91
-    MACSEC_SA                = 92
-    SYSTEM_PORT              = 93
-    FINE_GRAINED_HASH_FIELD  = 94
-    SWITCH_TUNNEL            = 95
-    MY_SID_ENTRY             = 96
-    MY_MAC                   = 97
-    NEXT_HOP_GROUP_MAP       = 98
-    IPSEC                    = 99
-    IPSEC_PORT               = 100
-    IPSEC_SA                 = 101
-    GENERIC_PROGRAMMABLE     = 102
-    ARS_PROFILE              = 103
-    ARS                      = 104
 
-    # Subsequent entries are sourced from the sai_object_type_extensions_t,
-    # which is defined in experimental/saitypesextensions.h.
-    TABLE_BITMAP_CLASSIFICATION_ENTRY  = 105
-    TABLE_BITMAP_ROUTER_ENTRY          = 106
-    TABLE_META_TUNNEL_ENTRY  = 107
-    DASH_ACL_GROUP           = 108
-    DASH_ACL_RULE            = 109
-    DIRECTION_LOOKUP_ENTRY   = 110
-    ENI_ETHER_ADDRESS_MAP_ENTRY        = 111
-    ENI                      = 112
-    INBOUND_ROUTING_ENTRY    = 113
-    OUTBOUND_CA_TO_PA_ENTRY  = 114
-    OUTBOUND_ROUTING_ENTRY   = 115
-    VNET                     = 116
-    PA_VALIDATION_ENTRY      = 117
-    VIP_ENTRY                = 118
-    EXTENSIONS_RANGE_END     = 119
+    @staticmethod
+    def generate_from_thrift():
+        try:
+            from sai_thrift import sai_headers
+        except:
+            return
+
+        # Skip generation in case enum is not empty
+        if list(SaiObjType):
+            return
+
+        # This enum is sourced from the sai_object_type_t,
+        # which is defined in saitypes.h
+        for e in sai_headers.sai_object_type:
+            if e.name == "SAI_OBJECT_TYPE_MAX":
+                break
+            extend_enum(SaiObjType, e.name[16:], e.value)
+
+        # Subsequent entries are sourced from the sai_object_type_extensions_t,
+        # which is defined in experimental/saitypesextensions.h
+        for e in sai_headers.sai_object_type_extensions:
+            if e.name == "SAI_OBJECT_TYPE_EXTENSIONS_RANGE_START":
+                continue
+            extend_enum(SaiObjType, e.name[16:], e.value)
+
+    @staticmethod
+    def generate_from_json():
+        # Skip generation in case enum is not empty
+        if list(SaiObjType):
+            return
+
+        try:
+            with open("/etc/sai/sai.json", "r") as f:
+                sai_json = json.loads(f.read())
+        except IOError:
+            assert False, "Failed to locate `sai.json` file"
+
+        for item in sai_json:
+            extend_enum(SaiObjType, item.get('name')[16:], item.get('value'))
 
 
 class SaiStatus(Enum):
