@@ -6,28 +6,32 @@ class SaiObjType(Enum):
 
     @staticmethod
     def generate_from_thrift():
-        try:
-            from sai_thrift import sai_headers
-        except:
-            return
-
         # Skip generation in case enum is not empty
         if list(SaiObjType):
             return
 
-        # This enum is sourced from the sai_object_type_t,
-        # which is defined in saitypes.h
-        for e in sai_headers.sai_object_type:
-            if e.name == "SAI_OBJECT_TYPE_MAX":
-                break
-            extend_enum(SaiObjType, e.name[16:], e.value)
+        try:
+            import re
+            from sai_thrift import sai_headers
+        except:
+            return
 
-        # Subsequent entries are sourced from the sai_object_type_extensions_t,
-        # which is defined in experimental/saitypesextensions.h
-        for e in sai_headers.sai_object_type_extensions:
-            if e.name == "SAI_OBJECT_TYPE_EXTENSIONS_RANGE_START":
+        wildcard_pattern = re.compile(r'^SAI_OBJECT_TYPE_.*')
+        matching_variables = {}
+        module_globals = vars(sai_headers)
+
+        for variable_name, variable_value in module_globals.items():
+            if wildcard_pattern.match(variable_name):
+                matching_variables[variable_name] = variable_value
+
+        for variable_name, variable_value in matching_variables.items():
+            if variable_name == "SAI_OBJECT_TYPE_MAX":
                 continue
-            extend_enum(SaiObjType, e.name[16:], e.value)
+            if variable_name == "SAI_OBJECT_TYPE_EXTENSIONS_RANGE_START":
+                continue
+
+            value = variable_value if type(variable_value) == int else variable_value.value
+            extend_enum(SaiObjType, variable_name[16:], value)
 
     @staticmethod
     def generate_from_json():
