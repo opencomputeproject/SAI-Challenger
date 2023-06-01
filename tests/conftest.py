@@ -40,8 +40,8 @@ def pytest_addoption(parser):
 
 
 def pytest_sessionstart(session):
-    SaiObjType.generate_sai_obj_type_enum_from_thrift()
-    SaiObjType.generate_sai_obj_type_enum_from_json()
+    SaiObjType.generate_from_thrift()
+    SaiObjType.generate_from_json()
 
 
 @pytest.fixture(scope="session")

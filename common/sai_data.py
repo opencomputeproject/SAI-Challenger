@@ -5,7 +5,7 @@ from aenum import Enum, extend_enum
 class SaiObjType(Enum):
 
     @staticmethod
-    def generate_sai_obj_type_enum_from_thrift():
+    def generate_from_thrift():
         try:
             from sai_thrift import sai_headers
         except:
@@ -30,7 +30,7 @@ class SaiObjType(Enum):
             extend_enum(SaiObjType, e.name[16:], e.value)
 
     @staticmethod
-    def generate_sai_obj_type_enum_from_json():
+    def generate_from_json():
         # Skip generation in case enum is not empty
         if list(SaiObjType):
             return
