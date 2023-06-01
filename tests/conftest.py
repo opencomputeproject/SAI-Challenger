@@ -6,6 +6,7 @@ curdir = os.path.dirname(os.path.realpath(__file__))
 from saichallenger.common.sai_npu import SaiNpu
 from saichallenger.common.sai_phy import SaiPhy
 from saichallenger.common.sai_testbed import SaiTestbed
+from saichallenger.common.sai_data import SaiObjType
 
 _previous_test_failed = False
 
@@ -36,6 +37,11 @@ def pytest_addoption(parser):
     parser.addoption("--target", action="store", default=os.getenv('SC_TARGET'), help="The target device with this NPU")
     parser.addoption("--sku", action="store", default=None, help="SKU mode")
     parser.addoption("--testbed", action="store", default=None, help="Testbed name")
+
+
+def pytest_sessionstart(session):
+    SaiObjType.generate_sai_obj_type_enum_from_thrift()
+    SaiObjType.generate_sai_obj_type_enum_from_json()
 
 
 @pytest.fixture(scope="session")

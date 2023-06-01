@@ -106,7 +106,7 @@ COPY scripts/gen_attr_list /sai/gen_attr_list
 RUN apt-get install -y nlohmann-json-dev
 
 # Install SAI-C dependencies
-RUN pip3 install pytest pytest_dependency pytest-html pdbpp macaddress click==8.0
+RUN pip3 install pytest pytest_dependency pytest-html aenum pdbpp macaddress click==8.0
 RUN apt-get install -y python3-paramiko
 
 # Deploy SAI Challenger

@@ -157,6 +157,7 @@ int main()
     {
         json.push_back(nlohmann::json{
             { "name", (*obj_type_info)->objecttypename },
+            { "value", (*obj_type_info)->objecttype },
             { "description", description((*obj_type_info)->objecttypename) },
             { "attributes", attribute(*obj_type_info) } });
     }
