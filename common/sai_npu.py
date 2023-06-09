@@ -258,7 +258,7 @@ class SaiNpu(Sai):
 
         for oid in self.dot1q_bp_oids:
             if oid not in default_vlan_bp:
-                self.create_vlan_member(self.default_vlan_oid, oid, "SAI_VLAN_TAGGING_MODE_UNTAGGED")
+                self.create_vlan_member(self.default_vlan_oid, bp_oid, "SAI_VLAN_TAGGING_MODE_UNTAGGED")
 
     def assert_port_oper_up(self, port_oid, tout=15):
         for i in range(tout):
