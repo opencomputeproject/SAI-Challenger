@@ -13,6 +13,7 @@ import_base_modules()
 def set_ptf_params(request):
     if request.config.option.testbed:
         tb_params = SaiTestbedMeta("/sai-challenger", request.config.option.testbed)
+        tb_params.generate_sai_ptf_config_files()
         ports = to_ptf_int_list(tb_params.config['dataplane'][0]['port_groups'])
     else:
         ports = ""
@@ -20,6 +21,8 @@ def set_ptf_params(request):
     arg_back = sys.argv
     # provide required PTF runner params to avoid exiting with an error
     sys.argv = ['ptf.py','--test-dir', '/sai-challenger/usecases/sai-ptf/SAI/ptf', *ports]
+    sys.argv.append("--test-params")
+    sys.argv.append("thrift_server='127.0.0.1';config_db_json='/sai-challenger/testbeds/config_db.json'")
 
     # load PTF runner module to let it collect test params into ptf.config
     import imp
