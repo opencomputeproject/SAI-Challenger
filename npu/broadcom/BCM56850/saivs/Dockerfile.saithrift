@@ -40,6 +40,7 @@ RUN git clone https://github.com/sonic-net/sonic-sairedis.git \
         && git submodule update --init \
         && cd SAI && git fetch origin \
         && git checkout ${SAI_ID} \
+        && sed -i '/#include <saitypes.h>/a #include <sai.h>' experimental/saiextensions.h \
         && sed -i '/#include <saitypes.h>/a #include <saiswitch.h>' experimental/saiswitchextensions.h \
         # Comment out headers checker which is broken for SAI v1.9
         && sed -ri 's/\.\/checkheaders/#\.\/checkheaders/' meta/Makefile \
@@ -57,11 +58,12 @@ RUN git clone https://github.com/sonic-net/sonic-sairedis.git \
         && dpkg -i libsaivs_1.0.0_amd64.deb \
         && dpkg -i libsaivs-dev_1.0.0_amd64.deb \
         && dpkg -i syncd-vs_1.0.0_amd64.deb \
+        && rm -f *.deb \
         && cd sonic-sairedis/SAI \
-        && GEN_SAIRPC_OPTS="-e" make saithrift-install \
         && cp meta/saimetadatautils.c /sai/gen_attr_list/ \
         && cp meta/saimetadata.c /sai/gen_attr_list/ \
         && cp meta/saiserialize.c /sai/gen_attr_list/ \
+        && GEN_SAIRPC_OPTS="-cve" make saithrift-install \
         && mv /sai/sonic-sairedis/tests /sai/ \
         && rm -rf /sai/sonic-sairedis/* \
         && mv /sai/tests /sai/sonic-sairedis/
