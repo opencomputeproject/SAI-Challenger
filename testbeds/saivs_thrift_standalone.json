@@ -5,7 +5,7 @@
     "alias": "vs",
     "asic": "trident2",
     "target": "saivs",
-    "sku": null,
+    "sku": "32x100g",
     "client": {
       "type": "thrift",
       "config": {
