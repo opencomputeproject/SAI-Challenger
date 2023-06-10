@@ -213,6 +213,9 @@ class SaiNpu(Sai):
             port_attr = [
                 "SAI_PORT_ATTR_ADMIN_STATE",   "true",
                 "SAI_PORT_ATTR_PORT_VLAN_ID",  self.default_vlan_id,
+                # To make saivs happy on ports re-creation
+                # https://github.com/sonic-net/sonic-sairedis/blob/00a953c6eafb8852d771c0f7a4f91db9f0965530/vslib/SwitchStateBase.cpp#L1207
+                "SAI_PORT_ATTR_MTU",           "1514",
             ]
 
             # Lanes
@@ -236,6 +239,11 @@ class SaiNpu(Sai):
             port_oid = self.create(SaiObjType.PORT, port_attr)
             self.port_oids.append(port_oid)
 
+        # To make saivs happy on ports re-creation
+        # This will cause refresh_port_list() to update READ_ONLY attribute
+        # which is needed for refresh_bridge_port_list()
+        self.get_list(self.switch_oid, "SAI_SWITCH_ATTR_PORT_LIST", "oid:0x0")
+
         # Create bridge ports and default VLAN members
         for port_oid in self.port_oids:
             bp_oid = self.create(SaiObjType.BRIDGE_PORT,
@@ -258,7 +266,7 @@ class SaiNpu(Sai):
 
         for oid in self.dot1q_bp_oids:
             if oid not in default_vlan_bp:
-                self.create_vlan_member(self.default_vlan_oid, bp_oid, "SAI_VLAN_TAGGING_MODE_UNTAGGED")
+                self.create_vlan_member(self.default_vlan_oid, oid, "SAI_VLAN_TAGGING_MODE_UNTAGGED")
 
     def assert_port_oper_up(self, port_oid, tout=15):
         for i in range(tout):
