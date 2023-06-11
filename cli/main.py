@@ -35,6 +35,10 @@ exec_params = {
     }
 }
 
+SaiObjType.generate_from_thrift()
+SaiObjType.generate_from_json()
+
+
 # This is our main entrypoint - the main 'sai' command
 @click.group()
 def cli():
