@@ -168,6 +168,8 @@ class CommandProcessor:
 
 
 class Sai():
+    metadata = None
+
     def __init__(self, cfg):
         self.cfg = cfg.copy()
         self.command_processor = CommandProcessor(self)
@@ -240,6 +242,16 @@ class Sai():
         return self.sai_client.set(obj, attr, do_assert)
 
     def get(self, obj, attrs, do_assert=True):
+        if len(attrs) == 1:
+            obj_type = self.vid_to_type(obj)
+            attr = attrs[0]
+            attr_type = self.get_obj_attr_type(obj_type, attr)
+            status, data = self.get_by_type(obj, attr, attr_type)
+            if do_assert:
+                assert status == "SAI_STATUS_SUCCESS", f"Failed to retrieve {attr}: {status}"
+                return data
+            return status, data
+
         return self.sai_client.get(obj, attrs, do_assert)
 
     # BULK
@@ -282,30 +294,28 @@ class Sai():
     def vid_to_type(self, vid):
         return self.sai_client.vid_to_type(vid)
 
-    # Used in tests
     @staticmethod
     def get_meta(obj_type=None):
-        try:
-            path = "/etc/sai/sai.json"
-            f = open(path, "r")
-            sai_str = f.read()
-            sai_json = json.loads(sai_str)
-        except IOError:
-            return None
-
-        if obj_type is not None:
-            if type(obj_type) == SaiObjType:
-                obj_type = "SAI_OBJECT_TYPE_" + SaiObjType(obj_type).name
-            else:
-                assert type(obj_type) == str
-                assert obj_type.startswith("SAI_OBJECT_TYPE_")
-
-            for item in sai_json:
-                if obj_type in item.values():
-                    return item
-            else:
+        if Sai.metadata is None:
+            try:
+                with open('/etc/sai/sai.json', 'r') as f:
+                    Sai.metadata = json.load(f)
+            except IOError:
                 return None
-        return sai_json
+
+        if obj_type is None:
+            return Sai.metadata
+
+        if type(obj_type) == SaiObjType:
+            obj_type = "SAI_OBJECT_TYPE_" + SaiObjType(obj_type).name
+        else:
+            assert type(obj_type) == str
+            assert obj_type.startswith("SAI_OBJECT_TYPE_")
+
+        for item in Sai.metadata:
+            if obj_type in item.values():
+                return item
+        return None
 
     @staticmethod
     def get_obj_attrs(sai_obj_type):
