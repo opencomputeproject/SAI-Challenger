@@ -6,63 +6,62 @@ And the test case code does not require to contain any environment specific data
 Testbed file contains:
 - DUT info: name, type, connection info, ASIC, SKU, ports, etc.
 - Dataplane info: name, type, connection info, ports.
-- Connections: How the dataplane is connected to the DUT.
 
 ### Common attributes
 
 Here is the list of mandatory attributes for each entry in the testbed configuration. But each specific entry type may contain own attribute types required only by that specific entity.
 
-**alias** - device name used for references in the json configuration and in the code.
+**alias** - device name used for references in the JSON configuration and in the code.
 
-**port_groups** - description of ports on the devices.
+**asic** - ASIC name as it is defined in `npu/<VENDOR>/` folder.
 
-### NPU section
+**target** - target platform name as it is defined in `npu/<VENDOR>/<ASIC>/` folder.
+
+**sku** - SKU name (a file with ports settings) as it is defined in `npu/<VENDOR>/<ASIC>/sku/` folder. Also, the ports configuration can be provided explicitly in the same format as it is defined in SKU configuration file. As an option, this parameters can be set to `null`. In such case, SAI-C will not re-configure ports settings on SAI switch initialization. Because it's expected that the ports will be configured on SAI switch initialization implicitly.
+
+**client** - SAI RPC configuration parameters.
+
+### The `npu` section
 
 ```json5
-"NPU": [
+"npu": [
   {
     "alias": "vs",
     "asic": "trident2",
     "target": "saivs",
-    "type": "vs",
     "sku": null,
-    "mode": "client-server",
-    "sai_server_ip": "172.17.0.3",
-    "port_groups": [{"1x10G": "Ethernet0", "init": "1x10G", "alias": 0},
-                    {"1x10G": "Ethernet1", "init": "1x10G", "alias": 1}
-                  ],
-    "sai_dataplane": "ptf_nn"
+    "client": {
+      "type": "redis",
+      "config": {
+        "ip": "172.17.0.3",
+        "port": "6379",
+        "loglevel": "NOTICE"
+      }
+    }
   }
-]
+],
+
 ```
 
-### DATAPLANE section
+### The `dataplane` section
 
-DATAPLANE section contains traffic generator related attributes. Bellow there is an example for the default PTF dataplane.
+The `dataplane` section contains traffic generator related attributes. Bellow there is an example for the default PTF dataplane.
 
 ```json5
-"DATAPLANE": [
+"dataplane": [
   {
     "alias": "ptf",
     "type": "ptf",
     "mode": "eth",
-    "port_groups": [{"10G": "veth1", "init": "10G", "alias": 0},
-                    {"10G": "veth2", "init": "10G", "alias": 1}
-                   ]
+    "port_groups": [
+      {"alias": 0, "name": "veth1"},
+      {"alias": 1, "name": "veth2"},
+      {"alias": 2, "name": "veth3"},
+      {"alias": 3, "name": "veth4"}
+    ]
   }
 ]
 ```
 
-More about dataplane section (including **snappi** and HW traffic generators) - [link](./sai_dataplane.md).
+For more information on dataplane configuration (including **snappi** and HW traffic generators) please refer to [sai_dataplane.md](./sai_dataplane.md) document.
 
-### CONNECTIONS section
-
-CONNECTION sections contains the dictionary of connected devices and port pairs. Use **aliases** to reference necessary device or port_group from the NPU/DPU/PHY and DATAPLANE sections.
-
-```json5
-"CONNECTIONS": {
-    "ptf->vs": [[0, 0],
-                [1, 1]
-               ]
-}
-```
