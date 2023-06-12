@@ -156,7 +156,7 @@ class SaiTestbed():
             phy_cfg["traffic"] = self.with_traffic
             asic = self.spawn_asic(self.base_dir, phy_cfg, "phy")
             self.phy.append(asic)
-        for dataplane_cfg in self.meta.config.get("dataplane"):
+        for dataplane_cfg in self.meta.config.get("dataplane") or []:
             dataplane_cfg["traffic"] = self.with_traffic
             dp = self.spawn_dataplane(dataplane_cfg)
             self.dataplane.append(dp)
