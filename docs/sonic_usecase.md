@@ -33,12 +33,6 @@ Typical content of the testbed description file:
           }
         }
       }
-    ],
-    "dataplane": [
-      {
-        "alias": "dataplane-1",
-        "type": "ptf"
-      }
     ]
 }
 ```

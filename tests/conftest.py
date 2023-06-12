@@ -150,10 +150,10 @@ def phy(exec_params, testbed_instance):
 @pytest.fixture(scope="session")
 def dataplane_instance(exec_params, testbed_instance):
     if testbed_instance is not None:
-        if len(testbed_instance.dataplane) > 1:
-            yield None
-        else:
+        if len(testbed_instance.dataplane) == 1:
             yield testbed_instance.dataplane[0]
+        else:
+            yield None
     else:
         cfg = {
             "type": "ptf",
