@@ -2,7 +2,10 @@
 
 This document describes how to use a target device running SONiC NOS as a SAI DUT.
 
-NOTE: In this operational mode, SAI Challenger utilizes Redis as an interface for SAI implementation, eliminating the need for any additional packages or applications to be built and deployed in the SONiC environment.
+NOTE: In this operational mode, SAI Challenger utilizes Redis as an interface for SAI configuration, eliminating the need for any additional packages or applications to be built and deployed in the SONiC environment.
+
+<a href="url"><img src="../img/sonic-dut.svg" align="center" width="700" ></a>
+<br/><br/>
 
 ### Prepare SONiC device to be used as a SAI DUT
 
