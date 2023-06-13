@@ -45,6 +45,7 @@ See [Use-Cases README](usecases/README.md) for more details.
 - [Composing testbed definition](./docs/testbed_definition.md)
 - [Running tests in client-server mode](./docs/client_server_mode.md)
 - [Running tests in standalone mode](./docs/standalone_mode.md).
+- [Utilizing SONiC device as a SAI DUT](./docs/sonic_usecase.md).
 
 ## Porting SAI Challenger to new platform
 
