@@ -1,5 +1,11 @@
 import pytest
 from saichallenger.common.sai_data import SaiObjType
+from saichallenger.common.sai import Sai
+
+
+bport_attrs = Sai.get_obj_attrs(SaiObjType.BRIDGE_PORT)
+bport_attrs_default = {}
+bport_attrs_updated = {}
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -7,23 +13,6 @@ def skip_all(testbed_instance):
     testbed = testbed_instance
     if testbed is not None and len(testbed.npu) != 1:
         pytest.skip("invalid for \"{}\" testbed".format(testbed.name))
-
-
-bport_attrs = [
-    ("SAI_BRIDGE_PORT_ATTR_TYPE",                                           "sai_bridge_port_type_t"),
-    ("SAI_BRIDGE_PORT_ATTR_PORT_ID",                                        "sai_object_id_t"),
-    ("SAI_BRIDGE_PORT_ATTR_RIF_ID",                                         "sai_object_id_t"),
-    ("SAI_BRIDGE_PORT_ATTR_BRIDGE_ID",                                      "sai_object_id_t"),
-    ("SAI_BRIDGE_PORT_ATTR_FDB_LEARNING_MODE",                              "sai_bridge_port_fdb_learning_mode_t"),
-    ("SAI_BRIDGE_PORT_ATTR_MAX_LEARNED_ADDRESSES",                          "sai_uint32_t"),
-    ("SAI_BRIDGE_PORT_ATTR_FDB_LEARNING_LIMIT_VIOLATION_PACKET_ACTION",     "sai_packet_action_t"),
-    ("SAI_BRIDGE_PORT_ATTR_ADMIN_STATE",                                    "bool"),
-    ("SAI_BRIDGE_PORT_ATTR_INGRESS_FILTERING",                              "bool"),
-    ("SAI_BRIDGE_PORT_ATTR_EGRESS_FILTERING",                               "bool"),
-]
-
-bport_attrs_default = {}
-bport_attrs_updated = {}
 
 
 @pytest.fixture(scope="module")
@@ -35,6 +24,7 @@ def sai_bport_obj(npu):
     for attr in bport_attrs_updated:
         if attr in bport_attrs_default:
             npu.set(bport_oid, [attr, bport_attrs_default[attr]])
+
 
 @pytest.mark.parametrize(
     "attr,attr_type",
