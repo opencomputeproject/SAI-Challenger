@@ -12,15 +12,34 @@ _previous_test_failed = False
 
 @pytest.hookimpl(tryfirst=True, hookwrapper=True)
 def pytest_runtest_makereport(item, call):
+    '''
+    This code defines a hook, which is executed after each phase
+    of a test execution and is responsible for creating a test report.
 
-  outcome = yield
-  rep = outcome.get_result()
+    The "when" attribute of the test report represents the phase of the test:
+      - "setup": the report is generated during the setup phase of the test.
+      - "call": the report is generated during the actual execution of the test.
+      - "teardown": the report is generated during the teardown phase of the test.
 
-  global _previous_test_failed
-  if rep.when == "setup":
-      _previous_test_failed = rep.outcome not in ["passed", "skipped"]
-  elif not _previous_test_failed:
-      _previous_test_failed = rep.outcome not in ["passed", "skipped"]
+    The outcome of a test can have the following possible values:
+      - "passed": the test has passed successfully.
+      - "failed": the test has failed.
+      - "skipped": the test was skipped intentionally.
+      - "error": an unexpected error occurred during the test execution.
+      - "xfailed": the test was expected to fail, and it actually failed as expected.
+      - "xpassed": the test was expected to fail, but it passed unexpectedly.
+    '''
+
+    outcome = yield
+    rep = outcome.get_result()
+
+    global _previous_test_failed
+    if rep.when == "setup":
+        # Store initial outcome of the test
+        _previous_test_failed = rep.outcome not in ["passed", "skipped"]
+    elif not _previous_test_failed:
+        # Update the outcome only in case all previous phases were successful
+        _previous_test_failed = rep.outcome not in ["passed", "skipped"]
 
 
 @pytest.fixture
