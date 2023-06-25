@@ -103,7 +103,7 @@ RUN echo "#mock" > /ptf/ptf && pip3 install /ptf
 
 # Install SAI attributes metadata JSON generator
 COPY scripts/gen_attr_list /sai/gen_attr_list
-RUN apt-get install -y nlohmann-json-dev
+RUN apt-get install -y nlohmann-json3-dev
 
 # Install SAI-C dependencies
 RUN pip3 install pytest pytest_dependency pytest-html aenum pdbpp macaddress click==8.0
