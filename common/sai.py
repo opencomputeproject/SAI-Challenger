@@ -506,6 +506,7 @@ class Sai():
         self.cleanup()
 
         oids = []
+        status = None
         records = self.__parse_rec(fname)
         for cnt, record in records.items():
             print("#{}: {}".format(cnt, record))
@@ -521,7 +522,9 @@ class Sai():
                     if "oid:" in attrs[idx]:
                         attrs[idx] = self.rec2vid[attrs[idx]]
 
-                key = self.create(self.__update_key(rec[0], rec[1]), attrs)
+                status, key = self.create(self.__update_key(rec[0], rec[1]), attrs, False)
+                if status != "SAI_STATUS_SUCCESS":
+                    continue
                 if "{" not in key:
                     key_list = rec[1].split(":", 1)
                     self.rec2vid[key_list[1]] = key
@@ -639,6 +642,9 @@ class Sai():
                 for idx, oid in enumerate(G_oids):
                     self.rec2vid[oid] = oids[idx]
                 oids = []
+            elif rec[0] == 'E':
+                # It's expected that the previous command has failed
+                assert status in [rec[1], "SAI_STATUS_SUCCESS"], f"Expected fail reason is {rec[1]}. Actual fail reason is {status}"
             else:
                 print("Iggnored line {}: {}".format(cnt, rec))
 
