@@ -568,7 +568,7 @@ class Sai():
                 bulk_attrs = []
                 for idx, entry in enumerate(record[1:]):
                     attr = entry[1].split('=')
-                    if "oid:" in attr[1] and attrs[i] != "oid:0x0":
+                    if "oid:" in attr[1] and attr[1] != "oid:0x0":
                         attr[1] = self.rec2vid[attr[1]]
 
                     # Convert into "sai-object-type:key"
