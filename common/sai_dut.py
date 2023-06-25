@@ -50,7 +50,7 @@ class SaiDut:
             if i + 1 < tout:
                 time.sleep(1)
         state = "not running" if is_running else "running"
-        assert False, f"The {container} container is still not running after {tout} seconds..."
+        assert False, f"The {container} container is still {state} after {tout} seconds..."
 
     def assert_service_state(self, service, is_active=True, tout=30):
         for i in range(tout):
