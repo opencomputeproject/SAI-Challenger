@@ -49,7 +49,8 @@ class TestDefaultVrf:
             attr_value = self.state.get(attr)
             if attr_value is None:
                 pytest.skip("no default value")
-        npu.set(npu.default_vrf_oid, [attr, attr_value])
+        status = npu.set(npu.default_vrf_oid, [attr, attr_value], False)
+        npu.assert_status_success(status)
         assert npu.get(npu.default_vrf_oid, [attr]).value() == attr_value
 
 
