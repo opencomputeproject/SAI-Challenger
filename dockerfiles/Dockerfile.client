@@ -26,7 +26,7 @@ RUN apt-get -o Acquire::Check-Valid-Until=false update && apt-get install -y \
         doxygen \
         aspell \
         git \
-        nlohmann-json-dev \
+        nlohmann-json3-dev \
         python3-paramiko
 
 WORKDIR /sai
