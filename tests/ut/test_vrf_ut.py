@@ -69,8 +69,37 @@ class TestNonDefaultVrf:
     def test_get_attr(self, npu, dataplane, attr, attr_type):
         status, data = npu.get_by_type(self.state["vrf_oid"], attr, attr_type, False)
         npu.assert_status_success(status)
+        if attr == "SAI_VIRTUAL_ROUTER_ATTR_SRC_MAC_ADDRESS":
+            status, switch_data = npu.get(npu.switch_oid, ["SAI_SWITCH_ATTR_SRC_MAC_ADDRESS"], False)
+            npu.assert_status_success(status)
+            assert data.value() == switch_data.value()
+        elif attr in ["SAI_VIRTUAL_ROUTER_ATTR_ADMIN_V4_STATE", "SAI_VIRTUAL_ROUTER_ATTR_ADMIN_V6_STATE"]:
+            assert data.value() == "true"
+        elif attr in ["SAI_VIRTUAL_ROUTER_ATTR_VIOLATION_TTL1_PACKET_ACTION", "SAI_VIRTUAL_ROUTER_ATTR_VIOLATION_IP_OPTIONS_PACKET_ACTION"]:
+            assert data.value() == "SAI_PACKET_ACTION_TRAP"
+        elif attr in ["SAI_VIRTUAL_ROUTER_ATTR_UNKNOWN_L3_MULTICAST_PACKET_ACTION"]:
+            assert data.value() == "SAI_PACKET_ACTION_DROP"
 
     @pytest.mark.dependency(depends=['TestNonDefaultVrf::test_create'])
     def test_remove(self, npu):
-            assert self.state["vrf_oid"] != "oid:0x0"
-            npu.remove(self.state["vrf_oid"])
+        assert self.state["vrf_oid"] != "oid:0x0"
+        npu.remove(self.state["vrf_oid"])
+
+    def test_get_max_vrf(self, npu):
+        status, data = npu.get(npu.switch_oid, ["SAI_SWITCH_ATTR_MAX_VIRTUAL_ROUTERS"], False)
+        npu.assert_status_success(status)
+        assert data.uint32() >= 1
+
+    @pytest.mark.dependency(depends=['TestNonDefaultVrf::test_create', 'TestNonDefaultVrf::test_remove'])
+    @pytest.mark.parametrize("vrf_max", [32])
+    def test_scaling(self, npu, vrf_max):
+        vrf_oids = []
+        for i in range(vrf_max):
+            status, oid = npu.create(SaiObjType.VIRTUAL_ROUTER, [], False)
+            if status != "SAI_STATUS_SUCCESS":
+                break
+            vrf_oids.append(oid)
+        created_vrfs = len(vrf_oids)
+        for oid in vrf_oids:
+            npu.remove(oid)
+        assert created_vrfs == vrf_max, f"Created {created_vrfs} VRFs only!"
