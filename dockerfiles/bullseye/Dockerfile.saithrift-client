@@ -1,4 +1,4 @@
-FROM sc-client
+FROM sc-deb11-client
 
 MAINTAINER andriy.kokhan@gmail.com
 
@@ -6,9 +6,26 @@ ENV SAIGEN_DEPS    libgetopt-long-descriptive-perl libconst-fast-perl \
                    libtemplate-perl libnamespace-autoclean-perl \
                    libmoose-perl libmoosex-aliases-perl thrift-compiler
 
-RUN apt install -y libthrift-dev libthrift-0.11.0
+RUN apt install -y libthrift-dev
 
-RUN pip3 install ctypesgen thrift==0.11.0
+RUN pip3 install ctypesgen
+
+RUN apt install -y libtool
+
+# Install Thrift code gen
+RUN wget "http://archive.apache.org/dist/thrift/0.11.0/thrift-0.11.0.tar.gz" \
+        && tar -xf thrift-0.11.0.tar.gz \
+        && cd thrift-0.11.0 \
+        && ./bootstrap.sh \
+        && ./configure --prefix=/usr --with-cpp --with-python \
+        --with-qt4=no --with-qt5=no --with-csharp=no --with-java=no --with-erlang=no \
+        --with-nodejs=no --with-lua=no --with-per=no --with-php=no --with-dart=no \
+        --with-ruby=no --with-haskell=no --with-go=no --with-rs=no --with-haxe=no \
+        --with-dotnetcore=no --with-d=no \
+        && make && make install \
+        && pip3 install lib/py \
+        && cd /sai \
+        && rm -rf thrift-0.11.0 thrift-0.11.0.tar.gz
 
 COPY sai.env /sai
 
