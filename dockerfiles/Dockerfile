@@ -39,7 +39,7 @@ RUN apt-get install -y redis-server libhiredis0.14 python3-redis libc-ares2
 RUN apt-get install -y \
         make libtool m4 autoconf dh-exec debhelper automake cmake pkg-config \
         libhiredis-dev libnl-3-dev libnl-genl-3-dev libnl-route-3-dev swig3.0 \
-        libpython2.7-dev libgtest-dev libgmock-dev libboost-dev autoconf-archive \
+        libgtest-dev libgmock-dev libboost-dev autoconf-archive \
         uuid-dev libboost-serialization-dev libyang-dev libyang0.16
 
 RUN apt-get install -y \
@@ -51,6 +51,7 @@ RUN git clone --recursive https://github.com/sonic-net/sonic-swss-common \
         && . /sai.env \
         && git checkout ${SWSS_COMMON_ID} \
         && ./autogen.sh \
+        && export DEB_BUILD_PROFILES=nopython2 \
         && dpkg-buildpackage -us -uc -b --jobs=auto \
         && cd .. \
         && dpkg -i libswsscommon_1.0.0_amd64.deb \
