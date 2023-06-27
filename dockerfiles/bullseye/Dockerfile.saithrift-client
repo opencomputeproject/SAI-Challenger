@@ -1,4 +1,4 @@
-FROM sc-deb11-client
+FROM sc-client
 
 MAINTAINER andriy.kokhan@gmail.com
 
