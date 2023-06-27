@@ -15,6 +15,7 @@ TARGET=""
 OPTS=""
 COMMAND="start"
 SAI_INTERFACE="redis"
+BASE_OS="buster"
 
 print-help() {
     echo
@@ -34,6 +35,8 @@ print-help() {
     echo "  -r Remove Docker after run"
     echo "  -s [redis|thrift]"
     echo "     SAI interface"
+    echo "  -o [buster|bullseye]"
+    echo "     Docker image base OS"
     echo
     exit 0
 }
@@ -72,6 +75,10 @@ while [[ $# -gt 0 ]]; do
         ;;
         "-s"|"--sai_interface")
             SAI_INTERFACE="$2"
+            shift
+        ;;
+        "-o"|"--base_os")
+            BASE_OS="$2"
             shift
         ;;
     esac
@@ -121,6 +128,7 @@ print-start-options() {
     echo "==========================================="
     echo
     echo " Docker image type  : ${IMAGE_TYPE}"
+    echo " Base OS            : ${BASE_OS}"
     echo " ASIC name          : ${ASIC_TYPE}"
     echo " ASIC target        : ${TARGET}"
     echo " Platform path      : ${ASIC_PATH}"
