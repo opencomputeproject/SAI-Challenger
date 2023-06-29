@@ -1,4 +1,4 @@
-FROM sc-client
+FROM sc-client:buster
 
 MAINTAINER andriy.kokhan@gmail.com
 

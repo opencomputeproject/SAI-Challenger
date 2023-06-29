@@ -1,4 +1,5 @@
-FROM sc-server-base
+ARG BASE_OS
+FROM sc-server-base:${BASE_OS}
 
 MAINTAINER andriy.kokhan@gmail.com
 

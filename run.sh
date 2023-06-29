@@ -17,6 +17,13 @@ COMMAND="start"
 SAI_INTERFACE="redis"
 BASE_OS="buster"
 
+declare -A base_os_map
+base_os_map["deb10"]="buster"
+base_os_map["buster"]="buster"
+base_os_map["deb11"]="bullseye"
+base_os_map["bullseye"]="bullseye"
+
+
 print-help() {
     echo
     echo "$(basename ""$0"") [OPTIONS]"
@@ -92,6 +99,13 @@ if [[ "${IMAGE_TYPE}" != "standalone" && \
     exit 1
 fi
 
+if [ ! -v base_os_map["${BASE_OS}"] ]; then
+    echo "Unknown base OS \"${BASE_OS}\""
+    exit 1
+fi
+
+BASE_OS="${base_os_map[${BASE_OS}]}"
+
 if [[ "${IMAGE_TYPE}" != "client" ]]; then
 
     if [ -z "${ASIC_TYPE}" ]; then
@@ -165,21 +179,21 @@ if [ "${COMMAND}" = "start" ]; then
             --cap-add=NET_ADMIN \
             ${OPTS} \
             --device /dev/net/tun:/dev/net/tun \
-            -d ${IMG_NAME}
+            -d "${IMG_NAME}:${BASE_OS}"
     elif [ "${IMAGE_TYPE}" = "server" ]; then
         IMG_NAME=$(echo "sc-server-${ASIC_TYPE}-${TARGET}" | tr '[:upper:]' '[:lower:]')
         docker run --name ${IMG_NAME}-run \
             --cap-add=NET_ADMIN \
             ${OPTS} \
             --device /dev/net/tun:/dev/net/tun \
-            -d ${IMG_NAME}
+            -d "${IMG_NAME}:${BASE_OS}"
     else
         docker run --name ${PREFIX}-client-run \
             -v $(pwd):/sai-challenger \
             --cap-add=NET_ADMIN \
             --device /dev/net/tun:/dev/net/tun \
             ${OPTS} \
-            -d ${PREFIX}-client
+            -d ${PREFIX}-client:${BASE_OS}
     fi
 
 elif [ "${COMMAND}" = "stop" ]; then

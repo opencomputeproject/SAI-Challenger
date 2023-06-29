@@ -1,4 +1,5 @@
-FROM sc-base
+ARG BASE_OS
+FROM sc-base:$BASE_OS
 
 # Install generic packages
 RUN apt-get install -y \
@@ -7,31 +8,34 @@ RUN apt-get install -y \
         libmoosex-aliases-perl \
         libnamespace-autoclean-perl \
         libgetopt-long-descriptive-perl \
-        aspell-en \
-        bison flex g++ libboost-all-dev libevent-dev libssl-dev \
-        libthrift-dev libthrift-0.11.0 thrift-compiler
-
-RUN pip3 install ctypesgen thrift==0.11.0
+        aspell-en bison flex g++ \
+        libboost-all-dev libevent-dev libssl-dev
 
 WORKDIR /sai
 
+ARG BASE_OS
+RUN if [ "$BASE_OS" = "buster" ]; then \
+        apt-get install -y thrift-compiler libthrift-dev libthrift-0.11.0 \
+        && pip3 install ctypesgen thrift==0.11.0 ; \
+    else \
+        apt-get install -y pkg-config \
+        && wget "http://archive.apache.org/dist/thrift/0.11.0/thrift-0.11.0.tar.gz" \
+        && tar -xf thrift-0.11.0.tar.gz \
+        && cd thrift-0.11.0 \
+        && ./bootstrap.sh \
+        && ./configure --prefix=/usr --with-cpp --with-python \
+            --with-qt4=no --with-qt5=no --with-csharp=no --with-java=no --with-erlang=no \
+            --with-nodejs=no --with-lua=no --with-per=no --with-php=no --with-dart=no \
+            --with-ruby=no --with-haskell=no --with-go=no --with-rs=no --with-haxe=no \
+            --with-dotnetcore=no --with-d=no \
+        && make && make install \
+        && pip3 install ctypesgen lib/py \
+        && cd /sai \
+        && rm -rf thrift-0.11.0 thrift-0.11.0.tar.gz ; \
+    fi
+
 ENV SAITHRIFTV2=y
 ENV platform=vs
-
-## Install Thrift code gen
-#RUN wget "http://archive.apache.org/dist/thrift/0.11.0/thrift-0.11.0.tar.gz" \
-#        && tar -xf thrift-0.11.0.tar.gz \
-#        && cd thrift-0.11.0 \
-#        && ./bootstrap.sh \
-#        && ./configure --prefix=/usr --with-cpp --with-python \
-#        --with-qt4=no --with-qt5=no --with-csharp=no --with-java=no --with-erlang=no \
-#        --with-nodejs=no --with-lua=no --with-per=no --with-php=no --with-dart=no \
-#        --with-ruby=no --with-haskell=no --with-go=no --with-rs=no --with-haxe=no \
-#        --with-dotnetcore=no --with-d=no \
-#        && make && make install \
-#        && pip3 install lib/py \
-#        && cd /sai \
-#        && rm -rf thrift-0.11.0 thrift-0.11.0.tar.gz
 
 RUN git clone https://github.com/sonic-net/sonic-sairedis.git \
         && cd sonic-sairedis \
