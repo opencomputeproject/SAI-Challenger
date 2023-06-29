@@ -6,9 +6,9 @@ on:
     branches: [ "**" ]
     paths:
       - '.github/workflows/sc-docker-client-server-bldr.yml'
-      - 'dockerfiles/Dockerfile.client'
-      - 'dockerfiles/Dockerfile.saithrift-client'
-      - 'dockerfiles/Dockerfile.server'
+      - 'dockerfiles/buster/Dockerfile.client'
+      - 'dockerfiles/buster/Dockerfile.saithrift-client'
+      - 'dockerfiles/buster/Dockerfile.server'
       - 'npu/broadcom/BCM56850/saivs/Dockerfile.server'
       - 'common/**'
       - 'cli/**'

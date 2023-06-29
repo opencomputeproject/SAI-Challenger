@@ -6,7 +6,7 @@ on:
     branches: [ "**" ]
     paths:
       - '.github/workflows/sc-docker-standalone-bldr.yml'
-      - 'dockerfiles/Dockerfile'
+      - 'dockerfiles/buster/Dockerfile'
       - 'npu/broadcom/BCM56850/saivs/Dockerfile'
       - 'npu/broadcom/BCM56850/saivs/Dockerfile.saithrift'
       - 'common/**'
