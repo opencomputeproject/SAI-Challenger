@@ -1,0 +1,56 @@
+name: sc-standalone-deb10
+
+on:
+  pull_request:
+    types: [ opened, synchronize, reopened ]
+    branches: [ "**" ]
+    paths:
+      - '.github/workflows/sc-standalone-deb10.yml'
+      - 'dockerfiles/buster/Dockerfile'
+      - 'npu/broadcom/BCM56850/saivs/Dockerfile'
+      - 'npu/broadcom/BCM56850/saivs/Dockerfile.saithrift'
+      - 'common/**'
+      - 'cli/**'
+      - 'scripts/**'
+      - 'configs/**'
+      - 'tests/**'
+      - 'setup.py'
+      - 'build.sh'
+      - 'run.sh'
+      - 'exec.sh'
+      - '.dockerignore'
+      - 'sai.env'
+
+jobs:
+  build-sc-stadalone-thrift:
+    name: Build SAI Challenger standalone image
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v3
+    - name: Update submodules
+      run: git submodule update --init
+    - name: Build standalone Docker image
+      run: ./build.sh -i standalone -o deb10
+    - name: Start SAI-C in standalone mode
+      run: ./run.sh -i standalone -o deb10
+    - name: Run tests
+      run: ./exec.sh --no-tty pytest --testbed=saivs_standalone -v test_l2_basic.py -v test_vrf.py -v test_dc_t1.py
+    - name: Run sairedis tests
+      run: ./exec.sh --no-tty pytest --testbed=saivs_standalone -v -k "test_sairec"
+    - name: Run unit tests
+      run: ./exec.sh --no-tty pytest --testbed=saivs_standalone -v -k \
+           "test_acl_ut or test_bridge_ut or (test_switch_ut and not sai_map_list_t) or test_vrf_ut or test_port_ut.py"
+    - name: Run data-driven tests
+      run: ./exec.sh --no-tty pytest --testbed=saivs_standalone -v test_l2_basic_dd.py
+    - name: Build standalone docker image with SAI thrift
+      run: ./build.sh -i standalone -s thrift -o deb10
+    - name: Start SAI-C in standalone mode with SAI thrift
+      run: ./run.sh -i standalone -s thrift -o deb10
+    - name: Run thrift tests
+      run: ./exec.sh --no-tty -s thrift pytest --testbed=saivs_thrift_standalone -v test_l2_basic.py -v test_vrf.py -v test_dc_t1.py
+    - name: Run thift data-driven tests
+      run: ./exec.sh --no-tty -s thrift pytest --testbed=saivs_thrift_standalone -v test_l2_basic_dd.py
+    - name: Run thrift unit tests
+      run: ./exec.sh --no-tty -s thrift pytest --testbed=saivs_thrift_standalone -v ut/test_vrf_ut.py ut/test_bridge_ut.py ut/test_acl_ut.py
+    - name: Run thrift sairedis tests
+      run: ./exec.sh --no-tty -s thrift pytest --testbed=saivs_thrift_standalone -v -k "test_sairec"

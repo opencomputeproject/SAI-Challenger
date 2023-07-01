@@ -1,12 +1,12 @@
-name: sc-docker-standalone-bldr
+name: sc-standalone-deb11
 
 on:
   pull_request:
     types: [ opened, synchronize, reopened ]
     branches: [ "**" ]
     paths:
-      - '.github/workflows/sc-docker-standalone-bldr.yml'
-      - 'dockerfiles/buster/Dockerfile'
+      - '.github/workflows/sc-standalone-deb11.yml'
+      - 'dockerfiles/bullseye/Dockerfile'
       - 'npu/broadcom/BCM56850/saivs/Dockerfile'
       - 'npu/broadcom/BCM56850/saivs/Dockerfile.saithrift'
       - 'common/**'
@@ -29,10 +29,10 @@ jobs:
     - uses: actions/checkout@v3
     - name: Update submodules
       run: git submodule update --init
-    - name: Build standalone docker image
-      run: ./build.sh -i standalone
+    - name: Build standalone Docker image
+      run: ./build.sh -i standalone -o deb11
     - name: Start SAI-C in standalone mode
-      run: ./run.sh -i standalone
+      run: ./run.sh -i standalone -o deb11
     - name: Run tests
       run: ./exec.sh --no-tty pytest --testbed=saivs_standalone -v test_l2_basic.py -v test_vrf.py -v test_dc_t1.py
     - name: Run sairedis tests
@@ -43,9 +43,9 @@ jobs:
     - name: Run data-driven tests
       run: ./exec.sh --no-tty pytest --testbed=saivs_standalone -v test_l2_basic_dd.py
     - name: Build standalone docker image with SAI thrift
-      run: ./build.sh -i standalone -s thrift
+      run: ./build.sh -i standalone -s thrift -o deb11
     - name: Start SAI-C in standalone mode with SAI thrift
-      run: ./run.sh -i standalone -s thrift
+      run: ./run.sh -i standalone -s thrift -o deb11
     - name: Run thrift tests
       run: ./exec.sh --no-tty -s thrift pytest --testbed=saivs_thrift_standalone -v test_l2_basic.py -v test_vrf.py -v test_dc_t1.py
     - name: Run thift data-driven tests
