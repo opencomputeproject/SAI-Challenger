@@ -6,14 +6,13 @@ ENV SAIGEN_DEPS    libgetopt-long-descriptive-perl libconst-fast-perl \
                    libtemplate-perl libnamespace-autoclean-perl \
                    libmoose-perl libmoosex-aliases-perl thrift-compiler
 
-RUN apt install -y libthrift-dev libthrift-0.11.0
-
-RUN pip3 install ctypesgen thrift==0.11.0
-
 COPY sai.env /sai
 
 WORKDIR /sai
-RUN apt install -y ${SAIGEN_DEPS} \
+RUN apt-get -o Acquire::Check-Valid-Until=false update \
+        && apt install -y libthrift-dev libthrift-0.11.0 \
+        && pip3 install ctypesgen thrift==0.11.0 \
+        && apt install -y ${SAIGEN_DEPS} \
         && git clone https://github.com/opencomputeproject/SAI.git \
         && cd SAI \
         && . /sai/sai.env \
@@ -29,7 +28,8 @@ RUN apt install -y ${SAIGEN_DEPS} \
         && python3 setup.py install \
         && cd /sai \
         && rm -rf SAI \
-        && apt purge -y ${SAIGEN_DEPS}
+        && apt purge -y ${SAIGEN_DEPS} \
+        && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /sai-challenger/tests
 
