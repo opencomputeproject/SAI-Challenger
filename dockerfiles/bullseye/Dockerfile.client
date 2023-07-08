@@ -20,8 +20,11 @@ RUN apt-get -o Acquire::Check-Valid-Until=false update && apt-get install -y \
         doxygen \
         aspell \
         git \
+        wget \
+        libffi-dev \
         nlohmann-json3-dev \
-        python3-paramiko
+        python3-paramiko \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /sai
 
@@ -64,8 +67,7 @@ RUN pip3 install snappi==0.11.14 snappi_ixnetwork==0.9.1
 RUN pip3 install scapy dpkt
 
 # Install ptf_nn_agent dependencies
-RUN apt-get install -y libffi-dev cmake wget \
-        && wget https://github.com/nanomsg/nanomsg/archive/1.0.0.tar.gz \
+RUN wget https://github.com/nanomsg/nanomsg/archive/1.0.0.tar.gz \
         && tar xvfz 1.0.0.tar.gz \
         && cd nanomsg-1.0.0 \
         && mkdir -p build \

@@ -6,12 +6,12 @@ ENV SAIGEN_DEPS    libgetopt-long-descriptive-perl libconst-fast-perl \
                    libtemplate-perl libnamespace-autoclean-perl \
                    libmoose-perl libmoosex-aliases-perl
 
-RUN apt install -y libtool pkg-config
-
 WORKDIR /sai
 
 # Install Thrift code gen
-RUN wget "http://archive.apache.org/dist/thrift/0.11.0/thrift-0.11.0.tar.gz" \
+RUN apt-get -o Acquire::Check-Valid-Until=false update \
+        && apt install -y libtool pkg-config \
+        && wget "http://archive.apache.org/dist/thrift/0.11.0/thrift-0.11.0.tar.gz" \
         && tar -xf thrift-0.11.0.tar.gz \
         && cd thrift-0.11.0 \
         && ./bootstrap.sh \
@@ -23,11 +23,13 @@ RUN wget "http://archive.apache.org/dist/thrift/0.11.0/thrift-0.11.0.tar.gz" \
         && make && make install \
         && pip3 install ctypesgen lib/py \
         && cd /sai \
-        && rm -rf thrift-0.11.0 thrift-0.11.0.tar.gz
+        && rm -rf thrift-0.11.0 thrift-0.11.0.tar.gz \
+        && rm -rf /var/lib/apt/lists/*
 
 COPY sai.env /sai
 
-RUN apt install -y ${SAIGEN_DEPS} \
+RUN apt-get -o Acquire::Check-Valid-Until=false update \
+        && apt install -y ${SAIGEN_DEPS} \
         && git clone https://github.com/opencomputeproject/SAI.git \
         && cd SAI \
         && . /sai/sai.env \
@@ -43,7 +45,8 @@ RUN apt install -y ${SAIGEN_DEPS} \
         && python3 setup.py install \
         && cd /sai \
         && rm -rf SAI \
-        && apt purge -y ${SAIGEN_DEPS}
+        && apt purge -y ${SAIGEN_DEPS} \
+        && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /sai-challenger/tests
 
