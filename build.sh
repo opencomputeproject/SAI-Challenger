@@ -14,6 +14,7 @@ ASIC_PATH=""
 TARGET=""
 SAI_INTERFACE="redis"
 BASE_OS="buster"
+NOSNAPPI=""
 
 declare -A base_os_map
 base_os_map["deb10"]="buster"
@@ -37,6 +38,8 @@ print-help() {
     echo "     SAI interface"
     echo "  -o [buster|bullseye]"
     echo "     Docker image base OS"
+    echo "  --nosnappi"
+    echo "     Do not include snappi to the final image"
     echo
     exit 0
 }
@@ -67,6 +70,9 @@ while [[ $# -gt 0 ]]; do
         "-o"|"--base_os")
             BASE_OS="$2"
             shift
+        ;;
+        "--nosnappi")
+            NOSNAPPI="y"
         ;;
     esac
     shift
@@ -146,7 +152,7 @@ elif [ "${IMAGE_TYPE}" = "server" ]; then
     docker build -f dockerfiles/${BASE_OS}/Dockerfile.server -t sc-server-base:${BASE_OS} .
     rm -rf .build/
 else
-    docker build -f dockerfiles/${BASE_OS}/Dockerfile.client -t sc-client:${BASE_OS} .
+    docker build -f dockerfiles/${BASE_OS}/Dockerfile.client --build-arg NOSNAPPI=${NOSNAPPI} -t sc-client:${BASE_OS} .
     if [ "${SAI_INTERFACE}" = "thrift" ]; then
         docker build -f dockerfiles/${BASE_OS}/Dockerfile.saithrift-client -t sc-thrift-client:${BASE_OS} .
     fi

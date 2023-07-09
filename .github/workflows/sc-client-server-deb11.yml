@@ -47,9 +47,9 @@ jobs:
     - name: Update submodules
       run: git submodule update --init
     - name: Build client Docker image
-      run: ./build.sh -i client -o deb11
+      run: ./build.sh -i client -o deb11 --nosnappi
     - name: Build client Docker image with SAI thrift
-      run: ./build.sh -i client -s thrift -o deb11
+      run: ./build.sh -i client -s thrift -o deb11 --nosnappi
     - name: Save client Docker image
       run: docker save sc-client > sc-client.tar
     - name: Upload client Docker image
