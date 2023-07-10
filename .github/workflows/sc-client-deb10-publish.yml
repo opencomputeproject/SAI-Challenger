@@ -1,0 +1,63 @@
+name: sc-client-deb10-publish
+
+on:
+  #push:
+  pull_request:
+    types: [ opened, synchronize, reopened ]
+    branches: ["**"]
+      #- 'main'
+    paths:
+      - '.github/workflows/sc-client-deb10-publish.yml'
+      - 'dockerfiles/buster/Dockerfile.client'
+      - 'dockerfiles/buster/Dockerfile.saithrift-client'
+      - 'common/**'
+      - 'cli/**'
+      - 'scripts/**'
+      - 'configs/**'
+      - 'tests/**'
+      - 'setup.py'
+      - 'build.sh'
+      - '.dockerignore'
+      - 'sai.env'
+
+jobs:
+  build-sc-client:
+    name: Build SAI Challenger client image
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v3
+    - name: Update submodules
+      run: git submodule update --init
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: plvisiondevs
+        password: ${{ secrets.DOCKER_PASSWORD }}
+    - name: Build client Docker image
+      run: ./build.sh -i client -o deb10 --nosnappi
+    - name: Create a tag for DockerHub
+      run: docker tag sc-client:buster plvisiondevs/sc-client:buster
+    #- name: docker login
+    #  run: docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD"
+    #- shell: bash
+    #  env:
+    #    DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+    #    DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+    #  run: |
+    #    docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD"
+    - name: docker push sc-client
+      run: docker push plvisiondevs/sc-client:buster
+    #- name: Build client Docker image with SAI thrift
+    #  run: ./build.sh -i client -s thrift -o deb10 --nosnappi
+    #- name: Create a tag for DockerHub
+    #  run: docker tag sc-thrift-client:buster plvisiondevs/sc-thrift-client:buster
+    #- shell: bash
+    #  env:
+    #    DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+    #    DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+    #  run: |
+    ##    docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD"
+    #    docker push plvisiondevs/sc-thrift-client:buster
+    #- name: docker push sc-thrift-client
+    #  run: docker push plvisiondevs/sc-thrift-client:buster
+
