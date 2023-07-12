@@ -188,12 +188,17 @@ if [ "${COMMAND}" = "start" ]; then
             --device /dev/net/tun:/dev/net/tun \
             -d "${IMG_NAME}:${BASE_OS}"
     else
+        IMG_NAME=${PREFIX}-client:${BASE_OS}
+        if [ ! "$(docker inspect --type=image ${IMG_NAME} >/dev/null 2>&1)" ]; then
+            docker pull plvisiondevs/${IMG_NAME}-latest
+            docker tag plvisiondevs/${IMG_NAME}-latest ${IMG_NAME}
+        fi
         docker run --name ${PREFIX}-client-run \
             -v $(pwd):/sai-challenger \
             --cap-add=NET_ADMIN \
             --device /dev/net/tun:/dev/net/tun \
             ${OPTS} \
-            -d ${PREFIX}-client:${BASE_OS}
+            -d ${IMG_NAME}
     fi
 
 elif [ "${COMMAND}" = "stop" ]; then
