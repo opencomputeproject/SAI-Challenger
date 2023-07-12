@@ -174,6 +174,10 @@ if [ "${COMMAND}" = "start" ]; then
     # Start Docker container
     if [ "${IMAGE_TYPE}" = "standalone" ]; then
         IMG_NAME=$(echo "${PREFIX}-${ASIC_TYPE}-${TARGET}" | tr '[:upper:]' '[:lower:]')
+        if [ -z "$(docker images -q ${IMG_NAME}:${BASE_OS})" ]; then
+            docker pull plvisiondevs/${IMG_NAME}:${BASE_OS}-latest
+            docker tag plvisiondevs/${IMG_NAME}:${BASE_OS}-latest ${IMG_NAME}:${BASE_OS}
+        fi
         docker run --name ${IMG_NAME}-run \
             -v $(pwd):/sai-challenger \
             --cap-add=NET_ADMIN \
@@ -189,7 +193,7 @@ if [ "${COMMAND}" = "start" ]; then
             -d "${IMG_NAME}:${BASE_OS}"
     else
         IMG_NAME=${PREFIX}-client:${BASE_OS}
-        if [ ! "$(docker inspect --type=image ${IMG_NAME} >/dev/null 2>&1)" ]; then
+        if [ -z "$(docker images -q ${IMG_NAME})" ]; then
             docker pull plvisiondevs/${IMG_NAME}-latest
             docker tag plvisiondevs/${IMG_NAME}-latest ${IMG_NAME}
         fi
