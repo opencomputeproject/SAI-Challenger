@@ -489,17 +489,6 @@ class Sai():
             for idx, oid in enumerate(port_oids):
                 self.create_alias(f"PORT_{idx}", 'SAI_OBJECT_TYPE_PORT', oid)
 
-
-            status, data = self.get(dot1q_br_oid, ["SAI_BRIDGE_ATTR_PORT_LIST", "1:oid:0x0"], False)
-            bport_num = data.uint32()
-            assert (status == "SAI_STATUS_BUFFER_OVERFLOW")
-            assert (bport_num > 0)
-
-            dot1q_bp_oids = self.get(dot1q_br_oid,
-                                     ["SAI_BRIDGE_ATTR_PORT_LIST", self.make_list(bport_num, "oid:0x0")]).oids()
-            for idx, oid in enumerate(dot1q_bp_oids):
-                self.create_alias(f"BRIDGE_PORT_{idx}", 'SAI_OBJECT_TYPE_BRIDGE_PORT', oid)
-
     def __apply_rec(self, fname):
         # Since it's expected that sairedis.rec file contains a full configuration,
         # we must flush both Redis and NPU state before we start.
