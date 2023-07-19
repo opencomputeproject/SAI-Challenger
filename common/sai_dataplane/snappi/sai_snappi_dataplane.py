@@ -30,7 +30,6 @@ class SaiSnappiDataPlane(SaiDataPlane):
 
         # Create an empty configuration to be pushed to controller
         self.configuration = self.api.config()
-
         # Configure two ports where the location points to the port location:
         # Ixia-C:       port.location = "localhost:5555"
         # IxNetwork:    port.location = "<chassisip>;card;port"
