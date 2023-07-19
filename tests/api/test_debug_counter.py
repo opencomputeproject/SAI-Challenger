@@ -26,11 +26,6 @@ class TestSaiDebugCounter:
             {
                 'name': 'debug_counter_1',
                 'op': 'remove',
-                'type': 'SAI_OBJECT_TYPE_DEBUG_COUNTER',
-                'attributes': [
-                    'SAI_DEBUG_COUNTER_ATTR_TYPE',
-                    'SAI_DEBUG_COUNTER_TYPE_PORT_IN_DROP_REASONS',
-                ],
             }
         ]
 

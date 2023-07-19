@@ -23,8 +23,6 @@ class TestSaiWred:
             {
                 'name': 'wred_1',
                 'op': 'remove',
-                'type': 'SAI_OBJECT_TYPE_WRED',
-                'attributes': [],
             }
         ]
 

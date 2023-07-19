@@ -26,11 +26,6 @@ class TestSaiIsolationGroup:
             {
                 'name': 'isolation_group_1',
                 'op': 'remove',
-                'type': 'SAI_OBJECT_TYPE_ISOLATION_GROUP',
-                'attributes': [
-                    'SAI_ISOLATION_GROUP_ATTR_TYPE',
-                    'SAI_ISOLATION_GROUP_TYPE_PORT',
-                ],
             }
         ]
 

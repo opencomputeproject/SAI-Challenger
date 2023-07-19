@@ -28,13 +28,6 @@ class TestSaiBufferPool:
             {
                 'name': 'buffer_pool_1',
                 'op': 'remove',
-                'type': 'SAI_OBJECT_TYPE_BUFFER_POOL',
-                'attributes': [
-                    'SAI_BUFFER_POOL_ATTR_TYPE',
-                    'SAI_BUFFER_POOL_TYPE_INGRESS',
-                    'SAI_BUFFER_POOL_ATTR_SIZE',
-                    '10',
-                ],
             }
         ]
 

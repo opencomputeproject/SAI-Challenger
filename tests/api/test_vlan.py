@@ -23,8 +23,6 @@ class TestSaiVlan:
             {
                 'name': 'vlan_1',
                 'op': 'remove',
-                'type': 'SAI_OBJECT_TYPE_VLAN',
-                'attributes': ['SAI_VLAN_ATTR_VLAN_ID', '10'],
             }
         ]
 

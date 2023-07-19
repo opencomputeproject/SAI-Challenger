@@ -23,8 +23,6 @@ class TestSaiRpfGroup:
             {
                 'name': 'rpf_group_1',
                 'op': 'remove',
-                'type': 'SAI_OBJECT_TYPE_RPF_GROUP',
-                'attributes': [],
             }
         ]
 

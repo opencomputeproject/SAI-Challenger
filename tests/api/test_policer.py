@@ -28,13 +28,6 @@ class TestSaiPolicer:
             {
                 'name': 'policer_1',
                 'op': 'remove',
-                'type': 'SAI_OBJECT_TYPE_POLICER',
-                'attributes': [
-                    'SAI_POLICER_ATTR_METER_TYPE',
-                    'SAI_METER_TYPE_PACKETS',
-                    'SAI_POLICER_ATTR_MODE',
-                    'SAI_POLICER_MODE_SR_TCM',
-                ],
             }
         ]
 

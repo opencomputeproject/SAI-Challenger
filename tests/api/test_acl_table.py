@@ -23,8 +23,6 @@ class TestSaiAclTable:
             {
                 'name': 'acl_table_1',
                 'op': 'remove',
-                'type': 'SAI_OBJECT_TYPE_ACL_TABLE',
-                'attributes': ['SAI_ACL_TABLE_ATTR_ACL_STAGE', 'SAI_ACL_STAGE_INGRESS'],
             }
         ]
 

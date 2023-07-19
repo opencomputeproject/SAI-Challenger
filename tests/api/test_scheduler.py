@@ -23,8 +23,6 @@ class TestSaiScheduler:
             {
                 'name': 'scheduler_1',
                 'op': 'remove',
-                'type': 'SAI_OBJECT_TYPE_SCHEDULER',
-                'attributes': [],
             }
         ]
 

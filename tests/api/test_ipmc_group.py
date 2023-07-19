@@ -23,8 +23,6 @@ class TestSaiIpmcGroup:
             {
                 'name': 'ipmc_group_1',
                 'op': 'remove',
-                'type': 'SAI_OBJECT_TYPE_IPMC_GROUP',
-                'attributes': [],
             }
         ]
 

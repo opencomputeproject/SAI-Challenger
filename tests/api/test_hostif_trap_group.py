@@ -23,8 +23,6 @@ class TestSaiHostifTrapGroup:
             {
                 'name': 'hostif_trap_group_1',
                 'op': 'remove',
-                'type': 'SAI_OBJECT_TYPE_HOSTIF_TRAP_GROUP',
-                'attributes': [],
             }
         ]
 

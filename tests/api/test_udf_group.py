@@ -23,8 +23,6 @@ class TestSaiUdfGroup:
             {
                 'name': 'udf_group_1',
                 'op': 'remove',
-                'type': 'SAI_OBJECT_TYPE_UDF_GROUP',
-                'attributes': ['SAI_UDF_GROUP_ATTR_LENGTH', '10'],
             }
         ]
 

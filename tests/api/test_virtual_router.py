@@ -23,8 +23,6 @@ class TestSaiVirtualRouter:
             {
                 'name': 'virtual_router_1',
                 'op': 'remove',
-                'type': 'SAI_OBJECT_TYPE_VIRTUAL_ROUTER',
-                'attributes': [],
             }
         ]
 

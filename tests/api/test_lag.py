@@ -23,8 +23,6 @@ class TestSaiLag:
             {
                 'name': 'lag_1',
                 'op': 'remove',
-                'type': 'SAI_OBJECT_TYPE_LAG',
-                'attributes': [],
             }
         ]
 

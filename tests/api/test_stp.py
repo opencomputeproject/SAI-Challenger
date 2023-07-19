@@ -23,8 +23,6 @@ class TestSaiStp:
             {
                 'name': 'stp_1',
                 'op': 'remove',
-                'type': 'SAI_OBJECT_TYPE_STP',
-                'attributes': [],
             }
         ]
 
