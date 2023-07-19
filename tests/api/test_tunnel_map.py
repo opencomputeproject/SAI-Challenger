@@ -1,12 +1,9 @@
 from pprint import pprint
 
-import pytest
-
 
 class TestSaiTunnelMap:
     # object with no parents
 
-    @pytest.mark.dependency(scope='session')
     def test_tunnel_map_create(self, npu):
         commands = [
             {

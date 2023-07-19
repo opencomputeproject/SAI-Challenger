@@ -1,12 +1,9 @@
 from pprint import pprint
 
-import pytest
-
 
 class TestSaiAclRange:
     # object with no parents
 
-    @pytest.mark.dependency(scope='session')
     def test_acl_range_create(self, npu):
         commands = [
             {

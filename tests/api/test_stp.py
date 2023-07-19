@@ -1,12 +1,9 @@
 from pprint import pprint
 
-import pytest
-
 
 class TestSaiStp:
     # object with no attributes
 
-    @pytest.mark.dependency(scope='session')
     def test_stp_create(self, npu):
         commands = [
             {

@@ -1,12 +1,9 @@
 from pprint import pprint
 
-import pytest
-
 
 class TestSaiAclTableGroupMember:
     # object with parent SAI_OBJECT_TYPE_ACL_TABLE_GROUP SAI_OBJECT_TYPE_ACL_TABLE
 
-    @pytest.mark.dependency(scope='session')
     def test_acl_table_group_member_create(self, npu):
         commands = [
             {

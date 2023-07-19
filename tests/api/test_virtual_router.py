@@ -1,12 +1,9 @@
 from pprint import pprint
 
-import pytest
-
 
 class TestSaiVirtualRouter:
     # object with no attributes
 
-    @pytest.mark.dependency(scope='session')
     def test_virtual_router_create(self, npu):
         commands = [
             {

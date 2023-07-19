@@ -1,12 +1,9 @@
 from pprint import pprint
 
-import pytest
-
 
 class TestSaiBufferPool:
     # object with no parents
 
-    @pytest.mark.dependency(scope='session')
     def test_buffer_pool_create(self, npu):
         commands = [
             {

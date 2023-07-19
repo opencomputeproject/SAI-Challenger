@@ -1,12 +1,9 @@
 from pprint import pprint
 
-import pytest
-
 
 class TestSaiNextHopGroup:
     # object with no parents
 
-    @pytest.mark.dependency(scope='session')
     def test_next_hop_group_create(self, npu):
         commands = [
             {

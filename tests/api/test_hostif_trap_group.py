@@ -1,12 +1,9 @@
 from pprint import pprint
 
-import pytest
-
 
 class TestSaiHostifTrapGroup:
     # object with no attributes
 
-    @pytest.mark.dependency(scope='session')
     def test_hostif_trap_group_create(self, npu):
         commands = [
             {
