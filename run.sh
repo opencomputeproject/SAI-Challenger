@@ -154,8 +154,20 @@ print-start-options() {
 
 trap print-start-options EXIT
 
+start_docker_container() {
+    if [ -z "$(docker images -q ${IMG_NAME}:${BASE_OS})" ]; then
+        docker pull plvisiondevs/${IMG_NAME}:${BASE_OS}-latest
+        docker tag plvisiondevs/${IMG_NAME}:${BASE_OS}-latest ${IMG_NAME}:${BASE_OS}
+    fi
+    docker run --name ${IMG_NAME}-run \
+        --cap-add=NET_ADMIN \
+        --device /dev/net/tun:/dev/net/tun \
+        ${OPTS} \
+        -d "${IMG_NAME}:${BASE_OS}"
+}
+
 stop_docker_container() {
-    DOCKER_NAME=$1
+    DOCKER_NAME=${IMG_NAME}-run
     PID=$(docker inspect --format '{{ .State.Pid }}' $DOCKER_NAME)
     NETNS="$DOCKER_NAME_$PID"
     docker stop $DOCKER_NAME
@@ -169,53 +181,21 @@ else
     PREFIX="sc"
 fi
 
+
+if [ "${IMAGE_TYPE}" = "standalone" ]; then
+    IMG_NAME=$(echo "${PREFIX}-${ASIC_TYPE}-${TARGET}" | tr '[:upper:]' '[:lower:]')
+    OPTS="$OPTS -v $(pwd):/sai-challenger"
+elif [ "${IMAGE_TYPE}" = "server" ]; then
+    IMG_NAME=$(echo "sc-server-${ASIC_TYPE}-${TARGET}" | tr '[:upper:]' '[:lower:]')
+else
+    IMG_NAME=${PREFIX}-client
+    OPTS="$OPTS -v $(pwd):/sai-challenger"
+fi
+
 if [ "${COMMAND}" = "start" ]; then
-
-    # Start Docker container
-    if [ "${IMAGE_TYPE}" = "standalone" ]; then
-        IMG_NAME=$(echo "${PREFIX}-${ASIC_TYPE}-${TARGET}" | tr '[:upper:]' '[:lower:]')
-        if [ -z "$(docker images -q ${IMG_NAME}:${BASE_OS})" ]; then
-            docker pull plvisiondevs/${IMG_NAME}:${BASE_OS}-latest
-            docker tag plvisiondevs/${IMG_NAME}:${BASE_OS}-latest ${IMG_NAME}:${BASE_OS}
-        fi
-        docker run --name ${IMG_NAME}-run \
-            -v $(pwd):/sai-challenger \
-            --cap-add=NET_ADMIN \
-            ${OPTS} \
-            --device /dev/net/tun:/dev/net/tun \
-            -d "${IMG_NAME}:${BASE_OS}"
-    elif [ "${IMAGE_TYPE}" = "server" ]; then
-        IMG_NAME=$(echo "sc-server-${ASIC_TYPE}-${TARGET}" | tr '[:upper:]' '[:lower:]')
-        docker run --name ${IMG_NAME}-run \
-            --cap-add=NET_ADMIN \
-            ${OPTS} \
-            --device /dev/net/tun:/dev/net/tun \
-            -d "${IMG_NAME}:${BASE_OS}"
-    else
-        IMG_NAME=${PREFIX}-client:${BASE_OS}
-        if [ -z "$(docker images -q ${IMG_NAME})" ]; then
-            docker pull plvisiondevs/${IMG_NAME}-latest
-            docker tag plvisiondevs/${IMG_NAME}-latest ${IMG_NAME}
-        fi
-        docker run --name ${PREFIX}-client-run \
-            -v $(pwd):/sai-challenger \
-            --cap-add=NET_ADMIN \
-            --device /dev/net/tun:/dev/net/tun \
-            ${OPTS} \
-            -d ${IMG_NAME}
-    fi
-
+    start_docker_container
 elif [ "${COMMAND}" = "stop" ]; then
-
-    # Stop Docker container
-    if [ "${IMAGE_TYPE}" = "standalone" ]; then
-        stop_docker_container ${PREFIX}-${ASIC_TYPE}-${TARGET}-run
-    elif [ "${IMAGE_TYPE}" = "server" ]; then
-        stop_docker_container sc-server-${ASIC_TYPE}-${TARGET}-run
-    else
-        stop_docker_container ${PREFIX}-client-run
-    fi
-
+    stop_docker_container
 else
     echo "Unknown command \"${COMMAND}\". Supported: start|stop."
 fi
