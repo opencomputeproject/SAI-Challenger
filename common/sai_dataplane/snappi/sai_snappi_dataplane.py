@@ -38,11 +38,10 @@ class SaiSnappiDataPlane(SaiDataPlane):
         for pid, port in enumerate(self.config['port_groups']):
             if self.mode == 'ixnet':
                 location = port['location']
-                self.configuration.ports.port(name=port["name"], location=location)
+                assert not location.startswith("localhost"), f"Invalid {self.mode} port location {location}"
             else:
                 location = port.get('location', f"localhost:{BASE_TENGINE_PORT+pid}")
-                self.configuration.ports.port(name=port["name"], location=location)
-
+            self.configuration.ports.port(name=port["name"], location=location)
         cap = self.configuration.captures.capture(name="c1")[-1]
         cap.port_names = [p.name for p in self.configuration.ports]
         cap.format = cap.PCAP
