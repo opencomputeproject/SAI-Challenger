@@ -167,3 +167,39 @@ def test_l2_traffic(npu, dataplane):
     assert (total_tx == total_rx, "Tx Frame not equal to Rx Frame")
     assert (int(rows[0].loss) == 0, "Loss observed")
     assert (total_tx > 0, "Tx Frame rate is Zero")
+
+def test_cleanup(self, npu):
+    commands = [
+        {
+            'name': 'vlan_10',
+            'op': 'remove',
+        },
+        {
+            'name': 'bridge_p_2',
+            'op': 'remove',
+        },
+        {
+            'name': 'vlan_member_2',
+            'op': 'remove',
+        },
+        {
+            'name': 'PORT_2',
+            'op': 'remove',
+        },
+        {
+            'name': 'bridge_p_3',
+            'op': 'remove',
+        },
+        {
+            'name': 'vlan_member_3',
+            'op': 'remove',
+        },
+        {
+            'name': 'PORT_3',
+            'op': 'remove',
+        }
+    ]
+
+    results = [*npu.process_commands(commands)]
+    print('======= SAI commands RETURN values remove =======')
+    pprint(results)
