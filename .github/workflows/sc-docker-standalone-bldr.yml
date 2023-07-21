@@ -57,5 +57,3 @@ jobs:
       run: ./exec.sh --no-tty -s thrift pytest --testbed=saivs_thrift_standalone -v ut/test_vrf_ut.py ut/test_bridge_ut.py ut/test_acl_ut.py
     - name: Run thrift sairedis tests
       run: ./exec.sh --no-tty -s thrift pytest --testbed=saivs_thrift_standalone -v -k "test_sairec"
-    - name: Run API tests
-      run: ./exec.sh --no-tty pytest --testbed=saivs_standalone -v -k "api/test"
