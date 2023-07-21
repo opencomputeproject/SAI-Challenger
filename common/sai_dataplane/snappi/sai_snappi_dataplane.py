@@ -30,15 +30,17 @@ class SaiSnappiDataPlane(SaiDataPlane):
 
         # Create an empty configuration to be pushed to controller
         self.configuration = self.api.config()
-
         # Configure two ports where the location points to the port location:
         # Ixia-C:       port.location = "localhost:5555"
         # IxNetwork:    port.location = "<chassisip>;card;port"
         # TRex:         port.location = "localhost:5555"
         for pid, port in enumerate(self.config['port_groups']):
-            location = port.get('location', f"localhost:{BASE_TENGINE_PORT+pid}")
+            if self.mode == 'ixnet':
+                location = port['location']
+                assert not location.startswith("localhost"), f"Invalid {self.mode} port location {location}"
+            else:
+                location = port.get('location', f"localhost:{BASE_TENGINE_PORT+pid}")
             self.configuration.ports.port(name=port["name"], location=location)
-
         cap = self.configuration.captures.capture(name="c1")[-1]
         cap.port_names = [p.name for p in self.configuration.ports]
         cap.format = cap.PCAP
