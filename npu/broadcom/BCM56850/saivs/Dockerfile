@@ -1,4 +1,5 @@
-FROM sc-base
+ARG BASE_OS
+FROM sc-base:${BASE_OS}
 
 MAINTAINER andriy.kokhan@gmail.com
 
@@ -24,7 +25,9 @@ RUN git clone https://github.com/sonic-net/sonic-sairedis.git \
         && cd ../.. \
         # Exclude sairedis tests that require Redis to be running
         && find . -type f -name Makefile.am | xargs sed -ri 's/^TESTS =/# TESTS =/' \
+        && sed -i "s/^SUBDIRS = py2 py3/SUBDIRS = py3/" pyext/Makefile.am \
         && ./autogen.sh \
+        && export DEB_BUILD_PROFILES=nopython2 \
         && dpkg-buildpackage -us -uc -b --target=binary-syncd-vs --jobs=auto \
         && cd .. \
         && dpkg -i libsaimetadata_1.0.0_amd64.deb \
@@ -45,7 +48,7 @@ RUN cd /sai/gen_attr_list \
         && make -j$(nproc) \
         && mkdir -p /etc/sai \
         && ./attr_list_generator > /etc/sai/sai.json.tmp \
-        && python -mjson.tool /etc/sai/sai.json.tmp > /etc/sai/sai.json \
+        && python3 -mjson.tool /etc/sai/sai.json.tmp > /etc/sai/sai.json \
         && rm /etc/sai/sai.json.tmp
 
 # Setup supervisord

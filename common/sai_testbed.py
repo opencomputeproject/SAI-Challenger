@@ -7,12 +7,14 @@ import logging
 from saichallenger.common.sai_dut import SaiDut
 from saichallenger.common.sai_npu import SaiNpu
 from saichallenger.common.sai_dpu import SaiDpu
+from saichallenger.common.sai_phy import SaiPhy
 from saichallenger.common.sai_dataplane.sai_dataplane import SaiDataPlane
 
 
 class SaiTestbedMeta():
 
     def __init__(self, base_dir, name):
+        self.base_dir = base_dir
         try:
             testbed_file = name if name.endswith(".json") else f"{base_dir}/testbeds/{name}.json"
             f = open(testbed_file)
@@ -21,9 +23,52 @@ class SaiTestbedMeta():
         except Exception as e:
             assert False, f"{e}"
 
+    def generate_sai_ptf_config_files(self, alias=None, asic_type="npu"):
+        sku_config = self.get_sku_config(alias, asic_type)
+        if not sku_config:
+            return
+        self.config_db = dict()
+        self.config_db["PORT"] = dict()
+        port_idx = 0
+        for index, port in enumerate(sku_config["port"]):
+            port_name = port["name"] if "name" in port else "Ethernet" + str(port_idx)
+            port_idx += port["lanes"].count(',') + 1
+            port_speed = port["speed"] if "speed" in port else sku_config["speed"]
+            port_fec = port["fec"] if "fec" in port else sku_config["fec"]
+            port_autoneg = port["autoneg"] if "autoneg" in port else sku_config["autoneg"]
+            self.config_db["PORT"][port_name] = dict()
+            self.config_db["PORT"][port_name]["lanes"] = port["lanes"]
+            self.config_db["PORT"][port_name]["admin_status"] = "up"
+            self.config_db["PORT"][port_name]["speed"] = port_speed
+            self.config_db["PORT"][port_name]["fec"] = port_fec
+            self.config_db["PORT"][port_name]["autoneg"] = port_autoneg
+            self.config_db["PORT"][port_name]["alias"] = port_name
+            self.config_db["PORT"][port_name]["index"] = index + 1
+
+        # Generate config_db.json
+        file_path = f"{self.base_dir}/testbeds/config_db.json"
+        with open(file_path, "w") as f:
+            json.dump(self.config_db, f, indent=4)
+
+        # Generate port_config.ini
+        '''
+        # name           lanes                alias      speed       index
+        Ethernet0        65,66,67,68          etp1       100000      1
+        Ethernet4        69,70,71,72          etp2       100000      2
+                                  . . . . .
+        '''
+        line_format = "{:<16}{:<16}{:<16}{:<12}{}"
+        line = line_format.format("# name", "lanes", "alias", "speed", "index")
+        file_path = f"{self.base_dir}/testbeds/port_config.ini"
+        with open(file_path, "w") as f:
+            f.write(line + "\n")
+            for index, (k, v) in enumerate(self.config_db["PORT"].items()):
+                line = line_format.format(k, v["lanes"], k, v["speed"], index + 1)
+                f.write(line + "\n")
+
     def get_asic_config(self, alias, asic_type="npu"):
         for cfg in self.config.get(asic_type):
-            if cfg.get("alias") == alias:
+            if cfg.get("alias") == alias or alias is None:
                 return cfg
         return None
 
@@ -35,11 +80,11 @@ class SaiTestbedMeta():
             assert False, f"{e}"
         return asic_dir[0]
 
-    def get_sku_config(self, base_dir, alias, asic_type="npu"):
+    def get_sku_config(self, alias, asic_type="npu"):
         cfg = self.get_asic_config(alias, asic_type)
         sku = cfg.get("sku", None)
         if type(sku) == str:
-            asic_dir = self.get_asic_dir(base_dir, cfg["asic"], asic_type)
+            asic_dir = self.get_asic_dir(self.base_dir, cfg["asic"], asic_type)
             try:
                 target = cfg.get("target")
                 f = open(f"{asic_dir}/{target}/sku/{sku}.json")
@@ -88,6 +133,8 @@ class SaiTestbed():
                     asic = asic_mod.SaiNpuImpl(params)
                 elif asic_type == "dpu":
                     asic = asic_mod.SaiDpuImpl(params)
+                elif asic_type == "phy":
+                    asic = asic_mod.SaiPhyImpl(params)
                 else:
                     assert False, f"Failed to instantiate {asic_type} module"
             except Exception as e:
@@ -98,6 +145,8 @@ class SaiTestbed():
                 asic = SaiNpu(params)
             elif asic_type == "dpu":
                 asic = SaiDpu(params)
+            elif asic_type == "phy":
+                asic = SaiPhy(params)
             else:
                 assert False, f"Failed to instantiate default {asic_type} module"
         return asic
@@ -142,7 +191,16 @@ class SaiTestbed():
             dpu_cfg["traffic"] = self.with_traffic
             asic = self.spawn_asic(self.base_dir, dpu_cfg, "dpu")
             self.dpu.append(asic)
-        for dataplane_cfg in self.meta.config.get("dataplane"):
+        for phy_cfg in self.meta.config.get("phy", []):
+            if phy_cfg["client"]["config"].get("mode", None):
+                phy_cfg["client"]["config"]["alias"] = phy_cfg["alias"]
+                dut = self.spawn_dut(phy_cfg["client"]["config"])
+                self.dut.append(dut)
+                phy_cfg["dut"] = dut
+            phy_cfg["traffic"] = self.with_traffic
+            asic = self.spawn_asic(self.base_dir, phy_cfg, "phy")
+            self.phy.append(asic)
+        for dataplane_cfg in self.meta.config.get("dataplane") or []:
             dataplane_cfg["traffic"] = self.with_traffic
             dp = self.spawn_dataplane(dataplane_cfg)
             self.dataplane.append(dp)
@@ -160,6 +218,8 @@ class SaiTestbed():
             npu.reset()
         for dpu in self.dpu:
             dpu.reset()
+        for phy in self.phy:
+            phy.reset()
         if not self.skip_dataplane:
             for dp in self.dataplane:
                 dp.init()
@@ -171,6 +231,9 @@ class SaiTestbed():
         if not self.skip_dataplane:
             for dp in self.dataplane:
                 dp.deinit()
+
+        for dut in self.dut:
+            dut.deinit()
 
     def setup(self):
         """

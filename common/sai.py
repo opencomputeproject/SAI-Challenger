@@ -89,7 +89,8 @@ class CommandProcessor:
         '''
         Command examples:
             {
-                "OP" : "create",
+                "name": "vip1"
+                "op" : "create",
                 "type" : "SAI_OBJECT_TYPE_VIP_ENTRY",
                 "key" : {
                     "switch_id" : "$SWITCH_ID",
@@ -99,19 +100,28 @@ class CommandProcessor:
             }
 
             {
-                "OP" : "create",
+                "name": "acl_grp"
+                "op" : "create",
                 "type" : "SAI_OBJECT_TYPE_DASH_ACL_GROUP",
-                "key": "$acl_in_1",
                 "attributes" : [ "SAI_DASH_ACL_GROUP_ATTR_IP_ADDR_FAMILY", "SAI_IP_ADDR_FAMILY_IPV4" ]
             },
         '''
-        command = self.substitute_command_from_object_registry(command)
-
         store_name = command.get("name")
-        operation = command.get("op", 'create')
+        assert store_name, f"Invalid command {command}. Entry name is undefined"
+
+        operation = command.get("op")
+        assert operation, f"Invalid command {command}. Operation type is undefined"
+
+        if operation in ["set", "get", "remove"]:
+            entry = self.objects_registry.get(store_name)
+            assert entry, f"Failed to execute {command}. Unknown object {store_name}"
+
+        command = self.substitute_command_from_object_registry(command)
         attrs = command.get("attributes", [])
-        obj_type = command.get("type")
         obj_key = command.get("key")
+
+        obj_type = command.get("type")
+        assert obj_type, f"Unknown object type for {command}"
 
         if obj_key is None:
             obj_id = obj_type
@@ -125,11 +135,10 @@ class CommandProcessor:
 
         if operation == "create":
             obj = self.sai.create(obj_id, attrs)
-            if isinstance(store_name, str):  # Store to the DB
-                self.objects_registry[store_name] = {
-                    "type": obj_type,
-                    **(dict(oid=obj, key=None) if obj_key is None else dict(oid=None, key=obj))
-                }
+            self.objects_registry[store_name] = {
+                "type": obj_type,
+                **(dict(oid=obj, key=None) if obj_key is None else dict(oid=None, key=obj))
+            }
             return obj
 
         elif operation == "remove":
@@ -143,7 +152,14 @@ class CommandProcessor:
                     del self.objects_registry[store_name]
 
         elif operation == "get":
-            return self.sai.get(obj_id, attrs)
+            obj_type = self.sai.vid_to_type(obj_id)
+            results = []
+            for attr in attrs:
+                attr_type = self.sai.get_obj_attr_type(obj_type, attr)
+                status, data = self.sai.get_by_type(obj_id, attr, attr_type)
+                assert status == "SAI_STATUS_SUCCESS", f"Failed to retrieve {attr}: {status}"
+                results.append(data)
+            return results
 
         elif operation == "set":
             return self.sai.set(obj_id, attrs)
@@ -152,6 +168,8 @@ class CommandProcessor:
 
 
 class Sai():
+    metadata = None
+
     def __init__(self, cfg):
         self.cfg = cfg.copy()
         self.command_processor = CommandProcessor(self)
@@ -224,6 +242,16 @@ class Sai():
         return self.sai_client.set(obj, attr, do_assert)
 
     def get(self, obj, attrs, do_assert=True):
+        if len(attrs) == 1:
+            obj_type = self.vid_to_type(obj)
+            attr = attrs[0]
+            attr_type = self.get_obj_attr_type(obj_type, attr)
+            status, data = self.get_by_type(obj, attr, attr_type)
+            if do_assert:
+                assert status == "SAI_STATUS_SUCCESS", f"Failed to retrieve {attr}: {status}"
+                return data
+            return status, data
+
         return self.sai_client.get(obj, attrs, do_assert)
 
     # BULK
@@ -266,30 +294,28 @@ class Sai():
     def vid_to_type(self, vid):
         return self.sai_client.vid_to_type(vid)
 
-    # Used in tests
     @staticmethod
     def get_meta(obj_type=None):
-        try:
-            path = "/etc/sai/sai.json"
-            f = open(path, "r")
-            sai_str = f.read()
-            sai_json = json.loads(sai_str)
-        except IOError:
-            return None
-
-        if obj_type is not None:
-            if type(obj_type) == SaiObjType:
-                obj_type = "SAI_OBJECT_TYPE_" + SaiObjType(obj_type).name
-            else:
-                assert type(obj_type) == str
-                assert obj_type.startswith("SAI_OBJECT_TYPE_")
-
-            for item in sai_json:
-                if obj_type in item.values():
-                    return item
-            else:
+        if Sai.metadata is None:
+            try:
+                with open('/etc/sai/sai.json', 'r') as f:
+                    Sai.metadata = json.load(f)
+            except IOError:
                 return None
-        return sai_json
+
+        if obj_type is None:
+            return Sai.metadata
+
+        if type(obj_type) == SaiObjType:
+            obj_type = "SAI_OBJECT_TYPE_" + SaiObjType(obj_type).name
+        else:
+            assert type(obj_type) == str
+            assert obj_type.startswith("SAI_OBJECT_TYPE_")
+
+        for item in Sai.metadata:
+            if obj_type in item.values():
+                return item
+        return None
 
     @staticmethod
     def get_obj_attrs(sai_obj_type):
@@ -376,6 +402,7 @@ class Sai():
             data = self.get(obj, [attr, in_data])
         else:
             assert status == 'SAI_STATUS_SUCCESS', f"get_list({obj}, {attr}, {value}) --> {status}"
+            assert len(data.to_list()) <= 1, f"Unexpected {attr} value {data.to_list()} "
 
         return data.to_list()
 
@@ -479,6 +506,7 @@ class Sai():
         self.cleanup()
 
         oids = []
+        status = None
         records = self.__parse_rec(fname)
         for cnt, record in records.items():
             print("#{}: {}".format(cnt, record))
@@ -494,7 +522,9 @@ class Sai():
                     if "oid:" in attrs[idx]:
                         attrs[idx] = self.rec2vid[attrs[idx]]
 
-                key = self.create(self.__update_key(rec[0], rec[1]), attrs)
+                status, key = self.create(self.__update_key(rec[0], rec[1]), attrs, False)
+                if status != "SAI_STATUS_SUCCESS":
+                    continue
                 if "{" not in key:
                     key_list = rec[1].split(":", 1)
                     self.rec2vid[key_list[1]] = key
@@ -541,7 +571,7 @@ class Sai():
                 bulk_attrs = []
                 for idx, entry in enumerate(record[1:]):
                     attr = entry[1].split('=')
-                    if "oid:" in attr[1] and attrs[i] != "oid:0x0":
+                    if "oid:" in attr[1] and attr[1] != "oid:0x0":
                         attr[1] = self.rec2vid[attr[1]]
 
                     # Convert into "sai-object-type:key"
@@ -612,6 +642,9 @@ class Sai():
                 for idx, oid in enumerate(G_oids):
                     self.rec2vid[oid] = oids[idx]
                 oids = []
+            elif rec[0] == 'E':
+                # It's expected that the previous command has failed
+                assert status in [rec[1], "SAI_STATUS_SUCCESS"], f"Expected fail reason is {rec[1]}. Actual fail reason is {status}"
             else:
                 print("Iggnored line {}: {}".format(cnt, rec))
 

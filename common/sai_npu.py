@@ -9,6 +9,7 @@ from saichallenger.common.sai_dataplane.sai_hostif_dataplane import SaiHostifDat
 class SaiNpu(Sai):
 
     def __init__(self, cfg):
+        cfg["client"]["config"]["asic_type"] = "npu"
         super().__init__(cfg)
 
         self.switch_oid = "oid:0x0"
@@ -39,42 +40,35 @@ class SaiNpu(Sai):
         sw_attr = attr.copy()
         sw_attr.append("SAI_SWITCH_ATTR_INIT_SWITCH")
         sw_attr.append("true")
-        sw_attr.append("SAI_SWITCH_ATTR_TYPE")
-        sw_attr.append("SAI_SWITCH_TYPE_NPU")
+        # @default SAI_SWITCH_TYPE_NPU
 
         self.switch_oid = self.create(SaiObjType.SWITCH, sw_attr)
         self.rec2vid[self.switch_oid] = self.switch_oid
 
         # Default .1Q bridge
-        self.dot1q_br_oid = self.get(self.switch_oid, ["SAI_SWITCH_ATTR_DEFAULT_1Q_BRIDGE_ID", "oid:0x0"]).oid()
-        assert (self.dot1q_br_oid != "oid:0x0")
+        self.dot1q_br_oid = self.get(self.switch_oid, ["SAI_SWITCH_ATTR_DEFAULT_1Q_BRIDGE_ID"]).oid()
+        assert self.dot1q_br_oid != "oid:0x0"
 
         # Default VLAN
-        self.default_vlan_oid = self.get(self.switch_oid, ["SAI_SWITCH_ATTR_DEFAULT_VLAN_ID", "oid:0x0"]).oid()
-        assert (self.default_vlan_oid != "oid:0x0")
+        self.default_vlan_oid = self.get(self.switch_oid, ["SAI_SWITCH_ATTR_DEFAULT_VLAN_ID"]).oid()
+        assert self.default_vlan_oid != "oid:0x0"
 
-        self.default_vlan_id = self.get(self.default_vlan_oid, ["SAI_VLAN_ATTR_VLAN_ID", ""]).to_json()[1]
-        assert (self.default_vlan_id != "0")
+        self.default_vlan_id = self.get(self.default_vlan_oid, ["SAI_VLAN_ATTR_VLAN_ID"]).value()
+        assert self.default_vlan_id != "0"
 
         # Default VRF
-        self.default_vrf_oid = self.get(self.switch_oid, ["SAI_SWITCH_ATTR_DEFAULT_VIRTUAL_ROUTER_ID", "oid:0x0"]).oid()
-        assert (self.default_vrf_oid != "oid:0x0")
+        self.default_vrf_oid = self.get(self.switch_oid, ["SAI_SWITCH_ATTR_DEFAULT_VIRTUAL_ROUTER_ID"]).oid()
+        assert self.default_vrf_oid != "oid:0x0"
 
         # Ports
-        port_num = self.get(self.switch_oid, ["SAI_SWITCH_ATTR_NUMBER_OF_ACTIVE_PORTS", ""]).uint32()
+        port_num = self.get(self.switch_oid, ["SAI_SWITCH_ATTR_NUMBER_OF_ACTIVE_PORTS"]).uint32()
         if port_num > 0:
-            self.port_oids = self.get(self.switch_oid,
-                                     ["SAI_SWITCH_ATTR_PORT_LIST", self.make_list(port_num, "oid:0x0")]).oids()
+            self.port_oids = self.get(self.switch_oid, ["SAI_SWITCH_ATTR_PORT_LIST"]).to_list()
 
             # .1Q bridge ports
-            status, data = self.get(self.dot1q_br_oid, ["SAI_BRIDGE_ATTR_PORT_LIST", "1:oid:0x0"], False)
-            bport_num = data.uint32()
-            assert (status == "SAI_STATUS_BUFFER_OVERFLOW")
-            assert (bport_num > 0)
-
-            self.dot1q_bp_oids = self.get(self.dot1q_br_oid,
-                                         ["SAI_BRIDGE_ATTR_PORT_LIST", self.make_list(bport_num, "oid:0x0")]).oids()
-            assert (len(self.dot1q_bp_oids) <= bport_num)
+            self.dot1q_bp_oids = self.get(self.dot1q_br_oid, ["SAI_BRIDGE_ATTR_PORT_LIST"]).to_list()
+            assert len(self.dot1q_bp_oids) > 0
+            assert self.dot1q_bp_oids[0].startswith("oid:")
 
         # Update SKU
         if self.sku_config is not None:
@@ -82,9 +76,9 @@ class SaiNpu(Sai):
 
         # Wait for ports oper up state
         if self.run_traffic:
-            cpu_port_oid = self.get(self.switch_oid, ["SAI_SWITCH_ATTR_CPU_PORT", "oid:0x0"]).oid()
+            cpu_port_oid = self.get(self.switch_oid, ["SAI_SWITCH_ATTR_CPU_PORT"]).oid()
             for port_oid in self.port_oids:
-                admin_state = self.get(port_oid, ["SAI_PORT_ATTR_ADMIN_STATE", "true"]).value()
+                admin_state = self.get(port_oid, ["SAI_PORT_ATTR_ADMIN_STATE"]).value()
                 if port_oid != cpu_port_oid and admin_state == "true":
                     self.assert_port_oper_up(port_oid)
 
@@ -131,12 +125,9 @@ class SaiNpu(Sai):
         return oid
 
     def remove_vlan_member(self, vlan_oid, bp_oid):
-        status, data = self.get_by_type(vlan_oid, "SAI_VLAN_ATTR_MEMBER_LIST", "sai_object_list_t")
-        assert status == "SAI_STATUS_SUCCESS"
-
-        vlan_mbr_oids = data.to_list()
+        vlan_mbr_oids = self.get(vlan_oid, ["SAI_VLAN_ATTR_MEMBER_LIST"]).to_list()
         for vlan_mbr_oid in vlan_mbr_oids:
-            oid = self.get(vlan_mbr_oid, ["SAI_VLAN_MEMBER_ATTR_BRIDGE_PORT_ID", "oid:0x0"]).oid()
+            oid = self.get(vlan_mbr_oid, ["SAI_VLAN_MEMBER_ATTR_BRIDGE_PORT_ID"]).oid()
             if oid == bp_oid:
                 self.remove(vlan_mbr_oid)
                 return
@@ -206,7 +197,7 @@ class SaiNpu(Sai):
         for idx in range(num_ports):
             self.remove_vlan_member(self.default_vlan_oid, self.dot1q_bp_oids[idx])
             self.remove(self.dot1q_bp_oids[idx])
-            oid = self.get(self.port_oids[idx], ["SAI_PORT_ATTR_PORT_SERDES_ID", "oid:0x0"]).oid()
+            oid = self.get(self.port_oids[idx], ["SAI_PORT_ATTR_PORT_SERDES_ID"]).oid()
             if oid != "oid:0x0":
                 self.remove(oid)
             self.remove(self.port_oids[idx])
@@ -218,38 +209,36 @@ class SaiNpu(Sai):
             port_attr = [
                 "SAI_PORT_ATTR_ADMIN_STATE",   "true",
                 "SAI_PORT_ATTR_PORT_VLAN_ID",  self.default_vlan_id,
+                # To make saivs happy on ports re-creation
+                # https://github.com/sonic-net/sonic-sairedis/blob/00a953c6eafb8852d771c0f7a4f91db9f0965530/vslib/SwitchStateBase.cpp#L1207
+                "SAI_PORT_ATTR_MTU",           "1514",
             ]
 
             # Lanes
             lanes = port["lanes"]
             lanes = str(lanes.count(',') + 1) + ":" + lanes
-            port_attr.append("SAI_PORT_ATTR_HW_LANE_LIST")
-            port_attr.append(lanes)
+            port_attr.extend(["SAI_PORT_ATTR_HW_LANE_LIST", lanes])
 
             # Speed
             speed = port["speed"] if "speed" in port else sku["speed"]
-            port_attr.append("SAI_PORT_ATTR_SPEED")
-            port_attr.append(speed)
+            port_attr.extend(["SAI_PORT_ATTR_SPEED", speed])
 
             # Autoneg
-            autoneg = port["autoneg"] if "autoneg" in port else sku["autoneg"]
+            autoneg = port["autoneg"] if "autoneg" in port else sku.get("autoneg", "off")
             autoneg = "true" if autoneg == "on" else "false"
-            port_attr.append("SAI_PORT_ATTR_AUTO_NEG_MODE")
-            port_attr.append(autoneg)
+            port_attr.extend(["SAI_PORT_ATTR_AUTO_NEG_MODE", autoneg])
 
             # FEC
-            fec = port["fec"] if "fec" in port else sku["fec"]
-            if fec == "rs":
-                fec = "SAI_PORT_FEC_MODE_RS"
-            elif fec == "fc":
-                fec = "SAI_PORT_FEC_MODE_FC"
-            else:
-                fec = "SAI_PORT_FEC_MODE_NONE"
-            port_attr.append("SAI_PORT_ATTR_FEC_MODE")
-            port_attr.append(fec)
+            fec = port["fec"] if "fec" in port else sku.get("fec", "none")
+            port_attr.extend(["SAI_PORT_ATTR_FEC_MODE", "SAI_PORT_FEC_MODE_" + fec.upper()])
 
             port_oid = self.create(SaiObjType.PORT, port_attr)
             self.port_oids.append(port_oid)
+
+        # To make saivs happy on ports re-creation
+        # This will cause refresh_port_list() to update READ_ONLY attribute
+        # which is needed for refresh_bridge_port_list()
+        self.get(self.switch_oid, ["SAI_SWITCH_ATTR_PORT_LIST"])
 
         # Create bridge ports and default VLAN members
         for port_oid in self.port_oids:
@@ -264,20 +253,18 @@ class SaiNpu(Sai):
 
         # Check whether bridge ports were added into the default VLAN implicitly
         default_vlan_bp = []
-        status, data = self.get_by_type(self.default_vlan_oid, "SAI_VLAN_ATTR_MEMBER_LIST", "sai_object_list_t")
-        assert status == "SAI_STATUS_SUCCESS"
-        vlan_mbr_oids = data.to_list()
+        vlan_mbr_oids = self.get(self.default_vlan_oid, ["SAI_VLAN_ATTR_MEMBER_LIST"]).to_list()
         for vlan_mbr_oid in vlan_mbr_oids:
-            oid = self.get(vlan_mbr_oid, ["SAI_VLAN_MEMBER_ATTR_BRIDGE_PORT_ID", "oid:0x0"]).oid()
+            oid = self.get(vlan_mbr_oid, ["SAI_VLAN_MEMBER_ATTR_BRIDGE_PORT_ID"]).oid()
             default_vlan_bp.append(oid)
 
         for oid in self.dot1q_bp_oids:
             if oid not in default_vlan_bp:
-                self.create_vlan_member(self.default_vlan_oid, bp_oid, "SAI_VLAN_TAGGING_MODE_UNTAGGED")
+                self.create_vlan_member(self.default_vlan_oid, oid, "SAI_VLAN_TAGGING_MODE_UNTAGGED")
 
     def assert_port_oper_up(self, port_oid, tout=15):
         for i in range(tout):
-            status, data = self.get_by_type(port_oid, "SAI_PORT_ATTR_OPER_STATUS", "")
+            status, data = self.get(port_oid, ["SAI_PORT_ATTR_OPER_STATUS"])
             assert status == "SAI_STATUS_SUCCESS"
             if data.value() == "SAI_PORT_OPER_STATUS_UP":
                 return

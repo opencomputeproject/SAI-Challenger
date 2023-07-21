@@ -15,6 +15,14 @@ TARGET=""
 OPTS=""
 COMMAND="start"
 SAI_INTERFACE="redis"
+BASE_OS="buster"
+
+declare -A base_os_map
+base_os_map["deb10"]="buster"
+base_os_map["buster"]="buster"
+base_os_map["deb11"]="bullseye"
+base_os_map["bullseye"]="bullseye"
+
 
 print-help() {
     echo
@@ -34,6 +42,8 @@ print-help() {
     echo "  -r Remove Docker after run"
     echo "  -s [redis|thrift]"
     echo "     SAI interface"
+    echo "  -o [buster|bullseye]"
+    echo "     Docker image base OS"
     echo
     exit 0
 }
@@ -74,6 +84,10 @@ while [[ $# -gt 0 ]]; do
             SAI_INTERFACE="$2"
             shift
         ;;
+        "-o"|"--base_os")
+            BASE_OS="$2"
+            shift
+        ;;
     esac
     shift
 done
@@ -84,6 +98,13 @@ if [[ "${IMAGE_TYPE}" != "standalone" && \
     echo "Unknown image type \"${IMAGE_TYPE}\""
     exit 1
 fi
+
+if [ ! -v base_os_map["${BASE_OS}"] ]; then
+    echo "Unknown base OS \"${BASE_OS}\""
+    exit 1
+fi
+
+BASE_OS="${base_os_map[${BASE_OS}]}"
 
 if [[ "${IMAGE_TYPE}" != "client" ]]; then
 
@@ -121,6 +142,7 @@ print-start-options() {
     echo "==========================================="
     echo
     echo " Docker image type  : ${IMAGE_TYPE}"
+    echo " Base OS            : ${BASE_OS}"
     echo " ASIC name          : ${ASIC_TYPE}"
     echo " ASIC target        : ${TARGET}"
     echo " Platform path      : ${ASIC_PATH}"
@@ -132,8 +154,20 @@ print-start-options() {
 
 trap print-start-options EXIT
 
+start_docker_container() {
+    if [ -z "$(docker images -q ${IMG_NAME}:${BASE_OS})" ]; then
+        docker pull plvisiondevs/${IMG_NAME}:${BASE_OS}-latest
+        docker tag plvisiondevs/${IMG_NAME}:${BASE_OS}-latest ${IMG_NAME}:${BASE_OS}
+    fi
+    docker run --name ${IMG_NAME}-run \
+        --cap-add=NET_ADMIN \
+        --device /dev/net/tun:/dev/net/tun \
+        ${OPTS} \
+        -d "${IMG_NAME}:${BASE_OS}"
+}
+
 stop_docker_container() {
-    DOCKER_NAME=$1
+    DOCKER_NAME=${IMG_NAME}-run
     PID=$(docker inspect --format '{{ .State.Pid }}' $DOCKER_NAME)
     NETNS="$DOCKER_NAME_$PID"
     docker stop $DOCKER_NAME
@@ -147,43 +181,21 @@ else
     PREFIX="sc"
 fi
 
+
+if [ "${IMAGE_TYPE}" = "standalone" ]; then
+    IMG_NAME=$(echo "${PREFIX}-${ASIC_TYPE}-${TARGET}" | tr '[:upper:]' '[:lower:]')
+    OPTS="$OPTS -v $(pwd):/sai-challenger"
+elif [ "${IMAGE_TYPE}" = "server" ]; then
+    IMG_NAME=$(echo "sc-server-${ASIC_TYPE}-${TARGET}" | tr '[:upper:]' '[:lower:]')
+else
+    IMG_NAME=${PREFIX}-client
+    OPTS="$OPTS -v $(pwd):/sai-challenger"
+fi
+
 if [ "${COMMAND}" = "start" ]; then
-
-    # Start Docker container
-    if [ "${IMAGE_TYPE}" = "standalone" ]; then
-        IMG_NAME=$(echo "${PREFIX}-${ASIC_TYPE}-${TARGET}" | tr '[:upper:]' '[:lower:]')
-        docker run --name ${IMG_NAME}-run \
-            -v $(pwd):/sai-challenger \
-            --cap-add=NET_ADMIN \
-            ${OPTS} \
-            --device /dev/net/tun:/dev/net/tun \
-            -d ${IMG_NAME}
-    elif [ "${IMAGE_TYPE}" = "server" ]; then
-        docker run --name sc-server-${ASIC_TYPE}-${TARGET}-run \
-            --cap-add=NET_ADMIN \
-            ${OPTS} \
-            --device /dev/net/tun:/dev/net/tun \
-            -d sc-server-${ASIC_TYPE}-${TARGET}
-    else
-        docker run --name ${PREFIX}-client-run \
-            -v $(pwd):/sai-challenger \
-            --cap-add=NET_ADMIN \
-            --device /dev/net/tun:/dev/net/tun \
-            ${OPTS} \
-            -d ${PREFIX}-client
-    fi
-
+    start_docker_container
 elif [ "${COMMAND}" = "stop" ]; then
-
-    # Stop Docker container
-    if [ "${IMAGE_TYPE}" = "standalone" ]; then
-        stop_docker_container ${PREFIX}-${ASIC_TYPE}-${TARGET}-run
-    elif [ "${IMAGE_TYPE}" = "server" ]; then
-        stop_docker_container sc-server-${ASIC_TYPE}-${TARGET}-run
-    else
-        stop_docker_container ${PREFIX}-client-run
-    fi
-
+    stop_docker_container
 else
     echo "Unknown command \"${COMMAND}\". Supported: start|stop."
 fi

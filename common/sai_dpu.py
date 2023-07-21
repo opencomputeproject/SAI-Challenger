@@ -7,6 +7,7 @@ from saichallenger.common.sai_data import SaiObjType
 class SaiDpu(Sai):
 
     def __init__(self, cfg):
+        cfg["client"]["config"]["asic_type"] = "dpu"
         super().__init__(cfg)
         print("__INIT__")
         self.switch_oid = "oid:0x0"
@@ -28,7 +29,7 @@ class SaiDpu(Sai):
                                          ["SAI_SWITCH_ATTR_DEFAULT_VLAN_ID", "oid:0x0"]).oid()
         logging.info(f'Default VLAN oid {self.default_vlan_oid}')
 
-        port_num = self.get(self.switch_oid, ["SAI_SWITCH_ATTR_NUMBER_OF_ACTIVE_PORTS", 0]).uint32()
+        port_num = self.get(self.switch_oid, ["SAI_SWITCH_ATTR_NUMBER_OF_ACTIVE_PORTS", ""]).uint32()
         if port_num > 0:
             self.port_oids = self.get(self.switch_oid,
                                       ["SAI_SWITCH_ATTR_PORT_LIST", self.make_list(port_num, "oid:0x0")]).oids()

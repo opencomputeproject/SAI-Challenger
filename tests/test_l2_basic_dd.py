@@ -13,10 +13,14 @@ def test_l2_trunk_to_trunk_vlan_dd(npu, dataplane):
     #1. Create a VLAN 10
     #2. Add two ports as tagged members to the VLAN
     #3. Setup static FDB entries for port 1 and port 2
-    #4. Send a simple vlan tag (10) packet on port 1 and verify packet on port 2
-    #5. Clean up configuration
+    #4. Set max learned addresses
+    #5. Get max learned addresses
+    #6. Get vlan member list
+    #7. Send a simple vlan tag (10) packet on port 1 and verify packet on port 2
+    #8. Clean up configuration
     """
     vlan_id = "10"
+    vlan_learned_max = "512"
     macs = ['00:11:11:11:11:11', '00:22:22:22:22:22']
 
     cmds = [{
@@ -55,6 +59,32 @@ def test_l2_trunk_to_trunk_vlan_dd(npu, dataplane):
             ]
         })
     status = [*npu.process_commands(cmds)]
+
+    cmds2 = [
+        {
+            "name": "vlan_10",
+            "op": "set",
+            "attributes": [
+                "SAI_VLAN_ATTR_MAX_LEARNED_ADDRESSES", vlan_learned_max
+            ]
+        },
+        {
+            "name": "vlan_10",
+            "op": "get",
+            "attributes": [
+                "SAI_VLAN_ATTR_MAX_LEARNED_ADDRESSES",
+                "SAI_VLAN_ATTR_MEMBER_LIST"
+            ]
+        }
+    ]
+    status = [*npu.process_commands(cmds2)]
+    # command #0
+    assert status[0] == "SAI_STATUS_SUCCESS"
+    # command #1, attribute #0
+    assert status[1][0].value() == vlan_learned_max
+    # command #1, attribute #1
+    assert len(status[1][1].oids()) == 2
+
     try:
         if npu.run_traffic:
             pkt = simple_tcp_packet(eth_dst=macs[1],

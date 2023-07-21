@@ -4,21 +4,42 @@ import pytest
 curdir = os.path.dirname(os.path.realpath(__file__))
 
 from saichallenger.common.sai_npu import SaiNpu
+from saichallenger.common.sai_phy import SaiPhy
 from saichallenger.common.sai_testbed import SaiTestbed
+from saichallenger.common.sai_data import SaiObjType
 
 _previous_test_failed = False
 
 @pytest.hookimpl(tryfirst=True, hookwrapper=True)
 def pytest_runtest_makereport(item, call):
+    '''
+    This code defines a hook, which is executed after each phase
+    of a test execution and is responsible for creating a test report.
 
-  outcome = yield
-  rep = outcome.get_result()
+    The "when" attribute of the test report represents the phase of the test:
+      - "setup": the report is generated during the setup phase of the test.
+      - "call": the report is generated during the actual execution of the test.
+      - "teardown": the report is generated during the teardown phase of the test.
 
-  global _previous_test_failed
-  if rep.when == "setup":
-      _previous_test_failed = rep.outcome not in ["passed", "skipped"]
-  elif not _previous_test_failed:
-      _previous_test_failed = rep.outcome not in ["passed", "skipped"]
+    The outcome of a test can have the following possible values:
+      - "passed": the test has passed successfully.
+      - "failed": the test has failed.
+      - "skipped": the test was skipped intentionally.
+      - "error": an unexpected error occurred during the test execution.
+      - "xfailed": the test was expected to fail, and it actually failed as expected.
+      - "xpassed": the test was expected to fail, but it passed unexpectedly.
+    '''
+
+    outcome = yield
+    rep = outcome.get_result()
+
+    global _previous_test_failed
+    if rep.when == "setup":
+        # Store initial outcome of the test
+        _previous_test_failed = rep.outcome not in ["passed", "skipped"]
+    elif not _previous_test_failed:
+        # Update the outcome only in case all previous phases were successful
+        _previous_test_failed = rep.outcome not in ["passed", "skipped"]
 
 
 @pytest.fixture
@@ -35,6 +56,11 @@ def pytest_addoption(parser):
     parser.addoption("--target", action="store", default=os.getenv('SC_TARGET'), help="The target device with this NPU")
     parser.addoption("--sku", action="store", default=None, help="SKU mode")
     parser.addoption("--testbed", action="store", default=None, help="Testbed name")
+
+
+def pytest_sessionstart(session):
+    SaiObjType.generate_from_thrift()
+    SaiObjType.generate_from_json()
 
 
 @pytest.fixture(scope="session")
@@ -121,14 +147,32 @@ def dpu(exec_params, testbed_instance):
         dpu.reset()
     return dpu
 
+@pytest.fixture(scope="session")
+def phy(exec_params, testbed_instance):
+    if testbed_instance is not None:
+        if len(testbed_instance.phy) == 1:
+            return testbed_instance.phy[0]
+        return None
+
+    phy = None
+    exec_params["asic_dir"] = None
+
+    if exec_params["asic"] == "generic":
+        phy = SaiPhy(exec_params)
+    else:
+        phy = SaiTestbed.spawn_asic(f"{curdir}/..", exec_params, "phy")
+
+    if phy is not None:
+        phy.reset()
+    return phy
 
 @pytest.fixture(scope="session")
 def dataplane_instance(exec_params, testbed_instance):
     if testbed_instance is not None:
-        if len(testbed_instance.dataplane) > 1:
-            yield None
-        else:
+        if len(testbed_instance.dataplane) == 1:
             yield testbed_instance.dataplane[0]
+        else:
+            yield None
     else:
         cfg = {
             "type": "ptf",

@@ -13,6 +13,15 @@ ASIC_TYPE=""
 ASIC_PATH=""
 TARGET=""
 SAI_INTERFACE="redis"
+BASE_OS="buster"
+NOSNAPPI=""
+
+declare -A base_os_map
+base_os_map["deb10"]="buster"
+base_os_map["buster"]="buster"
+base_os_map["deb11"]="bullseye"
+base_os_map["bullseye"]="bullseye"
+
 
 print-help() {
     echo
@@ -27,6 +36,10 @@ print-help() {
     echo "     Target device with this NPU"
     echo "  -s [redis|thrift]"
     echo "     SAI interface"
+    echo "  -o [buster|bullseye]"
+    echo "     Docker image base OS"
+    echo "  --nosnappi"
+    echo "     Do not include snappi to the final image"
     echo
     exit 0
 }
@@ -54,6 +67,13 @@ while [[ $# -gt 0 ]]; do
             SAI_INTERFACE="$2"
             shift
         ;;
+        "-o"|"--base_os")
+            BASE_OS="$2"
+            shift
+        ;;
+        "--nosnappi")
+            NOSNAPPI="y"
+        ;;
     esac
     shift
 done
@@ -64,6 +84,16 @@ if [[ "${IMAGE_TYPE}" != "standalone" && \
     echo "Unknown image type \"${IMAGE_TYPE}\""
     exit 1
 fi
+
+if [ ! -v base_os_map["${BASE_OS}"] ]; then
+    echo "Unknown base OS \"${BASE_OS}\""
+    exit 1
+fi
+
+BASE_OS="${base_os_map[${BASE_OS}]}"
+
+# Clean the previous build
+rm -rf .build/
 
 if [[ "${IMAGE_TYPE}" != "client" ]]; then
 
@@ -101,6 +131,7 @@ print-build-options() {
     echo "==========================================="
     echo
     echo " Docker image type  : ${IMAGE_TYPE}"
+    echo " Base OS            : ${BASE_OS}"
     echo " ASIC name          : ${ASIC_TYPE}"
     echo " ASIC target        : ${TARGET}"
     echo " Platform path      : ${ASIC_PATH}"
@@ -114,16 +145,16 @@ trap print-build-options EXIT
 
 # Build base Docker image
 if [ "${IMAGE_TYPE}" = "standalone" ]; then
-    docker build -f dockerfiles/Dockerfile -t sc-base .
+    docker build -f dockerfiles/${BASE_OS}/Dockerfile -t sc-base:${BASE_OS} .
 elif [ "${IMAGE_TYPE}" = "server" ]; then
     find ${ASIC_PATH}/../ -type f -name \*.py -exec install -D {} .build/{} \;
     find ${ASIC_PATH}/../ -type f -name \*.json -exec install -D {} .build/{} \;
-    docker build -f dockerfiles/Dockerfile.server -t sc-server-base .
+    docker build -f dockerfiles/${BASE_OS}/Dockerfile.server -t sc-server-base:${BASE_OS} .
     rm -rf .build/
 else
-    docker build -f dockerfiles/Dockerfile.client -t sc-client .
+    docker build -f dockerfiles/${BASE_OS}/Dockerfile.client --build-arg NOSNAPPI=${NOSNAPPI} -t sc-client:${BASE_OS} .
     if [ "${SAI_INTERFACE}" = "thrift" ]; then
-        docker build -f dockerfiles/Dockerfile.saithrift-client -t sc-thrift-client .
+        docker build -f dockerfiles/${BASE_OS}/Dockerfile.saithrift-client -t sc-thrift-client:${BASE_OS} .
     fi
 fi
 
@@ -132,11 +163,11 @@ pushd "${ASIC_PATH}/${TARGET}"
 IMG_NAME=$(echo "${ASIC_TYPE}-${TARGET}" | tr '[:upper:]' '[:lower:]')
 if [ "${IMAGE_TYPE}" = "standalone" ]; then
     if [ "${SAI_INTERFACE}" = "thrift" ]; then
-        docker build -f Dockerfile.saithrift -t sc-thrift-${IMG_NAME} .
+        docker build -f Dockerfile.saithrift --build-arg BASE_OS=${BASE_OS} -t sc-thrift-${IMG_NAME}:${BASE_OS} .
     else
-        docker build -f Dockerfile -t sc-${IMG_NAME} .
+        docker build -f Dockerfile --build-arg BASE_OS=${BASE_OS} -t sc-${IMG_NAME}:${BASE_OS} .
     fi
 elif [ "${IMAGE_TYPE}" = "server" ]; then
-    docker build -f Dockerfile.server -t sc-server-${IMG_NAME} .
+    docker build -f Dockerfile.server --build-arg BASE_OS=${BASE_OS} -t sc-server-${IMG_NAME}:${BASE_OS} .
 fi
 popd

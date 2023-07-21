@@ -9,7 +9,7 @@
     "client": {
       "type": "redis",
       "config": {
-        "mode": "sonic",
+        "mode": "sonic-restore",
         "username": "admin",
         "password": "YourPaSsWoRd",
         "ip": "192.168.122.178",

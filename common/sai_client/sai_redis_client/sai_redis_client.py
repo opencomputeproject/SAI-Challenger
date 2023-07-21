@@ -18,10 +18,11 @@ class SaiRedisClient(SaiClient):
         self.port = cfg["port"]
         self.libsaivs = cfg["saivs"]
         self.asic_channel = None
+        self.asic_db = 9 if cfg["asic_type"] is "phy" else 1
 
         self.is_dut_mbr = cfg.get("mode") is not None
 
-        self.r = redis.Redis(host=self.server_ip, port=self.port, db=1)
+        self.r = redis.Redis(host=self.server_ip, port=self.port, db=self.asic_db)
         self.loglevel_db = redis.Redis(host=self.server_ip, port=self.port, db=3)
 
     def cleanup(self):
@@ -50,10 +51,12 @@ class SaiRedisClient(SaiClient):
           5. The supervisord restarts syncd program as per `autorestart`
              option in `supervisord.conf` file.
         '''
+        self.assert_process_running(self.port, self.server_ip, "Redis server has not started yet...")
         self.r.flushall()
         self.loglevel_db.hmset('syncd:syncd', {'LOGLEVEL':self.loglevel, 'LOGOUTPUT':'SYSLOG'})
         self.r.shutdown()
-        time.sleep(2)
+        time.sleep(1)
+        self.assert_process_running(self.port, self.server_ip, "Redis server has not restarted yet...")
         self.__assert_syncd_running()
 
     def set_loglevel(self, sai_api, loglevel):
@@ -107,8 +110,8 @@ class SaiRedisClient(SaiClient):
         status = []
         attempts = self.attempts
 
-        # Wait upto 3 mins for switch init on HW
-        if not self.libsaivs and obj.startswith("SAI_OBJECT_TYPE_SWITCH") and op == "Screate":
+        # Wait upto 3 mins for switch init
+        if obj.startswith("SAI_OBJECT_TYPE_SWITCH") and op == "Screate":
             tout = 0.5
             attempts = 240
 
@@ -135,7 +138,11 @@ class SaiRedisClient(SaiClient):
             vid = json.loads(obj.split(":", 1)[1])
 
         if type(attrs) != str:
+            for i, attr in enumerate(attrs):
+                if type(attr) != str:
+                    attrs[i] = json.dumps(attr)
             attrs = json.dumps(attrs)
+
         status = self.operate(obj, attrs, "Screate")
         status[2] = status[2].decode("utf-8")
         if do_assert:
@@ -538,15 +545,16 @@ class SaiRedisClient(SaiClient):
 
     def __assert_syncd_running(self, tout=30):
         for i in range(tout + 1):
-            numsub = self.r.execute_command('PUBSUB', 'NUMSUB', 'ASIC_STATE_CHANNEL')
-            if numsub[1] >= 1:
-                # SONiC 202111 or older detected
-                self.asic_channel = "ASIC_STATE_CHANNEL"
-                return
-            numsub = self.r.execute_command('PUBSUB', 'NUMSUB', 'ASIC_STATE_CHANNEL@1')
+            if self.asic_db == 1:
+                numsub = self.r.execute_command('PUBSUB', 'NUMSUB', 'ASIC_STATE_CHANNEL')
+                if numsub[1] >= 1:
+                    # SONiC 202111 or older detected
+                    self.asic_channel = "ASIC_STATE_CHANNEL"
+                    return
+            numsub = self.r.execute_command('PUBSUB', 'NUMSUB', f'ASIC_STATE_CHANNEL@{self.asic_db}')
             if numsub[1] >= 1:
                 # SONiC 202205 or newer detected
-                self.asic_channel = "ASIC_STATE_CHANNEL@1"
+                self.asic_channel = f"ASIC_STATE_CHANNEL@{self.asic_db}"
                 return
             if i < tout:
                 time.sleep(1)

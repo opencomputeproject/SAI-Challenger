@@ -6,7 +6,6 @@ from sai_thrift import sai_headers
 from sai_thrift.ttypes import *
 from sai_thrift import ttypes
 from sai_thrift.sai_headers import *
-from saichallenger.common.sai_client.sai_thrift_client.sai_thrift_metadata import SaiMetadata
 from saichallenger.common.sai_data import SaiObjType, SaiStatus
 
 
@@ -91,6 +90,8 @@ class ThriftConverter():
             return ThriftConverter.sai_int_list(value_type, value)
         elif value_type in [ 'u32range' , 's32range', 'u16range' ]:
             return ThriftConverter.sai_int_range(value_type, value)
+        elif value_type in [ 'qosmap' ]:
+            return ThriftConverter.sai_qos_map_list(value)
         elif value_type in [ 'maplist' ]:
             return ThriftConverter.sai_map_list(value)
         elif value_type in [ 'aclcapability' ]:
@@ -132,7 +133,7 @@ class ThriftConverter():
             return "oid"
         elif attr_name == 'SAI_FDB_FLUSH_ATTR_BV_ID':
             return "oid"
-        return SaiMetadata[attr_name]
+        return ThriftConverter.sai_metadata.get(attr_name)
 
     @staticmethod
     def sai_object_list(object_list):
@@ -163,6 +164,37 @@ class ThriftConverter():
         splitted = range.split(',')
         sai_thrift_class = getattr(ttypes, 'sai_thrift_{}_range_t'.format(value_type[:-5]))
         return sai_thrift_class(min=splitted[0], max=splitted[1])
+
+    @staticmethod
+    def sai_qos_map_params(value):
+        queue_index = value.get("qidx") if value.get("qidx") else value.get("queue_index")
+        return sai_thrift_qos_map_params_t(
+            tc=value.get("tc"),
+            dscp=value.get("tc"),
+            dot1p=value.get("dot1p"),
+            prio=value.get("prio"),
+            pg=value.get("pg"),
+            queue_index=queue_index,
+            color=ThriftConverter.get_enum_by_str(value.get("color")),
+            mpls_exp=value.get("mpls_exp"),
+            fc=value.get("fc")
+        )
+
+    @staticmethod
+    def sai_qos_map_list(value):
+        """
+        Full sairedis.rec representation:
+        SAI_QOS_MAP_ATTR_MAP_TO_VALUE_LIST={"count":1,"list":[{"key":{"color":"SAI_PACKET_COLOR_GREEN","dot1p":0,"dscp":0,"pg":0,"prio":0,"qidx":0,"tc":0},"value":{"color":"SAI_PACKET_COLOR_GREEN","dot1p":0,"dscp":0,"pg":0,"prio":0,"qidx":0,"tc":0}}]}
+
+        {"count":1,"list":[{"key":0,"value":0}]} =>  sai_thrift_qos_map_list_t(count=1, maplist=[{"key":0,"value":0}])
+        """
+        val = json.loads(value) if type(value) == str else value
+        maplist = []
+        for entry in val["list"]:
+            key = ThriftConverter.sai_qos_map_params(entry["key"])
+            value = ThriftConverter.sai_qos_map_params(entry["value"])
+            maplist.append(sai_thrift_qos_map_t(key=key, value=value))
+        return sai_thrift_qos_map_list_t(maplist=maplist, count=val["count"])
 
     @staticmethod
     def sai_map_list(value):
@@ -552,7 +584,7 @@ class ThriftConverter():
         """Get enum member value by enum member name"""
         if isinstance(value, str) and value.startswith('SAI_'):
             return getattr(sai_headers, value, None)
-        return int(value) if value.isdigit() else None
+        return int(value) if value and value.isdigit() else None
 
     @staticmethod
     def get_generic_type(attr_name):
@@ -578,3 +610,24 @@ class ThriftConverter():
         if meta is None:
             return None
         return generic_types[meta['properties'].get('genericType')]
+
+    @staticmethod
+    def generate_metadata():
+        import subprocess
+        import glob
+
+        # Search for thrift adapter
+        sai_thrift_adapter = glob.glob("/usr/local/lib/**/sai_adapter.py", recursive=True)[0]
+
+        # Get attributes from thrift adapter
+        cmd = f"cat {sai_thrift_adapter}"
+        cmd += " | grep -e 'attrs\[\"SAI_.*'"
+        cmd += " | sed 's/ attrs\[//' "
+        cmd += " | sed 's/\] = attr\\.value\\./: \"/'"
+        cmd += " | sed 's/$/\",/'"
+        result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+        assert result.returncode == 0, "Metadata generation failed!"
+
+        # Put attributes to dict
+        data = "{" + result.stdout[:-2] + "}"
+        ThriftConverter.sai_metadata = json.loads(data)
