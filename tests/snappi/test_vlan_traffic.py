@@ -1,6 +1,6 @@
 import pytest
-import snappi
 import time
+from pprint import pprint as pprint
 
 vlan_id = "10"
 macs = ["00:1A:C5:00:00:01", "00:1B:6E:00:00:01"]
@@ -164,10 +164,12 @@ def test_l2_traffic(npu, dataplane):
     total_rx = sum([m.frames_rx for m in res.port_metrics])
     print("Tx_Frame : {}".format(total_tx))
     print("Rx_Frame : {}".format(total_rx))
-    assert (total_tx == total_rx, "Tx Frame not equal to Rx Frame")
-    assert (int(rows[0].loss) == 0, "Loss observed")
-    assert (total_tx > 0, "Tx Frame rate is Zero")
+    assert total_tx == total_rx, "Tx Frame not equal to Rx Frame"
+    assert int(rows[0].loss) == 0, "Loss observed"
+    assert total_tx > 0, "Tx Frame rate is Zero"
 
+
+@pytest.mark.dependency(depends=["test_l2_traffic"])
 def test_cleanup(self, npu):
     commands = [
         {
