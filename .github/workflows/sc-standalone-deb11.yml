@@ -78,6 +78,8 @@ jobs:
            "test_acl_ut or test_bridge_ut or (test_switch_ut and not sai_map_list_t) or test_vrf_ut or test_port_ut.py"
     - name: Run data-driven tests
       run: ./exec.sh --no-tty pytest --testbed=saivs_standalone -v test_l2_basic_dd.py
+    - name: Run API tests
+      run: ./exec.sh --no-tty pytest --testbed=saivs_standalone -v -k "api/test"
 
     - name: Build standalone docker image with SAI thrift
       run: ./build.sh -i standalone -s thrift -o deb11
