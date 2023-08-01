@@ -1,6 +1,6 @@
 import pytest
-import time
 from pprint import pprint as pprint
+import time
 
 vlan_id = "10"
 macs = ["00:1A:C5:00:00:01", "00:1B:6E:00:00:01"]
@@ -24,21 +24,6 @@ def test_l2_traffic(npu, dataplane):
             "attributes": ["SAI_VLAN_ATTR_VLAN_ID", "10"],
         },
         {
-            "name": "bridge_p_2",
-            "op": "create",
-            "type": "SAI_OBJECT_TYPE_BRIDGE_PORT",
-            "attributes": [
-                "SAI_BRIDGE_PORT_ATTR_TYPE",
-                "SAI_BRIDGE_PORT_TYPE_PORT",
-                "SAI_BRIDGE_PORT_ATTR_PORT_ID",
-                "$PORT_2",
-                "SAI_BRIDGE_PORT_ATTR_ADMIN_STATE",
-                "true",
-                "SAI_BRIDGE_PORT_ATTR_FDB_LEARNING_MODE",
-                "SAI_BRIDGE_PORT_FDB_LEARNING_MODE_HW",
-            ],
-        },
-        {
             "name": "vlan_member_2",
             "op": "create",
             "type": "SAI_OBJECT_TYPE_VLAN_MEMBER",
@@ -46,7 +31,7 @@ def test_l2_traffic(npu, dataplane):
                 "SAI_VLAN_MEMBER_ATTR_VLAN_ID",
                 "$vlan_10",
                 "SAI_VLAN_MEMBER_ATTR_BRIDGE_PORT_ID",
-                "$bridge_p_2",
+                "$BRIDGE_PORT_2",
                 "SAI_VLAN_MEMBER_ATTR_VLAN_TAGGING_MODE",
                 "SAI_VLAN_TAGGING_MODE_UNTAGGED",
             ],
@@ -63,21 +48,6 @@ def test_l2_traffic(npu, dataplane):
             ],
         },
         {
-            "name": "bridge_p_3",
-            "op": "create",
-            "type": "SAI_OBJECT_TYPE_BRIDGE_PORT",
-            "attributes": [
-                "SAI_BRIDGE_PORT_ATTR_TYPE",
-                "SAI_BRIDGE_PORT_TYPE_PORT",
-                "SAI_BRIDGE_PORT_ATTR_PORT_ID",
-                "$PORT_3",
-                "SAI_BRIDGE_PORT_ATTR_ADMIN_STATE",
-                "true",
-                "SAI_BRIDGE_PORT_ATTR_FDB_LEARNING_MODE",
-                "SAI_BRIDGE_PORT_FDB_LEARNING_MODE_HW",
-            ],
-        },
-        {
             "name": "vlan_member_3",
             "op": "create",
             "type": "SAI_OBJECT_TYPE_VLAN_MEMBER",
@@ -85,7 +55,7 @@ def test_l2_traffic(npu, dataplane):
                 "SAI_VLAN_MEMBER_ATTR_VLAN_ID",
                 "$vlan_10",
                 "SAI_VLAN_MEMBER_ATTR_BRIDGE_PORT_ID",
-                "$bridge_p_3",
+                "$BRIDGE_PORT_3",
                 "SAI_VLAN_MEMBER_ATTR_VLAN_TAGGING_MODE",
                 "SAI_VLAN_TAGGING_MODE_UNTAGGED",
             ],
@@ -177,19 +147,11 @@ def test_cleanup(self, npu):
             'op': 'remove',
         },
         {
-            'name': 'bridge_p_2',
-            'op': 'remove',
-        },
-        {
             'name': 'vlan_member_2',
             'op': 'remove',
         },
         {
             'name': 'PORT_2',
-            'op': 'remove',
-        },
-        {
-            'name': 'bridge_p_3',
             'op': 'remove',
         },
         {
