@@ -11,7 +11,7 @@ def discovery(npu):
     npu.objects_discovery()
 
 
-def test_l2_traffic(npu, dataplane):
+def test_l2_untagged_vlan_traffic(npu, dataplane):
     """
     Creates vlan 10 and adds two ports to the vlan 10 member
     and validates the config using l2 traffic
@@ -43,8 +43,6 @@ def test_l2_traffic(npu, dataplane):
             "attributes": [
                 "SAI_PORT_ATTR_ADMIN_STATE",
                 "true",
-                "SAI_PORT_ATTR_PORT_VLAN_ID",
-                "10",
             ],
         },
         {
@@ -67,8 +65,6 @@ def test_l2_traffic(npu, dataplane):
             "attributes": [
                 "SAI_PORT_ATTR_ADMIN_STATE",
                 "true",
-                "SAI_PORT_ATTR_PORT_VLAN_ID",
-                "10",
             ],
         },
     ]
@@ -138,24 +134,13 @@ def test_l2_traffic(npu, dataplane):
     assert int(rows[0].loss) == 0, "Loss observed"
     assert total_tx > 0, "Tx Frame rate is Zero"
 
-
-@pytest.mark.dependency(depends=["test_l2_traffic"])
-def test_cleanup(self, npu):
     commands = [
         {
             'name': 'vlan_10',
             'op': 'remove',
         },
         {
-            'name': 'vlan_member_2',
-            'op': 'remove',
-        },
-        {
             'name': 'PORT_2',
-            'op': 'remove',
-        },
-        {
-            'name': 'vlan_member_3',
             'op': 'remove',
         },
         {
