@@ -70,6 +70,14 @@ class SaiNpu(Sai):
             assert len(self.dot1q_bp_oids) > 0
             assert self.dot1q_bp_oids[0].startswith("oid:")
 
+            if self.sku_config is None:
+                # The ports will not be re-created.
+                # Make sure the bridge ports are added into the default VLAN.
+                for bp_oid in self.dot1q_bp_oids:
+                    vlan_mbr_oid = self.get_vlan_member(self.default_vlan_oid, bp_oid)
+                    if vlan_mbr_oid == None:
+                        self.create_vlan_member(self.default_vlan_oid, bp_oid, "SAI_VLAN_TAGGING_MODE_UNTAGGED")
+
         # Update SKU
         if self.sku_config is not None:
             self.set_sku_mode(self.sku_config)
@@ -124,14 +132,18 @@ class SaiNpu(Sai):
                     ])
         return oid
 
-    def remove_vlan_member(self, vlan_oid, bp_oid):
+    def get_vlan_member(self, vlan_oid, bp_oid):
         vlan_mbr_oids = self.get(vlan_oid, ["SAI_VLAN_ATTR_MEMBER_LIST"]).to_list()
         for vlan_mbr_oid in vlan_mbr_oids:
             oid = self.get(vlan_mbr_oid, ["SAI_VLAN_MEMBER_ATTR_BRIDGE_PORT_ID"]).oid()
             if oid == bp_oid:
-                self.remove(vlan_mbr_oid)
-                return
-        assert False
+                return vlan_mbr_oid
+        return None
+
+    def remove_vlan_member(self, vlan_oid, bp_oid):
+        vlan_mbr_oid = self.get_vlan_member(vlan_oid, bp_oid)
+        assert vlan_mbr_oid, f"Bridge Port {bp_oid} is not a member of VLAN {vlan_oid}"
+        self.remove(vlan_mbr_oid)
 
     def create_route(self, dest, vrf_oid, nh_oid=None, opt_attr=None):
         attrs = []
