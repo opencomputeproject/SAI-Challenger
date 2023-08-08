@@ -239,6 +239,7 @@ class Sai():
         return self.sai_client.remove(obj, do_assert)
 
     def set(self, obj, attr, do_assert=True):
+        assert len(attr) == 2, f"Failed to set {attr}. Only one attribute can be set at a time!"
         return self.sai_client.set(obj, attr, do_assert)
 
     def get(self, obj, attrs, do_assert=True):
