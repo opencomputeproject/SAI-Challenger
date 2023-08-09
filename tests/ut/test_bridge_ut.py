@@ -16,12 +16,6 @@ def skip_all(testbed_instance):
         pytest.skip("invalid for \"{}\" testbed".format(testbed.name))
 
 
-@pytest.fixture(autouse=True)
-def on_prev_test_failure(prev_test_failed, npu):
-    if prev_test_failed:
-        npu.reset()
-
-
 @pytest.fixture(scope="module")
 def sai_bport_obj(npu):
     bport_oid = npu.dot1q_bp_oids[0]
@@ -64,7 +58,8 @@ class TestDot1qBridge:
             attr_value = self.state.get(attr)
             if attr_value is None:
                 pytest.skip("no default value")
-        npu.set(npu.dot1q_br_oid, [attr, attr_value])
+        status = npu.set(npu.dot1q_br_oid, [attr, attr_value], False)
+        npu.assert_status_success(status)
         assert npu.get(npu.dot1q_br_oid, [attr]).value() == attr_value
 
 
