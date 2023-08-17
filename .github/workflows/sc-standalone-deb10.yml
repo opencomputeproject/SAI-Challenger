@@ -48,12 +48,12 @@ jobs:
 
     - name: Check what Docker images have to be rebuild
       run: |
-        for file in "$DOCKER_BASE" "$DOCKER_REDIS"; do
+        for file in "$DOCKER_BASE" "$DOCKER_REDIS" "sai.env"; do
           if [[ "${{ steps.check_changes.outputs.changed_files }}" == *"$file"* ]]; then
             echo "REDIS_RPC=1" >> $GITHUB_ENV
           fi
         done
-        for file in "$DOCKER_BASE" "$DOCKER_THRIFT"; do
+        for file in "$DOCKER_BASE" "$DOCKER_THRIFT" "sai.env"; do
           if [[ "${{ steps.check_changes.outputs.changed_files }}" == *"$file"* ]]; then
             echo "THRIFT_RPC=1" >> $GITHUB_ENV
           fi
