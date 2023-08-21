@@ -73,82 +73,68 @@ def test_l2_untagged_vlan_traffic(npu, dataplane):
         print(command)
         result = npu.command_processor.process_command(command)
         print(result)
+    try:
+        macs = ["00:11:11:11:11:11", "00:22:22:22:22:22"]
+        config = dataplane.configuration
+        config.options.port_options.location_preemption = True
+        layer1 = config.layer1.layer1()[-1]
+        layer1.name = "port settings"
+        layer1.port_names = [port.name for port in config.ports]
+        layer1.ieee_media_defaults = False
+        layer1.auto_negotiation.rs_fec = False
+        layer1.auto_negotiation.link_training = False
+        layer1.speed = "speed_100_gbps"
+        layer1.auto_negotiate = False
+        flow1 = config.flows.flow(name="Vlan Traffic")[-1]
 
-    macs = ["00:11:11:11:11:11", "00:22:22:22:22:22"]
-    config = dataplane.configuration
-    config.options.port_options.location_preemption = True
-    layer1 = config.layer1.layer1()[-1]
-    layer1.name = "port settings"
-    layer1.port_names = [port.name for port in config.ports]
-    layer1.ieee_media_defaults = False
-    layer1.auto_negotiation.rs_fec = False
-    layer1.auto_negotiation.link_training = False
-    layer1.speed = "speed_100_gbps"
-    layer1.auto_negotiate = False
-    flow1 = config.flows.flow(name="Vlan Traffic")[-1]
+        flow1.tx_rx.port.tx_name = config.ports[0].name
+        flow1.tx_rx.port.rx_name = config.ports[1].name
+        flow1.size.fixed = 1024
+        flow1.rate.percentage = 100
+        flow1.metrics.enable = True
+        flow1.metrics.loss = True
+        source = macs[1]
+        destination = macs[0]
+        eth, vlan = flow1.packet.ethernet().vlan()
+        eth.src.value = source
+        eth.dst.value = destination
+        vlan.id.value = int(vlan_id)
 
-    flow1.tx_rx.port.tx_name = config.ports[0].name
-    flow1.tx_rx.port.rx_name = config.ports[1].name
-    flow1.size.fixed = 1024
-    flow1.rate.percentage = 100
-    flow1.metrics.enable = True
-    flow1.metrics.loss = True
-    source = macs[1]
-    destination = macs[0]
-    eth, vlan = flow1.packet.ethernet().vlan()
-    eth.src.value = source
-    eth.dst.value = destination
-    vlan.id.value = int(vlan_id)
+        dataplane.set_config()
+        restpy_session = dataplane.api.assistant.Session
+        ixnet = restpy_session.Ixnetwork
+        for port in ixnet.Vport.find():
+            port.L1Config.NovusHundredGigLan.AutoInstrumentation = "endOfFrame"
 
-    dataplane.set_config()
-    restpy_session = dataplane.api.assistant.Session
-    ixnet = restpy_session.Ixnetwork
-    for port in ixnet.Vport.find():
-        port.L1Config.NovusHundredGigLan.AutoInstrumentation = "endOfFrame"
+        ts = dataplane.api.transmit_state()
+        ts.flow_names = [flow1.name]
+        ts.state = ts.START
+        dataplane.api.set_transmit_state(ts)
+        time.sleep(10)
+        ts = dataplane.api.transmit_state()
+        ts.flow_names = [flow1.name]
+        ts.state = ts.STOP
+        dataplane.api.set_transmit_state(ts)
+        time.sleep(10)
+        request = dataplane.api.metrics_request()
+        request.flow.flow_names = [flow1.name]
+        rows = dataplane.api.get_metrics(request).flow_metrics
+        print("Loss {}".format(rows[0].loss))
 
-    ts = dataplane.api.transmit_state()
-    ts.flow_names = [flow1.name]
-    ts.state = ts.START
-    dataplane.api.set_transmit_state(ts)
-    time.sleep(10)
-    ts = dataplane.api.transmit_state()
-    ts.flow_names = [flow1.name]
-    ts.state = ts.STOP
-    dataplane.api.set_transmit_state(ts)
-    time.sleep(10)
-    request = dataplane.api.metrics_request()
-    request.flow.flow_names = [flow1.name]
-    rows = dataplane.api.get_metrics(request).flow_metrics
-    print("Loss {}".format(rows[0].loss))
-
-    req = dataplane.api.metrics_request()
-    req.port.port_names = [p.name for p in config.ports]
-    req.port.column_names = [req.port.FRAMES_TX, req.port.FRAMES_RX]
-    # fetch port metrics
-    res = dataplane.api.get_metrics(req)
-    total_tx = sum([m.frames_tx for m in res.port_metrics])
-    total_rx = sum([m.frames_rx for m in res.port_metrics])
-    print("Tx_Frame : {}".format(total_tx))
-    print("Rx_Frame : {}".format(total_rx))
-    assert total_tx == total_rx, "Tx Frame not equal to Rx Frame"
-    assert int(rows[0].loss) == 0, "Loss observed"
-    assert total_tx > 0, "Tx Frame rate is Zero"
-
-    commands = [
-        {
-            'name': 'vlan_10',
-            'op': 'remove',
-        },
-        {
-            'name': 'PORT_2',
-            'op': 'remove',
-        },
-        {
-            'name': 'PORT_3',
-            'op': 'remove',
-        }
-    ]
-
-    results = [*npu.process_commands(commands)]
-    print('======= SAI commands RETURN values remove =======')
-    pprint(results)
+        req = dataplane.api.metrics_request()
+        req.port.port_names = [p.name for p in config.ports]
+        req.port.column_names = [req.port.FRAMES_TX, req.port.FRAMES_RX]
+        # fetch port metrics
+        res = dataplane.api.get_metrics(req)
+        total_tx = sum([m.frames_tx for m in res.port_metrics])
+        total_rx = sum([m.frames_rx for m in res.port_metrics])
+        print("Tx_Frame : {}".format(total_tx))
+        print("Rx_Frame : {}".format(total_rx))
+        assert total_tx == total_rx, "Tx Frame not equal to Rx Frame"
+        assert int(rows[0].loss) == 0, "Loss observed"
+        assert total_tx > 0, "Tx Frame rate is Zero"
+    
+    finally:
+        results = [*npu.process_commands(commands, cleanup=True)]
+        print('======= SAI commands RETURN values remove =======')
+        pprint(results)
