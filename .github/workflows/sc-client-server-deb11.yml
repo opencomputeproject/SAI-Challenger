@@ -61,11 +61,16 @@ jobs:
     - name: Build server Docker image
       run: ./build.sh -i server -o deb11
       if: ${{ env.REDIS_RPC == '1' }}
-
     - name: Build thrift server Docker image
       run: ./build.sh -i server -o deb11 -s thrift --nosnappi
       if: ${{ env.THRIFT_RPC == '1' }}
 
+    - name: Pull SAI-C server
+      run: ./run.sh -i server -o deb11
+      if: ${{ env.REDIS_RPC == '0' }}
+    - name: Pull SAI-C thrift server
+      run: ./run.sh -i server -s thrift -o deb11
+      if: ${{ env.THRIFT_RPC == '0' }}
         
     - name: Save server Docker image
       run: docker save sc-server-trident2-saivs > sc-server.tar
@@ -74,7 +79,6 @@ jobs:
       with:
         name: Server Image
         path: sc-server.tar
-    
     - name: Save SAI Thrift server Docker image
       run: docker save sc-thrift-server-trident2-saivs > sc-thrift-server.tar
     - name: Upload server image
@@ -114,10 +118,16 @@ jobs:
     - name: Build client Docker image
       run: ./build.sh -i client -o deb11 --nosnappi
       if: ${{ env.REDIS_RPC == '1' }}
-    
     - name: Build thrift client Docker image
       run: ./build.sh -i client -o deb11 -s thrift --nosnappi
       if: ${{ env.THRIFT_RPC == '1' }}
+    
+    - name: Pull SAI-C client
+      run: ./run.sh -i client -o deb11
+      if: ${{ env.REDIS_RPC == '0' }}
+    - name: Pull SAI-C thrift client
+      run: ./run.sh -i client -s thrift -o deb11
+      if: ${{ env.THRIFT_RPC == '0' }}
     
     - name: Save client Docker image
       run: docker save sc-client > sc-client.tar
@@ -165,12 +175,11 @@ jobs:
         name: Server Image
     
     - name: Start SAI-C in client mode
-      run: ./run.sh -i client -s thrift -o deb11
+      run: ./run.sh -i client -o deb11
     - name: Wait for the client to get the IP address first
       run: sleep 5s
     - name: Start SAI-C in server mode
-      run: ./run.sh -i server -s thrift -o deb11
-    
+      run: ./run.sh -i server -o deb11
     - name: Update SAI-C server package
       run: ./exec.sh -i server --no-tty pip3 install /sai-challenger/common /sai-challenger
       if: ${{ env.REDIS_RPC == '0' }}
@@ -179,6 +188,7 @@ jobs:
       if: ${{ env.REDIS_RPC == '0' }}
     - name: Create veth links between client and server dockers
       run: sudo ./veth-create-host.sh sc-server-trident2-saivs-run sc-client-run
+
     - name: Run functional test cases
       run: ./exec.sh --no-tty -i client pytest --testbed=saivs_client_server -v -k "test_l2_basic"
     - name: Run unit tests
@@ -215,7 +225,10 @@ jobs:
     - name: Start SAI-C in server mode with SAI thrift
       run: ./run.sh -i server -s thrift -o deb11
     - name: Update SAI-C package
-      run: ./exec.sh --no-tty -s thrift pip3 install /sai-challenger/common /sai-challenger
+      run: ./exec.sh -i server --no-tty -s thrift pip3 install /sai-challenger/common /sai-challenger
+      if: ${{ env.THRIFT_RPC == '0' }}
+    - name: Update SAI-C package
+      run: ./exec.sh -i client --no-tty -s thrift pip3 install /sai-challenger/common /sai-challenger
       if: ${{ env.THRIFT_RPC == '0' }}
     - name: Create veth links between client and server dockers
       run: sudo ./veth-create-host.sh sc-thrift-server-trident2-saivs-run sc-thrift-client-run
