@@ -22,16 +22,45 @@ on:
       - '.dockerignore'
       - 'sai.env'
 
+env:
+  DOCKER_BASE: 'dockerfiles/bullseye/Dockerfile'
+  DOCKER_REDIS: 'npu/broadcom/BCM56850/saivs/Dockerfile'
+  DOCKER_THRIFT: 'npu/broadcom/BCM56850/saivs/Dockerfile.saithrift'
+  REDIS_RPC: 0
+  THRIFT_RPC: 0
+
 jobs:
   build-sc-server:
     name: Build SAI Challenger server image
     runs-on: ubuntu-20.04
     steps:
     - uses: actions/checkout@v3
+      with:
+        fetch-depth: 2
     - name: Update submodules
       run: git submodule update --init
+    
+    - name: Check what files were updated
+      id: check_changes
+      run: |
+        echo 'changed_files=$(git diff --name-only origin/HEAD | xargs)' >> $GITHUB_OUTPUT
+
+    - name: Check what Docker images have to be rebuild
+      run: |
+        for file in "$DOCKER_BASE" "$DOCKER_REDIS" "sai.env"; do
+          if [[ "${{ steps.check_changes.outputs.changed_files }}" == *"$file"* ]]; then
+            echo "REDIS_RPC=1" >> $GITHUB_ENV
+          fi
+        done
+    
     - name: Build server Docker image
       run: ./build.sh -i server -o deb11
+      if: ${{ env.REDIS_RPC == '1' }}
+
+    - name: Pull SAI-C server
+      run: ./run.sh -i server -o deb11
+      if: ${{ env.REDIS_RPC == '0' }}
+        
     - name: Save server Docker image
       run: docker save sc-server-trident2-saivs > sc-server.tar
     - name: Upload server image
@@ -45,12 +74,32 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
     - uses: actions/checkout@v3
+      with:
+        fetch-depth: 2
     - name: Update submodules
       run: git submodule update --init
+    
+    - name: Check what files were updated
+      id: check_changes
+      run: |
+        echo 'changed_files=$(git diff --name-only origin/HEAD | xargs)' >> $GITHUB_OUTPUT
+
+    - name: Check what Docker images have to be rebuild
+      run: |
+        for file in "$DOCKER_BASE" "$DOCKER_REDIS" "sai.env"; do
+          if [[ "${{ steps.check_changes.outputs.changed_files }}" == *"$file"* ]]; then
+            echo "REDIS_RPC=1" >> $GITHUB_ENV
+          fi
+        done
+
     - name: Build client Docker image
       run: ./build.sh -i client -o deb11 --nosnappi
-    - name: Build client Docker image with SAI thrift
-      run: ./build.sh -i client -s thrift -o deb11 --nosnappi
+      if: ${{ env.REDIS_RPC == '1' }}
+    
+    - name: Pull SAI-C client
+      run: ./run.sh -i client -o deb11
+      if: ${{ env.REDIS_RPC == '0' }}
+    
     - name: Save client Docker image
       run: docker save sc-client > sc-client.tar
     - name: Upload client Docker image
@@ -67,6 +116,7 @@ jobs:
     - uses: actions/checkout@v3
     - name: Update submodules.
       run: git submodule update --init
+    
     - name: Download client Docker image
       uses: actions/download-artifact@v3
       with:
@@ -87,14 +137,22 @@ jobs:
       uses: geekyeggo/delete-artifact@v2
       with:
         name: Server Image
+    
     - name: Start SAI-C client
       run: ./run.sh -i client -o deb11
     - name: Wait for the client to get the IP address first
       run: sleep 5s
     - name: Start SAI-C server
-      run: ./run.sh -i server -a trident2 -t saivs -o deb11
+      run: ./run.sh -i server -o deb11
+    - name: Update SAI-C server package
+      run: ./exec.sh -i server --no-tty pip3 install /sai-challenger/common /sai-challenger
+      if: ${{ env.REDIS_RPC == '0' }}
+    - name: Update SAI-C client package
+      run: ./exec.sh -i client --no-tty pip3 install /sai-challenger/common /sai-challenger
+      if: ${{ env.REDIS_RPC == '0' }}
     - name: Create veth links between client and server dockers
       run: sudo ./veth-create-host.sh sc-server-trident2-saivs-run sc-client-run
+
     - name: Run functional test cases
       run: ./exec.sh --no-tty -i client pytest --testbed=saivs_client_server -v -k "test_l2_basic"
     - name: Run unit tests
