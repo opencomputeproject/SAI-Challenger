@@ -52,11 +52,6 @@ jobs:
             echo "REDIS_RPC=1" >> $GITHUB_ENV
           fi
         done
-        for file in "$DOCKER_BASE" "$DOCKER_THRIFT" "sai.env"; do
-          if [[ "${{ steps.check_changes.outputs.changed_files }}" == *"$file"* ]]; then
-            echo "THRIFT_RPC=1" >> $GITHUB_ENV
-          fi
-        done
     
     - name: Build server Docker image
       run: ./build.sh -i server -o deb10
@@ -97,25 +92,14 @@ jobs:
             echo "REDIS_RPC=1"
           fi
         done
-        for file in "$DOCKER_BASE" "$DOCKER_THRIFT" "sai.env"; do
-          if [[ "${{ steps.check_changes.outputs.changed_files }}" == *"$file"* ]]; then
-            echo "THRIFT_RPC=1" >> $GITHUB_ENV
-          fi
-        done
 
     - name: Build client Docker image
       run: ./build.sh -i client -o deb10 --nosnappi
       if: ${{ env.REDIS_RPC == '1' }}
-    - name: Build thrift client Docker image
-      run: ./build.sh -i client -o deb11 -s thrift --nosnappi
-      if: ${{ env.THRIFT_RPC == '1' }}
     
     - name: Pull SAI-C client
       run: ./run.sh -i client -o deb10
       if: ${{ env.REDIS_RPC == '0' }}
-    - name: Pull SAI-C thrift client
-      run: ./run.sh -i client -s thrift -o deb10
-      if: ${{ env.THRIFT_RPC == '0' }}
     
     - name: Save client Docker image
       run: docker save sc-client > sc-client.tar
@@ -124,13 +108,6 @@ jobs:
       with:
         name: Client Image
         path: sc-client.tar
-    - name: Save SAI Thrift client Docker image
-      run: docker save sc-thrift-client > sc-thrift-client.tar
-    - name: Upload SAI Thrift client Docker image
-      uses: actions/upload-artifact@v3
-      with:
-        name: Client Thrift Image
-        path: sc-thrift-client.tar
 
   run-sc-tests:
     name: Run SAI Challenger tests in client-server mode
@@ -184,52 +161,3 @@ jobs:
            "test_acl_ut or test_bridge_ut or (test_switch_ut and not sai_map_list_t) or test_vrf_ut or test_port_ut.py"
     - name: Run thift data-driven tests
       run: ./exec.sh --no-tty -i client pytest --testbed=saivs_client_server -v test_l2_basic_dd.py
-    
-    - name: Stop SAI-C in client mode
-      run: ./run.sh -i client -o deb10 -c stop
-    - name: Stop SAI-C in server mode
-      run: ./run.sh -i server -o deb10 -c stop
-    
-    - name: Download SAI Thrift client Docker image
-      uses: actions/download-artifact@v3
-      with:
-        name: Client Thrift Image
-    - name: Load client image
-      run: docker load < sc-thrift-client.tar
-    - name: Download SAI Thrift server Docker image
-      uses: actions/download-artifact@v3
-      with:
-        name: Server Thrift Image
-    - name: Load server image
-      run: docker load < sc-server.tar
-    - name: Delete SAI Thrift client image artifact
-      uses: geekyeggo/delete-artifact@v2
-      with:
-        name: Client Thrift Image
-    - name: Delete SAI Thrift server image artifact
-      uses: geekyeggo/delete-artifact@v2
-      with:
-        name: Server Thrift Image
-
-    - name: Start SAI-C in client mode with SAI thrift
-      run: ./run.sh -i client -s thrift -o deb10
-    - name: Wait for the client to get the IP address first
-      run: sleep 5s
-    - name: Start SAI-C in server mode with SAI thrift
-      run: ./run.sh -i server -s thrift -o deb10
-    - name: Update SAI-C package
-      run: ./exec.sh --no-tty -s thrift -i server pip3 install /sai-challenger/common /sai-challenger
-      if: ${{ env.THRIFT_RPC == '0' }}
-    - name: Update SAI-C package
-      run: ./exec.sh --no-tty -s thrift -i client pip3 install /sai-challenger/common /sai-challenger
-      if: ${{ env.THRIFT_RPC == '0' }}
-    - name: Create veth links between client and server dockers
-      run: sudo ./veth-create-host.sh sc-thrift-server-trident2-saivs-run sc-thrift-client-run
-    - name: Run thrift tests
-      run: ./exec.sh --no-tty -s thrift pytest --testbed=saivs_thrift_standalone -v test_l2_basic.py -v test_vrf.py -v test_dc_t1.py
-    - name: Run thift data-driven tests
-      run: ./exec.sh --no-tty -s thrift pytest --testbed=saivs_thrift_standalone -v test_l2_basic_dd.py
-    - name: Run thrift unit tests
-      run: ./exec.sh --no-tty -s thrift pytest --testbed=saivs_thrift_standalone -v ut/test_vrf_ut.py ut/test_bridge_ut.py ut/test_acl_ut.py
-    - name: Run thrift sairedis tests
-      run: ./exec.sh --no-tty -s thrift pytest --testbed=saivs_thrift_standalone -v -k "test_sairec"
