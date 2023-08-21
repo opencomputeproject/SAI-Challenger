@@ -138,11 +138,11 @@ jobs:
       with:
         name: Server Image
     
-    - name: Start SAI-C in client mode
+    - name: Start SAI-C client
       run: ./run.sh -i client -o deb11
     - name: Wait for the client to get the IP address first
       run: sleep 5s
-    - name: Start SAI-C in server mode
+    - name: Start SAI-C server
       run: ./run.sh -i server -o deb11
     - name: Update SAI-C server package
       run: ./exec.sh -i server --no-tty pip3 install /sai-challenger/common /sai-challenger

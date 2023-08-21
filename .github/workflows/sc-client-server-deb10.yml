@@ -23,7 +23,7 @@ on:
       - 'sai.env'
 
 env:
-  DOCKER_BASE: 'dockerfiles/bullseye/Dockerfile'
+  DOCKER_BASE: 'dockerfiles/buster/Dockerfile'
   DOCKER_REDIS: 'npu/broadcom/BCM56850/saivs/Dockerfile'
   DOCKER_THRIFT: 'npu/broadcom/BCM56850/saivs/Dockerfile.saithrift'
   REDIS_RPC: 0
@@ -139,11 +139,11 @@ jobs:
       with:
         name: Server Image
     
-    - name: Start SAI-C in client mode
+    - name: Start SAI-C client
       run: ./run.sh -i client -o deb10
     - name: Wait for the client to get the IP address first
       run: sleep 5s
-    - name: Start SAI-C in server mode
+    - name: Start SAI-C server
       run: ./run.sh -i server -o deb10
     - name: Update SAI-C server package
       run: ./exec.sh -i server --no-tty pip3 install /sai-challenger/common /sai-challenger
