@@ -73,13 +73,6 @@ jobs:
       with:
         name: Server Image
         path: sc-server.tar
-    - name: Save SAI Thrift server Docker image
-      run: docker save sc-thrift-server-trident2-saivs > sc-thrift-server.tar
-    - name: Upload server image
-      uses: actions/upload-artifact@v3
-      with:
-        name: Server Thrift Image
-        path: sc-thrift-server.tar
 
   build-sc-client:
     name: Build SAI Challenger client image
@@ -191,10 +184,10 @@ jobs:
     - name: Run thift data-driven tests
       run: ./exec.sh --no-tty -i client pytest --testbed=saivs_client_server -v test_l2_basic_dd.py
     
-    - name: Start SAI-C in client mode
-      run: ./run.sh -i client -o deb11 stop
-    - name: Start SAI-C in server mode
-      run: ./run.sh -i server -o deb11 stop
+    - name: Stop SAI-C in client mode
+      run: ./run.sh -i client -o deb11 -c stop
+    - name: Stop SAI-C in server mode
+      run: ./run.sh -i server -o deb11 -c stop
 
     - name: Download SAI Thrift client Docker image
       uses: actions/download-artifact@v3
