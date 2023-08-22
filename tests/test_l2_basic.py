@@ -397,35 +397,25 @@ def test_l2_lag_hash_seed(npu, dataplane):
     """
     vlan_id = "10"
     mac = '00:11:11:11:11:11'
-    max_port = 4
+    lag_mbr_num = 4
     lag_hashseed_value = "10"
-    lag_mbr_oids = []
 
     # Remove bridge ports
-    for idx in range(max_port):
+    for idx in range(lag_mbr_num):
         npu.remove_vlan_member(npu.default_vlan_oid, npu.dot1q_bp_oids[idx])
         npu.remove(npu.dot1q_bp_oids[idx])
 
     # Remove Port #4 from the default VLAN
-    npu.remove_vlan_member(npu.default_vlan_oid, npu.dot1q_bp_oids[4])
+    npu.remove_vlan_member(npu.default_vlan_oid, npu.dot1q_bp_oids[lag_mbr_num])
 
-    # Create LAG
-    lag_oid = npu.create(SaiObjType.LAG, [])
-
-    # Create LAG members
-    for idx in range(max_port):
-        oid = npu.create(SaiObjType.LAG_MEMBER,
-                         [
-                             "SAI_LAG_MEMBER_ATTR_LAG_ID", lag_oid,
-                             "SAI_LAG_MEMBER_ATTR_PORT_ID", npu.port_oids[idx]
-                         ])
-        lag_mbr_oids.append(oid)
+    # Create LAG and LAG members
+    npu.create_lag(lag_members=npu.port_oids[:lag_mbr_num])
 
     # Create bridge port for LAG
     lag_bp_oid = npu.create(SaiObjType.BRIDGE_PORT,
                             [
                                 "SAI_BRIDGE_PORT_ATTR_TYPE", "SAI_BRIDGE_PORT_TYPE_PORT",
-                                "SAI_BRIDGE_PORT_ATTR_PORT_ID", lag_oid,
+                                "SAI_BRIDGE_PORT_ATTR_PORT_ID", npu.lag_oids[0],
                                 #"SAI_BRIDGE_PORT_ATTR_BRIDGE_ID", npu.dot1q_br_oid,
                                 "SAI_BRIDGE_PORT_ATTR_ADMIN_STATE", "true"
                             ])
@@ -435,11 +425,11 @@ def test_l2_lag_hash_seed(npu, dataplane):
 
     # Create VLAN members
     npu.create_vlan_member(vlan_oid, lag_bp_oid, "SAI_VLAN_TAGGING_MODE_UNTAGGED")
-    npu.create_vlan_member(vlan_oid, npu.dot1q_bp_oids[4], "SAI_VLAN_TAGGING_MODE_UNTAGGED")
+    npu.create_vlan_member(vlan_oid, npu.dot1q_bp_oids[lag_mbr_num], "SAI_VLAN_TAGGING_MODE_UNTAGGED")
 
     # Set PVID for LAG and Port #4
-    npu.set(npu.port_oids[4], ["SAI_PORT_ATTR_PORT_VLAN_ID", vlan_id])
-    npu.set(lag_oid, ["SAI_LAG_ATTR_PORT_VLAN_ID", vlan_id])
+    npu.set(npu.port_oids[lag_mbr_num], ["SAI_PORT_ATTR_PORT_VLAN_ID", vlan_id])
+    npu.set(npu.lag_oids[0], ["SAI_LAG_ATTR_PORT_VLAN_ID", vlan_id])
 
     npu.create_fdb(vlan_oid, mac, lag_bp_oid)
 
@@ -478,7 +468,7 @@ def test_l2_lag_hash_seed(npu, dataplane):
                                             ip_id=109,
                                             ip_ttl=64)
 
-                send_packet(dataplane, 4, str(pkt))
+                send_packet(dataplane, lag_mbr_num, str(pkt))
                 rcv_idx = verify_any_packet_any_port(dataplane, [exp_pkt], [0, 1, 2, 3])
                 count1[rcv_idx] += 1
                 laglist1.append(rcv_idx)
@@ -520,7 +510,7 @@ def test_l2_lag_hash_seed(npu, dataplane):
                                             ip_id=109,
                                             ip_ttl=64)
 
-                send_packet(dataplane, 4, str(pkt))
+                send_packet(dataplane, lag_mbr_num, str(pkt))
                 rcv_idx = verify_any_packet_any_port(dataplane, [exp_pkt], [0, 1, 2, 3])
                 count2[rcv_idx] += 1
                 laglist2.append(rcv_idx)
@@ -540,17 +530,18 @@ def test_l2_lag_hash_seed(npu, dataplane):
         npu.set(npu.switch_oid, ["SAI_SWITCH_ATTR_LAG_DEFAULT_HASH_SEED", "0"])
 
         npu.remove_vlan_member(vlan_oid, lag_bp_oid)
-        npu.remove_vlan_member(vlan_oid, npu.dot1q_bp_oids[4])
+        npu.remove_vlan_member(vlan_oid, npu.dot1q_bp_oids[lag_mbr_num])
         npu.remove(vlan_oid)
 
-        for oid in lag_mbr_oids:
-            npu.remove(oid)
+        for lag_oid in npu.lag_map:
+            for lag_mbr_oid in npu.lag_map[lag_oid]:
+                npu.remove(lag_mbr_oid)
 
         npu.remove(lag_bp_oid)
-        npu.remove(lag_oid)
+        npu.remove(npu.lag_oids[0])
 
         # Create bridge port for ports removed from LAG
-        for idx in range(max_port):
+        for idx in range(lag_mbr_num):
             bp_oid = npu.create(SaiObjType.BRIDGE_PORT,
                                 [
                                     "SAI_BRIDGE_PORT_ATTR_TYPE", "SAI_BRIDGE_PORT_TYPE_PORT",
@@ -561,11 +552,11 @@ def test_l2_lag_hash_seed(npu, dataplane):
             npu.dot1q_bp_oids[idx] = bp_oid
 
         # Add ports to default VLAN
-        for oid in npu.dot1q_bp_oids[0:5]:
+        for oid in npu.dot1q_bp_oids[0:lag_mbr_num+1]:
             npu.create_vlan_member(npu.default_vlan_oid, oid, "SAI_VLAN_TAGGING_MODE_UNTAGGED")
 
         # Set PVID
-        for oid in npu.port_oids[0:5]:
+        for oid in npu.port_oids[0:lag_mbr_num+1]:
             npu.set(oid, ["SAI_PORT_ATTR_PORT_VLAN_ID", npu.default_vlan_id])
 
 
