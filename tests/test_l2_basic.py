@@ -398,6 +398,7 @@ def test_l2_lag_hash_seed(npu, dataplane):
     vlan_id = "10"
     mac = '00:11:11:11:11:11'
     lag_mbr_num = 4
+    lag_mbr_oids = []
     lag_hashseed_value = "10"
 
     # Remove bridge ports
@@ -408,14 +409,23 @@ def test_l2_lag_hash_seed(npu, dataplane):
     # Remove Port #4 from the default VLAN
     npu.remove_vlan_member(npu.default_vlan_oid, npu.dot1q_bp_oids[lag_mbr_num])
 
-    # Create LAG and LAG members
-    npu.create_lag(lag_members=npu.port_oids[:lag_mbr_num])
+    # Create LAG
+    lag_oid = npu.create(SaiObjType.LAG)
+
+    # Create LAG members
+    for idx in range(lag_mbr_num):
+        oid = npu.create(SaiObjType.LAG_MEMBER,
+                         [
+                             "SAI_LAG_MEMBER_ATTR_LAG_ID", lag_oid,
+                             "SAI_LAG_MEMBER_ATTR_PORT_ID", npu.port_oids[idx]
+                         ])
+        lag_mbr_oids.append(oid)
 
     # Create bridge port for LAG
     lag_bp_oid = npu.create(SaiObjType.BRIDGE_PORT,
                             [
                                 "SAI_BRIDGE_PORT_ATTR_TYPE", "SAI_BRIDGE_PORT_TYPE_PORT",
-                                "SAI_BRIDGE_PORT_ATTR_PORT_ID", npu.lag_oids[0],
+                                "SAI_BRIDGE_PORT_ATTR_PORT_ID", lag_oid,
                                 #"SAI_BRIDGE_PORT_ATTR_BRIDGE_ID", npu.dot1q_br_oid,
                                 "SAI_BRIDGE_PORT_ATTR_ADMIN_STATE", "true"
                             ])
@@ -429,7 +439,7 @@ def test_l2_lag_hash_seed(npu, dataplane):
 
     # Set PVID for LAG and Port #4
     npu.set(npu.port_oids[lag_mbr_num], ["SAI_PORT_ATTR_PORT_VLAN_ID", vlan_id])
-    npu.set(npu.lag_oids[0], ["SAI_LAG_ATTR_PORT_VLAN_ID", vlan_id])
+    npu.set(lag_oid, ["SAI_LAG_ATTR_PORT_VLAN_ID", vlan_id])
 
     npu.create_fdb(vlan_oid, mac, lag_bp_oid)
 
@@ -452,10 +462,10 @@ def test_l2_lag_hash_seed(npu, dataplane):
                                 
                 pkt = simple_tcp_packet(eth_dst=mac,
                                         eth_src=src_mac,
-					                    ip_dst=ip_dst,
+                                        ip_dst=ip_dst,
                                         ip_src=ip_src,
                                         tcp_sport=sport,
-					                    tcp_dport=dport,
+                                        tcp_dport=dport,
                                         ip_id=109,
                                         ip_ttl=64)
 
@@ -533,12 +543,11 @@ def test_l2_lag_hash_seed(npu, dataplane):
         npu.remove_vlan_member(vlan_oid, npu.dot1q_bp_oids[lag_mbr_num])
         npu.remove(vlan_oid)
 
-        for lag_oid in npu.lag_map:
-            for lag_mbr_oid in npu.lag_map[lag_oid]:
-                npu.remove(lag_mbr_oid)
+        for oid in lag_mbr_oids:
+            npu.remove(oid)
 
         npu.remove(lag_bp_oid)
-        npu.remove(npu.lag_oids[0])
+        npu.remove(lag_oid)
 
         # Create bridge port for ports removed from LAG
         for idx in range(lag_mbr_num):

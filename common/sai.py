@@ -232,7 +232,7 @@ class Sai():
         return self.sai_client.set_loglevel(sai_api, loglevel)
 
     # CRUD
-    def create(self, obj, attrs, do_assert=True):
+    def create(self, obj, attrs=[], do_assert=True):
         return self.sai_client.create(obj, attrs, do_assert)
 
     def remove(self, obj, do_assert=True):

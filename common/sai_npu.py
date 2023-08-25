@@ -22,8 +22,6 @@ class SaiNpu(Sai):
         self.hostif_dataplane = None
         self.port_map = None
         self.hostif_map = None
-        self.lag_map = dict()
-        self.lag_oids = []
         self.sku_config = None
 
     def get_switch_id(self):
@@ -204,18 +202,6 @@ class SaiNpu(Sai):
         if self.hostif_map and self.port_map:
             self.hostif_dataplane.setPortMap(self.port_map)
             self.port_map = None
-
-    def create_lag(self, lag_attrs=[], lag_members=None):
-        lag_oid = self.create(SaiObjType.LAG, lag_attrs)
-        self.lag_map[lag_oid] = []
-        self.lag_oids.append(lag_oid)
-        if lag_members:
-            for lag_mbr in lag_members:
-                lag_mbr_oid = self.create(SaiObjType.LAG_MEMBER, [
-                    "SAI_LAG_MEMBER_ATTR_LAG_ID", lag_oid,
-                    "SAI_LAG_MEMBER_ATTR_PORT_ID", lag_mbr
-                    ])
-                self.lag_map[lag_oid].append(lag_mbr_oid)
 
     def set_sku_mode(self, sku):
         # Remove existing ports
