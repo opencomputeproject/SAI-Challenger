@@ -383,6 +383,192 @@ def test_l2_lag(npu, dataplane):
             npu.set(oid, ["SAI_PORT_ATTR_PORT_VLAN_ID", npu.default_vlan_id])
 
 
+def test_l2_lag_hash_seed(npu, dataplane):
+    """
+    Description:
+    Check that the packets are equally divided among LAG members.
+
+    Test scenario:
+    1. Create a LAG group with 4 ports 1 through 4.
+    2. Setup static FDB entries for the LAG and send packet to this destination MAC address.
+    3. Send 100 packets with varying 5-tuple and check order/sequence of the distribution of packets received on ports 1 through 4.
+    4. Change the LAG Hash seed value to 10 and compare the order/sequence of the distribution of packets received for the same set of 100 packets on ports 1 through 4.
+    5. Verify that it is different after changing the hash seed.
+    """
+    vlan_id = "10"
+    mac = '00:11:11:11:11:11'
+    lag_mbr_num = 4
+    lag_mbr_oids = []
+    lag_hashseed_value = "10"
+
+    # Remove bridge ports
+    for idx in range(lag_mbr_num):
+        npu.remove_vlan_member(npu.default_vlan_oid, npu.dot1q_bp_oids[idx])
+        npu.remove(npu.dot1q_bp_oids[idx])
+
+    # Remove Port #4 from the default VLAN
+    npu.remove_vlan_member(npu.default_vlan_oid, npu.dot1q_bp_oids[lag_mbr_num])
+
+    # Create LAG
+    lag_oid = npu.create(SaiObjType.LAG)
+
+    # Create LAG members
+    for idx in range(lag_mbr_num):
+        oid = npu.create(SaiObjType.LAG_MEMBER,
+                         [
+                             "SAI_LAG_MEMBER_ATTR_LAG_ID", lag_oid,
+                             "SAI_LAG_MEMBER_ATTR_PORT_ID", npu.port_oids[idx]
+                         ])
+        lag_mbr_oids.append(oid)
+
+    # Create bridge port for LAG
+    lag_bp_oid = npu.create(SaiObjType.BRIDGE_PORT,
+                            [
+                                "SAI_BRIDGE_PORT_ATTR_TYPE", "SAI_BRIDGE_PORT_TYPE_PORT",
+                                "SAI_BRIDGE_PORT_ATTR_PORT_ID", lag_oid,
+                                #"SAI_BRIDGE_PORT_ATTR_BRIDGE_ID", npu.dot1q_br_oid,
+                                "SAI_BRIDGE_PORT_ATTR_ADMIN_STATE", "true"
+                            ])
+
+    # Create VLAN
+    vlan_oid = npu.create(SaiObjType.VLAN, ["SAI_VLAN_ATTR_VLAN_ID", vlan_id])
+
+    # Create VLAN members
+    npu.create_vlan_member(vlan_oid, lag_bp_oid, "SAI_VLAN_TAGGING_MODE_UNTAGGED")
+    npu.create_vlan_member(vlan_oid, npu.dot1q_bp_oids[lag_mbr_num], "SAI_VLAN_TAGGING_MODE_UNTAGGED")
+
+    # Set PVID for LAG and Port #4
+    npu.set(npu.port_oids[lag_mbr_num], ["SAI_PORT_ATTR_PORT_VLAN_ID", vlan_id])
+    npu.set(lag_oid, ["SAI_LAG_ATTR_PORT_VLAN_ID", vlan_id])
+
+    npu.create_fdb(vlan_oid, mac, lag_bp_oid)
+
+    try:
+        if npu.run_traffic:
+            count1 = [0, 0, 0, 0]
+            laglist1 = list()
+            src_mac_start = '00:22:22:22:22:'
+            ip_src_start = '192.168.12.'
+            ip_dst_start = '10.10.10.'
+            dport = 0x80
+            sport = 0x1234
+            max_itrs = 101
+
+            # Sending 100 packets to verify the order/sequence of distribution
+            for i in range(0, max_itrs):
+                src_mac = src_mac_start + str(i % 99).zfill(2)
+                ip_src = ip_src_start + str(i % 99).zfill(3)
+                ip_dst = ip_dst_start + str(i % 99).zfill(3)    
+                                
+                pkt = simple_tcp_packet(eth_dst=mac,
+                                        eth_src=src_mac,
+                                        ip_dst=ip_dst,
+                                        ip_src=ip_src,
+                                        tcp_sport=sport,
+                                        tcp_dport=dport,
+                                        ip_id=109,
+                                        ip_ttl=64)
+
+                exp_pkt = simple_tcp_packet(eth_dst=mac,
+                                            eth_src=src_mac,
+                                            ip_dst=ip_dst,
+                                            ip_src=ip_src,
+                                            tcp_sport=sport,
+                                            tcp_dport=dport,
+                                            ip_id=109,
+                                            ip_ttl=64)
+
+                send_packet(dataplane, lag_mbr_num, str(pkt))
+                rcv_idx = verify_any_packet_any_port(dataplane, [exp_pkt], [0, 1, 2, 3])
+                count1[rcv_idx] += 1
+                laglist1.append(rcv_idx)
+                sport += 1
+                dport += 1
+            
+            npu.set(npu.switch_oid, ["SAI_SWITCH_ATTR_LAG_DEFAULT_HASH_SEED", lag_hashseed_value])
+
+            count2 = [0, 0, 0, 0]
+            laglist2 = list()
+            max_itrs = 101
+            src_mac_start = '00:22:22:22:22:'
+            ip_src_start = '192.168.12.'
+            ip_dst_start = '10.10.10.'
+            dport = 0x80
+            sport = 0x1234
+            
+            # Sending 100 packets to verify the order/sequence of distribution
+            for i in range(0, max_itrs):
+                src_mac = src_mac_start + str(i % 99).zfill(2)
+                ip_src = ip_src_start + str(i % 99).zfill(3)
+                ip_dst = ip_dst_start + str(i % 99).zfill(3)    
+                                
+                pkt = simple_tcp_packet(eth_dst=mac,
+                                        eth_src=src_mac,
+                                        ip_dst=ip_dst,
+                                        ip_src=ip_src,
+                                        tcp_sport=sport,
+                                        tcp_dport=dport,
+                                        ip_id=109,
+                                        ip_ttl=64)
+
+                exp_pkt = simple_tcp_packet(eth_dst=mac,
+                                            eth_src=src_mac,
+                                            ip_dst=ip_dst,
+                                            ip_src=ip_src,
+                                            tcp_sport=sport,
+                                            tcp_dport=dport,
+                                            ip_id=109,
+                                            ip_ttl=64)
+
+                send_packet(dataplane, lag_mbr_num, str(pkt))
+                rcv_idx = verify_any_packet_any_port(dataplane, [exp_pkt], [0, 1, 2, 3])
+                count2[rcv_idx] += 1
+                laglist2.append(rcv_idx)
+                sport += 1
+                dport += 1
+            
+            order_check = 0		
+            for i in range(0, max_itrs):
+                if(laglist1[i] != laglist2[i]):
+                    order_check += 1
+            
+            assert order_check > 0, "Checking the difference in order/sequence before and after changing hash seed value: " + str(order_check)
+
+    finally:
+        npu.flush_fdb_entries(npu.switch_oid, ["SAI_FDB_FLUSH_ATTR_BV_ID", vlan_oid, "SAI_FDB_FLUSH_ATTR_ENTRY_TYPE", "SAI_FDB_FLUSH_ENTRY_TYPE_ALL"])
+
+        npu.set(npu.switch_oid, ["SAI_SWITCH_ATTR_LAG_DEFAULT_HASH_SEED", "0"])
+
+        npu.remove_vlan_member(vlan_oid, lag_bp_oid)
+        npu.remove_vlan_member(vlan_oid, npu.dot1q_bp_oids[lag_mbr_num])
+        npu.remove(vlan_oid)
+
+        for oid in lag_mbr_oids:
+            npu.remove(oid)
+
+        npu.remove(lag_bp_oid)
+        npu.remove(lag_oid)
+
+        # Create bridge port for ports removed from LAG
+        for idx in range(lag_mbr_num):
+            bp_oid = npu.create(SaiObjType.BRIDGE_PORT,
+                                [
+                                    "SAI_BRIDGE_PORT_ATTR_TYPE", "SAI_BRIDGE_PORT_TYPE_PORT",
+                                    "SAI_BRIDGE_PORT_ATTR_PORT_ID", npu.port_oids[idx],
+                                    #"SAI_BRIDGE_PORT_ATTR_BRIDGE_ID", npu.dot1q_br_oid,
+                                    "SAI_BRIDGE_PORT_ATTR_ADMIN_STATE", "true"
+                                ])
+            npu.dot1q_bp_oids[idx] = bp_oid
+
+        # Add ports to default VLAN
+        for oid in npu.dot1q_bp_oids[0:lag_mbr_num+1]:
+            npu.create_vlan_member(npu.default_vlan_oid, oid, "SAI_VLAN_TAGGING_MODE_UNTAGGED")
+
+        # Set PVID
+        for oid in npu.port_oids[0:lag_mbr_num+1]:
+            npu.set(oid, ["SAI_PORT_ATTR_PORT_VLAN_ID", npu.default_vlan_id])
+
+
 def test_l2_vlan_bcast_ucast(npu, dataplane):
     """
     Description:
