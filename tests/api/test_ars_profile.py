@@ -1,15 +1,15 @@
 from pprint import pprint
 
 
-class TestSaiLag:
+class TestSaiArsProfile:
     # object with no attributes
 
-    def test_lag_create(self, npu):
+    def test_ars_profile_create(self, npu):
         commands = [
             {
-                'name': 'lag_1',
+                'name': 'ars_profile_1',
                 'op': 'create',
-                'type': 'SAI_OBJECT_TYPE_LAG',
+                'type': 'SAI_OBJECT_TYPE_ARS_PROFILE',
                 'attributes': [],
             }
         ]
@@ -17,15 +17,14 @@ class TestSaiLag:
         results = [*npu.process_commands(commands)]
         print('======= SAI commands RETURN values create =======')
         pprint(results)
+        assert all(results), 'Create error'
 
-    def test_lag_remove(self, npu):
-        commands = [
-            {
-                'name': 'lag_1',
-                'op': 'remove',
-            }
-        ]
+    def test_ars_profile_remove(self, npu):
+        commands = [{'name': 'ars_profile_1', 'op': 'remove'}]
 
         results = [*npu.process_commands(commands)]
         print('======= SAI commands RETURN values remove =======')
         pprint(results)
+        assert all(
+            [result == 'SAI_STATUS_SUCCESS' for result in results]
+        ), 'Remove error'

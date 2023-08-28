@@ -1,15 +1,15 @@
 from pprint import pprint
 
 
-class TestSaiScheduler:
+class TestSaiNatZoneCounter:
     # object with no attributes
 
-    def test_scheduler_create(self, npu):
+    def test_nat_zone_counter_create(self, npu):
         commands = [
             {
-                'name': 'scheduler_1',
+                'name': 'nat_zone_counter_1',
                 'op': 'create',
-                'type': 'SAI_OBJECT_TYPE_SCHEDULER',
+                'type': 'SAI_OBJECT_TYPE_NAT_ZONE_COUNTER',
                 'attributes': [],
             }
         ]
@@ -17,15 +17,14 @@ class TestSaiScheduler:
         results = [*npu.process_commands(commands)]
         print('======= SAI commands RETURN values create =======')
         pprint(results)
+        assert all(results), 'Create error'
 
-    def test_scheduler_remove(self, npu):
-        commands = [
-            {
-                'name': 'scheduler_1',
-                'op': 'remove',
-            }
-        ]
+    def test_nat_zone_counter_remove(self, npu):
+        commands = [{'name': 'nat_zone_counter_1', 'op': 'remove'}]
 
         results = [*npu.process_commands(commands)]
         print('======= SAI commands RETURN values remove =======')
         pprint(results)
+        assert all(
+            [result == 'SAI_STATUS_SUCCESS' for result in results]
+        ), 'Remove error'
