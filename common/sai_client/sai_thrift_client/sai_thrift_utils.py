@@ -58,6 +58,24 @@ class ThriftConverter():
         return re.search('SAI_.*_ATTR_(.*)', attr).group(1).lower()
 
     @staticmethod
+    def convert_u8_to_thrift(u8_str):
+        # Thrift does not support unsigned int notation.
+        # The values gt than 0x7F should be converted into the signed values.
+        value = int(u8_str, 0)
+        if value > 0x7F:
+            return -((~value & 0xFF) + 1)
+        return value
+
+    @staticmethod
+    def convert_u16_to_thrift(u16_str):
+        # Thrift does not support unsigned int notation.
+        # The values gt than 0x7FFF should be converted into the signed values.
+        value = int(u16_str, 0)
+        if value > 0x7FFF:
+            return -((~value & 0xFFFF) + 1)
+        return value
+
+    @staticmethod
     def convert_value_to_thrift(value, attr_name=None, value_type=None):
         """
         "100", "s32" => 100
@@ -73,7 +91,13 @@ class ThriftConverter():
                 actual_value = getattr(sai_headers, value, None)
                 if actual_value != None:
                     return actual_value
-            return 0 if value == '' else int(value, 0)
+            if value == '':
+                return 0
+            if value_type == 'u8':
+                return ThriftConverter.convert_u8_to_thrift(value)
+            elif value_type == 'u16':
+                return ThriftConverter.convert_u16_to_thrift(value)
+            return int(value, 0)
         if value_type in [ 'booldata' ]:
             return value.lower() == "true" or value == "0"
         elif value_type in [ 'mac', 'ipv4', 'ipv6', 'chardata' ]:
@@ -163,7 +187,7 @@ class ThriftConverter():
         """
         splitted = range.split(',')
         sai_thrift_class = getattr(ttypes, 'sai_thrift_{}_range_t'.format(value_type[:-5]))
-        return sai_thrift_class(min=splitted[0], max=splitted[1])
+        return sai_thrift_class(min=int(splitted[0]), max=int(splitted[1]))
 
     @staticmethod
     def sai_qos_map_params(value):
@@ -373,11 +397,15 @@ class ThriftConverter():
         sai_thrift_ip_address_t('192.168.0.1'...), "ipaddr" => "192.168.0.1"
         """
         value_type = ThriftConverter.get_attribute_type(attr_name)
-        if value_type in [ 's8', 'u8', 's16', 'u16',
+        if value_type in [ 's8', 's16',
                            'u32', 's64', 'u64',
                            'ptr', 'mac', 'ipv4', 'ipv6',
                            'chardata' ]:
             return str(value)
+        elif value_type == 'u8':
+            return str(value) if value > 0 else str(value & 0xFF)
+        elif value_type == 'u16':
+            return str(value) if value > 0 else str(value & 0xFFFF)
         elif value_type in [ 's32' ]:
             actual_value = ThriftConverter.get_str_by_enum(obj_type, attr_name, value)
             if actual_value != None:
