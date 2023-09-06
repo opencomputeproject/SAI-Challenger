@@ -6,27 +6,20 @@ SAI Challenger has capability to run these tests by setting up proper test envir
 
 # Steps to run tests
 
-0. Setup the environment
+1. Setup the environment
 ```
 git submodule update --init
-cp usecases/sai-ptf/ptf-conftest.py usecases/sai-ptf/SAI/ptf/conftest.py
-cp usecases/sai-ptf/patches/0001-sai-base-test.patch usecases/sai-ptf/SAI/
-cd usecases/sai-ptf/SAI/ && patch -p1 < 0001-sai-base-test.patch && cd -
 ```
 
-1. Build a Docker image with required test env
+2. Build a Docker image with a required test environment.
+   This step is optional. The image can be implicitly pulled from DockerHub by `run.sh`.
 ```
 ./build.sh -s thrift
 ```
 
-2. Start a container based on newly built image
+3. Start a Docker container
 ```
 ./run.sh -s thrift
-```
-
-3. Login into the container
-```
-docker exec -ti sc-thrift-trident2-saivs-run bash
 ```
 
 4. Run a test
@@ -37,11 +30,6 @@ docker exec -ti sc-thrift-trident2-saivs-run bash
 To run PTF test case:
 ```
 pytest --testbed=saivs_thrift_standalone ../usecases/sai-ptf/SAI/ptf/saifdb.py -k FdbAttributeTest -v
-```
-
-To clean-up `saiserver` for `saivs` target after test case execution:
-```
-supervisorctl restart saiserver
 ```
 
 To run SAI Challenger test case using Thrift RPC:

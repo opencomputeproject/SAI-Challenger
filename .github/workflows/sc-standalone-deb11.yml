@@ -102,3 +102,6 @@ jobs:
       run: ./exec.sh --no-tty -s thrift pytest --testbed=saivs_thrift_standalone -v -k "test_sairec"
     - name: Run thrift API tests
       run: ./exec.sh --no-tty -s thrift pytest --testbed=saivs_thrift_standalone -v -k "api/test"
+
+    - name: Run PTF tests
+      run: ./exec.sh --no-tty -s thrift pytest --testbed=saivs_thrift_standalone -v ../usecases/sai-ptf/SAI/ptf/saifdb.py -k FdbAttributeTest
