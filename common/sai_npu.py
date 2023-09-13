@@ -276,8 +276,7 @@ class SaiNpu(Sai):
 
     def assert_port_oper_up(self, port_oid, tout=15):
         for i in range(tout):
-            status, data = self.get(port_oid, ["SAI_PORT_ATTR_OPER_STATUS"])
-            assert status == "SAI_STATUS_SUCCESS"
+            data = self.get(port_oid, ["SAI_PORT_ATTR_OPER_STATUS"])
             if data.value() == "SAI_PORT_OPER_STATUS_UP":
                 return
             if i + 1 < tout:
