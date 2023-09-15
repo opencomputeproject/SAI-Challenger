@@ -362,7 +362,7 @@ class ThriftConverter():
         "16"       => 16
         "oid:0x10" => 16
         """
-        if oid == None or oid == 'null':
+        if oid == None or oid == 'null' or oid == 'SAI_NULL_OBJECT_ID':
             return 0
         if isinstance(oid, str) and oid.startswith('oid:0x'):
             return int(oid[4:], 16)
