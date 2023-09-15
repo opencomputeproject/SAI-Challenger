@@ -70,12 +70,13 @@ class SaiNpu(Sai):
             assert len(self.dot1q_bp_oids) > 0
             assert self.dot1q_bp_oids[0].startswith("oid:")
 
-            # The ports will not be re-created.
-            # Make sure the bridge ports are added into the default VLAN.
-            for bp_oid in self.dot1q_bp_oids:
-                vlan_mbr_oid = self.get_vlan_member(self.default_vlan_oid, bp_oid)
-                if vlan_mbr_oid == None and self.sku_config is None:
-                    self.create_vlan_member(self.default_vlan_oid, bp_oid, "SAI_VLAN_TAGGING_MODE_UNTAGGED")
+            if self.sku_config is None:
+                # The ports will not be re-created.
+                # Make sure the bridge ports are added into the default VLAN.
+                for bp_oid in self.dot1q_bp_oids:
+                    vlan_mbr_oid = self.get_vlan_member(self.default_vlan_oid, bp_oid)
+                    if vlan_mbr_oid == None:
+                        self.create_vlan_member(self.default_vlan_oid, bp_oid, "SAI_VLAN_TAGGING_MODE_UNTAGGED")
 
         # Update SKU
         if self.sku_config is not None:
@@ -206,11 +207,12 @@ class SaiNpu(Sai):
         # Remove existing ports
         num_ports = len(self.dot1q_bp_oids)
         for idx in range(num_ports):
-            if self.get_vlan_member(self.default_vlan_oid, self.dot1q_bp_oids[idx]):
-                self.remove_vlan_member(self.default_vlan_oid, self.dot1q_bp_oids[idx])
+            oid =  self.get_vlan_member(self.default_vlan_oid, self.dot1q_bp_oids[idx])
+            if oid:
+                self.remove(oid)
             self.remove(self.dot1q_bp_oids[idx])
-            oid = self.get(self.port_oids[idx], ["SAI_PORT_ATTR_PORT_SERDES_ID"]).oid()
-            if oid != "oid:0x0":
+            status, oid = self.get(self.port_oids[idx], ["SAI_PORT_ATTR_PORT_SERDES_ID"], do_assert=False).oid()
+            if status == "SAI_STATUS_SUCCESS" and oid != "oid:0x0":
                 self.remove(oid)
             self.remove(self.port_oids[idx])
         self.port_oids.clear()
