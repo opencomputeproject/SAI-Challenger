@@ -1,6 +1,5 @@
 from pprint import pprint
 
-
 class TestSaiAclCounter:
     # object with parent SAI_OBJECT_TYPE_ACL_TABLE
 
@@ -23,6 +22,23 @@ class TestSaiAclCounter:
         results = [*npu.process_commands(commands)]
         print('======= SAI commands RETURN values create =======')
         pprint(results)
+
+
+    @pytest.mark.dependency(name="test_sai_acl_counter_attr_label_set")
+    def test_sai_acl_counter_attr_label_set(self, npu):
+
+        commands = [
+            {
+                "name": "acl_counter_1",
+                "op": "set",
+                "attributes": ["SAI_ACL_COUNTER_ATTR_LABEL", '""']
+            }
+        ]
+        npu.objects_discovery()
+        results = [*npu.process_commands(commands)]
+        print("======= SAI commands RETURN values get =======")
+        pprint(results)
+
 
     def test_acl_counter_remove(self, npu):
         commands = [
