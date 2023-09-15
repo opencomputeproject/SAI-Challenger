@@ -207,11 +207,14 @@ class SaiNpu(Sai):
         # Remove existing ports
         num_ports = len(self.dot1q_bp_oids)
         for idx in range(num_ports):
-            self.remove_vlan_member(self.default_vlan_oid, self.dot1q_bp_oids[idx])
-            self.remove(self.dot1q_bp_oids[idx])
-            oid = self.get(self.port_oids[idx], ["SAI_PORT_ATTR_PORT_SERDES_ID"]).oid()
-            if oid != "oid:0x0":
+            oid =  self.get_vlan_member(self.default_vlan_oid, self.dot1q_bp_oids[idx])
+            if oid:
                 self.remove(oid)
+            self.remove(self.dot1q_bp_oids[idx])
+            status, data = self.get(self.port_oids[idx], ["SAI_PORT_ATTR_PORT_SERDES_ID"], do_assert=False)
+            serdes_oid = data.oid()
+            if status == "SAI_STATUS_SUCCESS" and serdes_oid != "oid:0x0":
+                self.remove(serdes_oid)
             self.remove(self.port_oids[idx])
         self.port_oids.clear()
         self.dot1q_bp_oids.clear()
