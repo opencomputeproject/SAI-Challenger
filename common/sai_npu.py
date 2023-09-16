@@ -212,9 +212,8 @@ class SaiNpu(Sai):
                 self.remove(oid)
             self.remove(self.dot1q_bp_oids[idx])
             status, data = self.get(self.port_oids[idx], ["SAI_PORT_ATTR_PORT_SERDES_ID"], do_assert=False)
-            serdes_oid = data.oid()
-            if status == "SAI_STATUS_SUCCESS" and serdes_oid != "oid:0x0":
-                self.remove(serdes_oid)
+            if status == "SAI_STATUS_SUCCESS" and data.oid() != "oid:0x0":
+                self.remove(data.oid())
             self.remove(self.port_oids[idx])
         self.port_oids.clear()
         self.dot1q_bp_oids.clear()
