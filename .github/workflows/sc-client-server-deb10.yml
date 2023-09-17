@@ -158,7 +158,7 @@ jobs:
       run: ./exec.sh --no-tty -i client pytest --testbed=saivs_client_server -v -k "test_l2_basic"
     - name: Run unit tests
       run: ./exec.sh --no-tty -i client pytest --testbed=saivs_client_server -v \
-           ut/test_acl_ut.py ut/test_bridge_ut.py ut/test_vrf_ut.py or ut/test_port_ut.py ut/test_fdb_ut.py
+           ut/test_acl_ut.py ut/test_bridge_ut.py ut/test_vrf_ut.py ut/test_port_ut.py ut/test_fdb_ut.py
     - name: Run unit tests
       run: ./exec.sh --no-tty -i client pytest --testbed=saivs_client_server -v -k \
            "test_switch_ut and not sai_map_list_t"
