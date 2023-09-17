@@ -157,7 +157,9 @@ jobs:
     - name: Run functional test cases
       run: ./exec.sh --no-tty -i client pytest --testbed=saivs_client_server -v -k "test_l2_basic"
     - name: Run unit tests
+      run: ./exec.sh --no-tty -i client pytest --testbed=saivs_client_server -v ut/test_acl_ut.py ut/test_bridge_ut.py ut/test_vrf_ut.py ut/test_port_ut.py ut/test_fdb_ut.py
+    - name: Run unit tests
       run: ./exec.sh --no-tty -i client pytest --testbed=saivs_client_server -v -k \
-           "test_acl_ut or test_bridge_ut or (test_switch_ut and not sai_map_list_t) or test_vrf_ut or test_port_ut.py"
+           "test_switch_ut and not sai_map_list_t"
     - name: Run thift data-driven tests
       run: ./exec.sh --no-tty -i client pytest --testbed=saivs_client_server -v test_l2_basic_dd.py
