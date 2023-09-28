@@ -1,0 +1,21 @@
+FROM sc-server-base:buster
+
+# Install generic packages
+RUN apt-get install -y \
+        libtemplate-perl \
+        libconst-fast-perl \
+        libmoosex-aliases-perl \
+        libnamespace-autoclean-perl \
+        libgetopt-long-descriptive-perl \
+        aspell-en bison flex g++ \
+        libboost-all-dev libevent-dev libssl-dev \
+        libpython3-dev libpcap-dev
+
+WORKDIR /sai
+
+RUN apt-get install -y thrift-compiler libthrift-dev libthrift-0.11.0 \
+    && pip3 install ctypesgen thrift==0.11.0 ;
+
+WORKDIR /sai-challenger
+
+CMD ["/usr/bin/supervisord"]
