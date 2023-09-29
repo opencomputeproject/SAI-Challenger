@@ -1,4 +1,58 @@
-FROM sc-server-base:buster
+FROM debian:buster-slim
+
+RUN echo "deb [arch=amd64] http://debian-archive.trafficmanager.net/debian/ buster main contrib non-free" >> /etc/apt/sources.list && \
+        echo "deb-src [arch=amd64] http://debian-archive.trafficmanager.net/debian/ buster main contrib non-free" >> /etc/apt/sources.list && \
+        echo "deb [arch=amd64] http://debian-archive.trafficmanager.net/debian-security/ buster/updates main contrib non-free" >> /etc/apt/sources.list && \
+        echo "deb-src [arch=amd64] http://debian-archive.trafficmanager.net/debian-security/ buster/updates main contrib non-free" >> /etc/apt/sources.list && \
+        echo "deb [arch=amd64] http://debian-archive.trafficmanager.net/debian buster-backports main" >> /etc/apt/sources.list
+
+## Make apt-get non-interactive
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install generic packages
+RUN apt-get -o Acquire::Check-Valid-Until=false update && apt-get install -y \
+        apt-utils \
+        vim \
+        curl \
+        wget \
+        iproute2 \
+        unzip \
+        git \
+        procps \
+        build-essential \
+        graphviz \
+        doxygen \
+        aspell \
+        python3-pip \
+        rsyslog \
+        supervisor
+
+# Add support for supervisord to handle startup dependencies
+RUN pip3 install supervisord-dependent-startup==1.4.0
+
+# Install sonic-swss-common & sonic-sairedis building dependencies
+RUN apt-get install -y \
+        make libtool m4 autoconf dh-exec debhelper automake cmake pkg-config \
+        libhiredis-dev libnl-3-dev libnl-genl-3-dev libnl-route-3-dev swig3.0 \
+        libgtest-dev libgmock-dev libboost-dev autoconf-archive \
+        uuid-dev libboost-serialization-dev libyang-dev libyang0.16
+
+RUN apt-get install -y \
+        libnl-3-dev libnl-genl-3-dev libnl-route-3-dev libnl-nf-3-dev libzmq3-dev
+
+COPY sai.env /
+RUN git clone --recursive https://github.com/sonic-net/sonic-swss-common \
+        && cd sonic-swss-common \
+        && . /sai.env \
+        && git checkout ${SWSS_COMMON_ID} \
+        && ./autogen.sh \
+        && export DEB_BUILD_PROFILES=nopython2 \
+        && dpkg-buildpackage -us -uc -b --jobs=auto \
+        && cd .. \
+        && dpkg -i libswsscommon_1.0.0_amd64.deb \
+        && dpkg -i libswsscommon-dev_1.0.0_amd64.deb \
+        && rm -rf sonic-swss-common \
+        && rm -f *swsscommon*
 
 # Install generic packages
 RUN apt-get install -y \
@@ -17,5 +71,7 @@ RUN apt-get install -y thrift-compiler libthrift-dev libthrift-0.11.0 \
     && pip3 install ctypesgen thrift==0.11.0 ;
 
 WORKDIR /sai-challenger
+
+COPY configs/server/supervisord.conf.thrift /etc/supervisor/conf.d/supervisord.conf
 
 CMD ["/usr/bin/supervisord"]

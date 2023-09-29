@@ -155,9 +155,10 @@ if [ "${IMAGE_TYPE}" = "standalone" ]; then
 elif [ "${IMAGE_TYPE}" = "server" ]; then
     find ${ASIC_PATH}/../ -type f -name \*.py -exec install -D {} .build/{} \;
     find ${ASIC_PATH}/../ -type f -name \*.json -exec install -D {} .build/{} \;
-    docker build -f dockerfiles/${BASE_OS}/Dockerfile.server -t sc-server-base:${BASE_OS} ${CACHE} .
     if [ "${SAI_INTERFACE}" = "thrift" ]; then
         docker build -f dockerfiles/${BASE_OS}/Dockerfile.saithrift-server -t sc-thrift-server-base:${BASE_OS} ${CACHE} .
+    else
+        docker build -f dockerfiles/${BASE_OS}/Dockerfile.server -t sc-server-base:${BASE_OS} ${CACHE} .
     fi
     rm -rf .build/
 else
