@@ -137,7 +137,7 @@ class SaiDutSonic(SaiDut):
 
         # Write to CONFIG_DB SONiC device information needed on syncd start
         config_db = redis.Redis(host=self.server_ip, port=self.port, db=4)
-        config_db.hmset("DEVICE_METADATA|localhost", device_metadata)
+        config_db.hset("DEVICE_METADATA|localhost", mapping=device_metadata)
         config_db.set("CONFIG_DB_INITIALIZED", "1")
 
     def deinit(self):
