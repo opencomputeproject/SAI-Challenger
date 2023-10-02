@@ -50,8 +50,6 @@ def prev_test_failed():
 
 def pytest_addoption(parser):
     parser.addoption("--sai-server", action="store", default='localhost', help="SAI server IP")
-    parser.addoption("--sai-interface", action="store", default='redis', help="SAI server interface (redis|thrift)")
-    parser.addoption("--sai-server-port", action="store", default='6379', help="SAI server port")
     parser.addoption("--traffic", action="store_true", default=False, help="run tests with traffic")
     parser.addoption("--loglevel", action="store", default='NOTICE', help="syncd logging level")
     parser.addoption("--asic", action="store", default=os.getenv('SC_ASIC'), help="ASIC type")
@@ -77,10 +75,10 @@ def exec_params(request):
         "target": request.config.getoption("--target"),
         "sku": request.config.getoption("--sku"),
         "client": {
-            "type": request.config.getoption("--sai-interface"),
+            "type": "redis",
             "config": {
                 "ip": request.config.getoption("--sai-server"),
-                "port": request.config.getoption("--sai-serve-port"),
+                "port": "6379",
                 "loglevel": request.config.getoption("--loglevel")
             }
         }

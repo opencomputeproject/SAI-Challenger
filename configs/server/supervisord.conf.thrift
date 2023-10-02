@@ -29,16 +29,6 @@ autostart=false
 autorestart=false
 dependent_startup=true
 
-[program:syncd]
-command=/usr/bin/syncd -s -p /etc/sai.d/sai.profile
-priority=5
-autostart=false
-autorestart=true
-stdout_logfile=syslog
-stderr_logfile=syslog
-dependent_startup=true
-dependent_startup_wait_for=rsyslogd:running wait-interfaces:exited
-
 [program:saiserver]
 command=/usr/sbin/saiserver -f /usr/share/sonic/hwsku/port_config.ini -p /usr/share/sonic/hwsku/sai.profile
 priority=3

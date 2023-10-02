@@ -15,7 +15,6 @@ TARGET=""
 SAI_INTERFACE="redis"
 BASE_OS="buster"
 NOSNAPPI=""
-CACHE=""
 
 declare -A base_os_map
 base_os_map["deb10"]="buster"
@@ -41,8 +40,6 @@ print-help() {
     echo "     Docker image base OS"
     echo "  --nosnappi"
     echo "     Do not include snappi to the final image"
-    echo "  --nocache"
-    echo "     Rebuild Docker images (--no-cache)"
     echo
     exit 0
 }
@@ -76,9 +73,6 @@ while [[ $# -gt 0 ]]; do
         ;;
         "--nosnappi")
             NOSNAPPI="y"
-        ;;
-        "--nocache")
-            CACHE="--no-cache "
         ;;
     esac
     shift
@@ -151,20 +145,20 @@ trap print-build-options EXIT
 
 # Build base Docker image
 if [ "${IMAGE_TYPE}" = "standalone" ]; then
-    docker build -f dockerfiles/${BASE_OS}/Dockerfile -t sc-base:${BASE_OS} ${CACHE} .
+    docker build -f dockerfiles/${BASE_OS}/Dockerfile -t sc-base:${BASE_OS} .
 elif [ "${IMAGE_TYPE}" = "server" ]; then
     find ${ASIC_PATH}/../ -type f -name \*.py -exec install -D {} .build/{} \;
     find ${ASIC_PATH}/../ -type f -name \*.json -exec install -D {} .build/{} \;
     if [ "${SAI_INTERFACE}" = "thrift" ]; then
-        docker build -f dockerfiles/${BASE_OS}/Dockerfile.saithrift-server -t sc-thrift-server-base:${BASE_OS} ${CACHE} .
+        docker build -f dockerfiles/${BASE_OS}/Dockerfile.saithrift-server -t sc-thrift-server-base:${BASE_OS} .
     else
-        docker build -f dockerfiles/${BASE_OS}/Dockerfile.server -t sc-server-base:${BASE_OS} ${CACHE} .
+        docker build -f dockerfiles/${BASE_OS}/Dockerfile.server -t sc-server-base:${BASE_OS} .
     fi
     rm -rf .build/
 else
-    docker build -f dockerfiles/${BASE_OS}/Dockerfile.client --build-arg NOSNAPPI=${NOSNAPPI} -t sc-client:${BASE_OS} ${CACHE} .
+    docker build -f dockerfiles/${BASE_OS}/Dockerfile.client --build-arg NOSNAPPI=${NOSNAPPI} -t sc-client:${BASE_OS} .
     if [ "${SAI_INTERFACE}" = "thrift" ]; then
-        docker build -f dockerfiles/${BASE_OS}/Dockerfile.saithrift-client -t sc-thrift-client:${BASE_OS} ${CACHE} .
+        docker build -f dockerfiles/${BASE_OS}/Dockerfile.saithrift-client -t sc-thrift-client:${BASE_OS} .
     fi
     exit 0
 fi
@@ -174,15 +168,15 @@ pushd "${ASIC_PATH}/${TARGET}"
 IMG_NAME=$(echo "${ASIC_TYPE}-${TARGET}" | tr '[:upper:]' '[:lower:]')
 if [ "${IMAGE_TYPE}" = "standalone" ]; then
     if [ "${SAI_INTERFACE}" = "thrift" ]; then
-        docker build -f Dockerfile.saithrift --build-arg BASE_OS=${BASE_OS} -t sc-thrift-${IMG_NAME}:${BASE_OS} ${CACHE} .
+        docker build -f Dockerfile.saithrift --build-arg BASE_OS=${BASE_OS} -t sc-thrift-${IMG_NAME}:${BASE_OS} .
     else
-        docker build -f Dockerfile --build-arg BASE_OS=${BASE_OS} -t sc-${IMG_NAME}:${BASE_OS} ${CACHE} .
+        docker build -f Dockerfile --build-arg BASE_OS=${BASE_OS} -t sc-${IMG_NAME}:${BASE_OS} .
     fi
 elif [ "${IMAGE_TYPE}" = "server" ]; then
     if [ "${SAI_INTERFACE}" = "thrift" ]; then
-        docker build -f Dockerfile.saithrift-server --build-arg BASE_OS=${BASE_OS} -t sc-thrift-server-${IMG_NAME}:${BASE_OS} ${CACHE} .
+        docker build -f Dockerfile.saithrift-server --build-arg BASE_OS=${BASE_OS} -t sc-thrift-server-${IMG_NAME}:${BASE_OS} .
     else
-        docker build -f Dockerfile.server --build-arg BASE_OS=${BASE_OS} -t sc-server-${IMG_NAME}:${BASE_OS} ${CACHE} .
+        docker build -f Dockerfile.server --build-arg BASE_OS=${BASE_OS} -t sc-server-${IMG_NAME}:${BASE_OS} .
     fi
 fi
 popd
