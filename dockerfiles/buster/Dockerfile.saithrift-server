@@ -9,6 +9,8 @@ RUN echo "deb [arch=amd64] http://debian-archive.trafficmanager.net/debian/ bust
 ## Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
 
+COPY sai.env /
+
 # Install generic packages
 RUN apt-get -o Acquire::Check-Valid-Until=false update && apt-get install -y \
         apt-utils \
@@ -30,30 +32,6 @@ RUN apt-get -o Acquire::Check-Valid-Until=false update && apt-get install -y \
 # Add support for supervisord to handle startup dependencies
 RUN pip3 install supervisord-dependent-startup==1.4.0
 
-# Install sonic-swss-common & sonic-sairedis building dependencies
-RUN apt-get install -y \
-        make libtool m4 autoconf dh-exec debhelper automake cmake pkg-config \
-        libhiredis-dev libnl-3-dev libnl-genl-3-dev libnl-route-3-dev swig3.0 \
-        libgtest-dev libgmock-dev libboost-dev autoconf-archive \
-        uuid-dev libboost-serialization-dev libyang-dev libyang0.16
-
-RUN apt-get install -y \
-        libnl-3-dev libnl-genl-3-dev libnl-route-3-dev libnl-nf-3-dev libzmq3-dev
-
-COPY sai.env /
-RUN git clone --recursive https://github.com/sonic-net/sonic-swss-common \
-        && cd sonic-swss-common \
-        && . /sai.env \
-        && git checkout ${SWSS_COMMON_ID} \
-        && ./autogen.sh \
-        && export DEB_BUILD_PROFILES=nopython2 \
-        && dpkg-buildpackage -us -uc -b --jobs=auto \
-        && cd .. \
-        && dpkg -i libswsscommon_1.0.0_amd64.deb \
-        && dpkg -i libswsscommon-dev_1.0.0_amd64.deb \
-        && rm -rf sonic-swss-common \
-        && rm -f *swsscommon*
-
 # Install generic packages
 RUN apt-get install -y \
         libtemplate-perl \
@@ -69,6 +47,25 @@ WORKDIR /sai
 
 RUN apt-get install -y thrift-compiler libthrift-dev libthrift-0.11.0 \
     && pip3 install ctypesgen thrift==0.11.0 ;
+
+ENV SAITHRIFTV2=y
+ENV platform=vs
+ENV GEN_SAIRPC_OPTS="-cve"
+ENV SAIRPC_EXTRA_LIBS="-L/usr/local/lib/ -lpthread"
+
+RUN git clone https://github.com/opencomputeproject/SAI.git \
+    && cd SAI && git fetch origin \
+    && . /sai.env \
+    && git checkout ${SAI_ID} \
+    && cd meta \
+    && make all libsaimetadata.so libsai.so \
+    && cp libsaimetadata.so /usr/lib \
+    && cp libsai.so /usr/lib \
+    && cd .. \
+    && mkdir /usr/include/sai/ \
+    && cp ./inc/sai*.h /usr/include/sai/ \
+    && cp ./experimental/sai*.h /usr/include/sai/ \
+    && make saithrift-install
 
 WORKDIR /sai-challenger
 

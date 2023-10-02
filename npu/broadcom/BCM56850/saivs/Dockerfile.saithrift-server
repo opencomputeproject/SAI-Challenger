@@ -1,0 +1,10 @@
+ARG BASE_OS
+FROM sc-thrift-server-base:$BASE_OS
+
+COPY configs/sai.profile /usr/share/sonic/hwsku/
+COPY configs/port_config.ini /usr/share/sonic/hwsku/
+COPY configs/lanemap.ini /usr/share/sonic/hwsku/
+
+WORKDIR /
+
+CMD ["/usr/bin/supervisord"]
