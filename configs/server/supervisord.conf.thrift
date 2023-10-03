@@ -21,14 +21,6 @@ stdout_logfile=syslog
 stderr_logfile=syslog
 dependent_startup=true
 
-[program:wait-interfaces]
-command=/usr/bin/wait-interfaces.sh
-priority=2
-startsecs=0
-autostart=false
-autorestart=false
-dependent_startup=true
-
 [program:saiserver]
 command=/usr/sbin/saiserver -f /usr/share/sonic/hwsku/port_config.ini -p /usr/share/sonic/hwsku/sai.profile
 priority=3

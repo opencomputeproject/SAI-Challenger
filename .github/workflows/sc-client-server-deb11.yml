@@ -70,6 +70,9 @@ jobs:
         name: Server Image
         path: sc-server.tar
 
+    - name: Build Thrift server Docker image
+      run: ./build.sh -i server -o deb11 -s thrift
+
   build-sc-client:
     name: Build SAI Challenger client image
     runs-on: ubuntu-20.04
