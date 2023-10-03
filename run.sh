@@ -186,7 +186,7 @@ if [ "${IMAGE_TYPE}" = "standalone" ]; then
     IMG_NAME=$(echo "${PREFIX}-${ASIC_TYPE}-${TARGET}" | tr '[:upper:]' '[:lower:]')
     OPTS="$OPTS -v $(pwd):/sai-challenger"
 elif [ "${IMAGE_TYPE}" = "server" ]; then
-    IMG_NAME=$(echo "sc-server-${ASIC_TYPE}-${TARGET}" | tr '[:upper:]' '[:lower:]')
+    IMG_NAME=$(echo "${PREFIX}-server-${ASIC_TYPE}-${TARGET}" | tr '[:upper:]' '[:lower:]')
 else
     IMG_NAME=${PREFIX}-client
     OPTS="$OPTS -v $(pwd):/sai-challenger"
