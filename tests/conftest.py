@@ -49,7 +49,7 @@ def prev_test_failed():
 
 
 def pytest_addoption(parser):
-    parser.addoption("--traffic", action="store_false", help="run tests with traffic")
+    parser.addoption("--traffic", action="store_true", help="run tests with traffic")
     parser.addoption("--testbed", action="store", help="Testbed name", required=True)
 
 
