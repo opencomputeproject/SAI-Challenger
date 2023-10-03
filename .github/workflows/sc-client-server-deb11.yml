@@ -25,8 +25,10 @@ env:
   DOCKER_CLIENT: 'dockerfiles/bullseye/Dockerfile.client'
   DOCKER_SERVER_BASE: 'dockerfiles/bullseye/Dockerfile.server'
   DOCKER_SERVER: 'npu/broadcom/BCM56850/saivs/Dockerfile.server'
+  DOCKER_THRIFT_SERVER: 'dockerfiles/buster/Dockerfile.saithrift-server'
   REDIS_CLIENT: 0
   REDIS_SERVER: 0
+  THRIFT_SERVER: 0
 
 jobs:
   build-sc-server:
@@ -53,6 +55,11 @@ jobs:
             echo "REDIS_SERVER=1" >> $GITHUB_ENV
           fi
         done
+        for file in "$DOCKER_THRIFT_SERVER" "sai.env"; do
+          if [[ "${{ steps.check_changes.outputs.changed_files }}" == *"$file"* ]]; then
+            echo "THRIFT_SERVER=1" >> $GITHUB_ENV
+          fi
+        done
     
     - name: Build server Docker image
       run: ./build.sh -i server -o deb11
@@ -69,6 +76,10 @@ jobs:
       with:
         name: Server Image
         path: sc-server.tar
+
+    - name: Build Thrift server Docker image
+      run: ./build.sh -i server -o deb11 -s thrift
+      if: ${{ env.THRIFT_SERVER == '1' }}
 
   build-sc-client:
     name: Build SAI Challenger client image

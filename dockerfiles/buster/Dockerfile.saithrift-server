@@ -1,0 +1,73 @@
+FROM debian:buster-slim
+
+RUN echo "deb [arch=amd64] http://debian-archive.trafficmanager.net/debian/ buster main contrib non-free" >> /etc/apt/sources.list && \
+        echo "deb-src [arch=amd64] http://debian-archive.trafficmanager.net/debian/ buster main contrib non-free" >> /etc/apt/sources.list && \
+        echo "deb [arch=amd64] http://debian-archive.trafficmanager.net/debian-security/ buster/updates main contrib non-free" >> /etc/apt/sources.list && \
+        echo "deb-src [arch=amd64] http://debian-archive.trafficmanager.net/debian-security/ buster/updates main contrib non-free" >> /etc/apt/sources.list && \
+        echo "deb [arch=amd64] http://debian-archive.trafficmanager.net/debian buster-backports main" >> /etc/apt/sources.list
+
+## Make apt-get non-interactive
+ENV DEBIAN_FRONTEND=noninteractive
+
+COPY sai.env /
+
+# Install generic packages
+RUN apt-get -o Acquire::Check-Valid-Until=false update && apt-get install -y \
+        apt-utils \
+        vim \
+        curl \
+        wget \
+        iproute2 \
+        unzip \
+        git \
+        procps \
+        build-essential \
+        graphviz \
+        doxygen \
+        aspell \
+        python3-pip \
+        rsyslog \
+        supervisor
+
+# Add support for supervisord to handle startup dependencies
+RUN pip3 install supervisord-dependent-startup==1.4.0
+
+# Install generic packages
+RUN apt-get install -y \
+        libtemplate-perl \
+        libconst-fast-perl \
+        libmoosex-aliases-perl \
+        libnamespace-autoclean-perl \
+        libgetopt-long-descriptive-perl \
+        aspell-en bison flex g++ \
+        libboost-all-dev libevent-dev libssl-dev \
+        libpython3-dev libpcap-dev
+
+WORKDIR /sai
+
+RUN apt-get install -y thrift-compiler libthrift-dev libthrift-0.11.0 \
+    && pip3 install ctypesgen thrift==0.11.0 ;
+
+ENV SAITHRIFTV2=y
+ENV GEN_SAIRPC_OPTS="-cve"
+ENV SAIRPC_EXTRA_LIBS="-L/usr/local/lib/ -lpthread"
+
+RUN git clone https://github.com/opencomputeproject/SAI.git \
+    && cd SAI && git fetch origin \
+    && . /sai.env \
+    && git checkout ${SAI_ID} \
+    && cd meta \
+    && make all libsaimetadata.so libsai.so \
+    && cp libsaimetadata.so /usr/lib \
+    && cp libsai.so /usr/lib \
+    && cd .. \
+    && mkdir /usr/include/sai/ \
+    && cp ./inc/sai*.h /usr/include/sai/ \
+    && cp ./experimental/sai*.h /usr/include/sai/ \
+    && make saithrift-install
+
+WORKDIR /sai-challenger
+
+COPY configs/server/supervisord.conf.thrift /etc/supervisor/conf.d/supervisord.conf
+
+CMD ["/usr/bin/supervisord"]

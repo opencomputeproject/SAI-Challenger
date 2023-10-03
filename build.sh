@@ -149,13 +149,18 @@ if [ "${IMAGE_TYPE}" = "standalone" ]; then
 elif [ "${IMAGE_TYPE}" = "server" ]; then
     find ${ASIC_PATH}/../ -type f -name \*.py -exec install -D {} .build/{} \;
     find ${ASIC_PATH}/../ -type f -name \*.json -exec install -D {} .build/{} \;
-    docker build -f dockerfiles/${BASE_OS}/Dockerfile.server -t sc-server-base:${BASE_OS} .
+    if [ "${SAI_INTERFACE}" = "thrift" ]; then
+        docker build -f dockerfiles/${BASE_OS}/Dockerfile.saithrift-server -t sc-thrift-server-base:${BASE_OS} .
+    else
+        docker build -f dockerfiles/${BASE_OS}/Dockerfile.server -t sc-server-base:${BASE_OS} .
+    fi
     rm -rf .build/
 else
     docker build -f dockerfiles/${BASE_OS}/Dockerfile.client --build-arg NOSNAPPI=${NOSNAPPI} -t sc-client:${BASE_OS} .
     if [ "${SAI_INTERFACE}" = "thrift" ]; then
         docker build -f dockerfiles/${BASE_OS}/Dockerfile.saithrift-client -t sc-thrift-client:${BASE_OS} .
     fi
+    exit 0
 fi
 
 # Build target Docker image
@@ -168,6 +173,10 @@ if [ "${IMAGE_TYPE}" = "standalone" ]; then
         docker build -f Dockerfile --build-arg BASE_OS=${BASE_OS} -t sc-${IMG_NAME}:${BASE_OS} .
     fi
 elif [ "${IMAGE_TYPE}" = "server" ]; then
-    docker build -f Dockerfile.server --build-arg BASE_OS=${BASE_OS} -t sc-server-${IMG_NAME}:${BASE_OS} .
+    if [ "${SAI_INTERFACE}" = "thrift" ]; then
+        docker build -f Dockerfile.saithrift-server --build-arg BASE_OS=${BASE_OS} -t sc-thrift-server-${IMG_NAME}:${BASE_OS} .
+    else
+        docker build -f Dockerfile.server --build-arg BASE_OS=${BASE_OS} -t sc-server-${IMG_NAME}:${BASE_OS} .
+    fi
 fi
 popd
