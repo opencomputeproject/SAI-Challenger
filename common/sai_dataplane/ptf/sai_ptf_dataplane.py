@@ -5,7 +5,7 @@ from unittest import TestCase
 import os
 import copy
 import sys
-import imp
+import importlib
 import random
 import time
 import signal
@@ -146,6 +146,11 @@ class SaiPtfDataPlane(SaiDataPlane, TestCase):
 
         ptf.open_logfile('main')
 
+    @staticmethod
+    def __import_module(root_path, module_name):
+        module_specs = importlib.util.find_spec(module_name, [root_path])
+        return module_specs.loader.load_module()
+
     def init(self):
         global ptf
         ptf.config.update(config_default)
@@ -178,7 +183,7 @@ class SaiPtfDataPlane(SaiDataPlane, TestCase):
 
         platform_mod = None
         try:
-            platform_mod = imp.load_module(platform_name, *imp.find_module(platform_name, [config["platform_dir"]]))
+            platform_mod = self.__import_module(config["platform_dir"], platform_name)
         except:
             logging.warn("Failed to import " + platform_name + " platform module")
             raise
