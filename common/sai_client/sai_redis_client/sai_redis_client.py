@@ -53,7 +53,7 @@ class SaiRedisClient(SaiClient):
         '''
         self.assert_process_running(self.port, self.server_ip, "Redis server has not started yet...")
         self.r.flushall()
-        self.loglevel_db.hmset('syncd:syncd', {'LOGLEVEL':self.loglevel, 'LOGOUTPUT':'SYSLOG'})
+        self.loglevel_db.hset('syncd:syncd', mapping={'LOGLEVEL':self.loglevel, 'LOGOUTPUT':'SYSLOG'})
         self.r.shutdown()
         time.sleep(1)
         self.assert_process_running(self.port, self.server_ip, "Redis server has not restarted yet...")

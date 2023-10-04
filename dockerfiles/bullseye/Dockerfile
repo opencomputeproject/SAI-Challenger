@@ -104,6 +104,9 @@ RUN apt-get install -y nlohmann-json3-dev
 RUN pip3 install pytest pytest_dependency pytest-html aenum pdbpp macaddress click==8.0
 RUN apt-get install -y python3-paramiko
 
+# Fix invoke/loader.py:3: DeprecationWarning caused by load_module()
+RUN pip3 install --upgrade invoke>=2.2.0
+
 # Deploy SAI Challenger
 COPY common              /sai-challenger/common
 COPY cli                 /sai-challenger/cli
