@@ -49,18 +49,23 @@ RUN apt-get install -y thrift-compiler libthrift-dev libthrift-0.11.0 \
     && pip3 install ctypesgen thrift==0.11.0 ;
 
 ENV SAITHRIFTV2=y
-ENV GEN_SAIRPC_OPTS="-cve"
+ENV GEN_SAIRPC_OPTS="-ve"
 ENV SAIRPC_EXTRA_LIBS="-L/usr/local/lib/ -lpthread"
+
+COPY scripts/meta/* /scripts/meta/
+COPY scripts/saithriftv2/* /scripts/saithriftv2/
 
 RUN git clone https://github.com/opencomputeproject/SAI.git \
     && cd SAI && git fetch origin \
     && . /sai.env \
     && git checkout ${SAI_ID} \
     && cd meta \
+    && cp -f /scripts/meta/* ./ \
     && make all libsaimetadata.so libsai.so \
     && cp libsaimetadata.so /usr/lib \
     && cp libsai.so /usr/lib \
     && cd .. \
+    && cp -f /scripts/saithriftv2/* ./test/saithriftv2/ \
     && mkdir /usr/include/sai/ \
     && cp ./inc/sai*.h /usr/include/sai/ \
     && cp ./experimental/sai*.h /usr/include/sai/ \
