@@ -25,7 +25,7 @@ env:
   DOCKER_CLIENT: 'dockerfiles/bullseye/Dockerfile.client'
   DOCKER_SERVER_BASE: 'dockerfiles/bullseye/Dockerfile.server'
   DOCKER_SERVER: 'npu/broadcom/BCM56850/saivs/Dockerfile.server'
-  DOCKER_THRIFT_SERVER: 'dockerfiles/buster/Dockerfile.saithrift-server'
+  DOCKER_THRIFT_SERVER: 'dockerfiles/bullseye/Dockerfile.saithrift-server'
   REDIS_CLIENT: 0
   REDIS_SERVER: 0
   THRIFT_SERVER: 0
