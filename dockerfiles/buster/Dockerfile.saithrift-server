@@ -49,15 +49,24 @@ RUN apt-get install -y thrift-compiler libthrift-dev libthrift-0.11.0 \
     && pip3 install ctypesgen thrift==0.11.0 ;
 
 ENV SAITHRIFTV2=y
-ENV GEN_SAIRPC_OPTS="-cve"
-ENV SAIRPC_EXTRA_LIBS="-L/usr/local/lib/ -lpthread"
+ENV GEN_SAIRPC_OPTS="-ve"
+ENV SAIRPC_EXTRA_LIBS="-L/usr/local/lib/"
+# Required to build libsaimetadata.so and libsai.so
+ENV SAI_THRIFT_ID="af31a8f"
 
 RUN git clone https://github.com/opencomputeproject/SAI.git \
     && cd SAI && git fetch origin \
     && . /sai.env \
     && git checkout ${SAI_ID} \
+    # Old branches have "saitypes.h" which conflicts with latest metadata Makefile
+    && sed -i 's/#include "saitypes.h"/#include <saitypes.h>/g' inc/saiwred.h \
     && cd meta \
-    && make all libsaimetadata.so libsai.so \
+    && make all \
+    # Verify and update build targets from the stable commit ID
+    && if ! $(grep -q "libsai.so" Makefile) || ! $(grep -q "lsai -lsaimetadata" ../test/saithriftv2/Makefile); then \
+        git checkout ${SAI_THRIFT_ID} Makefile size.sh size.pl libsai.cpp sai_rpc_frontend.main.cpp ../test/saithriftv2; \
+    fi \
+    && make libsaimetadata.so libsai.so \
     && cp libsaimetadata.so /usr/lib \
     && cp libsai.so /usr/lib \
     && cd .. \
