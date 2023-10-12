@@ -50,7 +50,7 @@ RUN apt-get install -y thrift-compiler libthrift-dev libthrift-0.11.0 \
 
 ENV SAITHRIFTV2=y
 ENV GEN_SAIRPC_OPTS="-ve"
-ENV SAIRPC_EXTRA_LIBS="-L/usr/local/lib/ -lpthread"
+ENV SAIRPC_EXTRA_LIBS="-L/usr/local/lib/"
 # Required to build libsaimetadata.so and libsai.so
 ENV SAI_THRIFT_ID="af31a8f"
 
@@ -62,7 +62,8 @@ RUN git clone https://github.com/opencomputeproject/SAI.git \
     && sed -i 's/#include "saitypes.h"/#include <saitypes.h>/g' inc/saiwred.h \
     && cd meta \
     && make all \
-    && if [ ! $(grep -Fq "libsai.so" Makefile) ]; then \
+    # If both files have 
+    && if ! $(grep -q "libsai.so" Makefile) || ! $(grep -q "lsai -lsaimetadata" ../test/saithriftv2/Makefile); then \
         git checkout ${SAI_THRIFT_ID} Makefile size.sh size.pl libsai.cpp sai_rpc_frontend.main.cpp ../test/saithriftv2; \
     fi \
     && make libsaimetadata.so libsai.so \
