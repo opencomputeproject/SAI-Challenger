@@ -214,12 +214,6 @@ class Sai():
     def alloc_vid(self, obj_type):
         return self.sai_client.alloc_vid(obj_type)
 
-    def apply_rec(self, fname):
-        dut = self.cfg.get("dut", None)
-        if dut:
-            dut.cleanup()
-        return self.__apply_rec(fname)
-
     def cleanup(self):
         dut = self.cfg.get("dut", None)
         if dut:
@@ -503,9 +497,9 @@ class Sai():
             for idx, oid in enumerate(dot1q_bp_oids):
                 self.create_alias(f"BRIDGE_PORT_{idx}", 'SAI_OBJECT_TYPE_BRIDGE_PORT', oid)
 
-    def __apply_rec(self, fname):
+    def apply_rec(self, fname):
         # Since it's expected that sairedis.rec file contains a full configuration,
-        # we must flush both Redis and NPU state before we start.
+        # before we start, we must flush both RPC backend (Redis or Thrift server) and NPU state.
         self.cleanup()
 
         oids = []
