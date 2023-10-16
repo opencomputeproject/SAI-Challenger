@@ -16,7 +16,7 @@ def skip_all(testbed_instance):
     if testbed is not None and len(testbed.npu) != 1:
         pytest.skip('invalid for {} testbed'.format(testbed.name))
 
-def test_l2_untagged_vlan_traffic(npu, dataplane):
+def test_l2_tagged_vlan_traffic(npu, dataplane):
     """
     Creates vlan 10 and adds two ports to the vlan 10 member
     and validates the config using l2 traffic
@@ -38,7 +38,7 @@ def test_l2_untagged_vlan_traffic(npu, dataplane):
                 "SAI_VLAN_MEMBER_ATTR_BRIDGE_PORT_ID",
                 "$BRIDGE_PORT_2",
                 "SAI_VLAN_MEMBER_ATTR_VLAN_TAGGING_MODE",
-                "SAI_VLAN_TAGGING_MODE_UNTAGGED",
+                "SAI_VLAN_TAGGING_MODE_TAGGED",
             ],
         },
         {
@@ -60,7 +60,7 @@ def test_l2_untagged_vlan_traffic(npu, dataplane):
                 "SAI_VLAN_MEMBER_ATTR_BRIDGE_PORT_ID",
                 "$BRIDGE_PORT_3",
                 "SAI_VLAN_MEMBER_ATTR_VLAN_TAGGING_MODE",
-                "SAI_VLAN_TAGGING_MODE_UNTAGGED",
+                "SAI_VLAN_TAGGING_MODE_TAGGED",
             ],
         },
         {
@@ -96,7 +96,7 @@ def test_l2_untagged_vlan_traffic(npu, dataplane):
             flow1.tx_rx.port.tx_name = config.ports[0].name
             flow1.tx_rx.port.rx_name = config.ports[1].name
             flow1.size.fixed = 1024
-            flow1.rate.percentage = 100
+            flow1.rate.pps = 1000
             flow1.metrics.enable = True
             flow1.metrics.loss = True
             source = macs[1]
@@ -114,14 +114,41 @@ def test_l2_untagged_vlan_traffic(npu, dataplane):
 
             ts = dataplane.api.transmit_state()
             ts.flow_names = [flow1.name]
+            print('Starting Data Traffic')
             ts.state = ts.START
             dataplane.api.set_transmit_state(ts)
-            time.sleep(10)
+            time.sleep(5)
             ts = dataplane.api.transmit_state()
             ts.flow_names = [flow1.name]
+
+            ixnet.Vport.find()[1].Capture.HardwareEnabled = True
+            print('Starting Data Capture')
+            ixnet.StartCapture()
+            time.sleep(10)
+            print('Stopping Data Capture')
+            ixnet.StopCapture()
+            print('Stopping Data Traffic')
             ts.state = ts.STOP
             dataplane.api.set_transmit_state(ts)
-            time.sleep(10)
+            time.sleep(5)
+
+            counter = 0
+            while ixnet.Vport.find()[1].Capture.DataCaptureState != 'ready':
+                time.sleep(1)
+                if counter > 120:
+                    raise Exception('FAIL: Data Capture state not ready for Port {} after 120 Seconds')
+                counter+=1
+            print('Data Capture State for Rx Port : {}'.format(ixnet.Vport.find()[1].Capture.DataCaptureState))
+
+            print('Total Data packets captured on Rx Port: {}'.format(ixnet.Vport.find()[1].Capture.DataPacketCounter))
+            ixnet.Vport.find()[1].Capture.CurrentPacket.GetPacketFromDataCapture(Arg2=1)
+            packetHeaderStacks = ixnet.Vport.find()[1].Capture.CurrentPacket.Stack.find()
+            for packetHeader in packetHeaderStacks.find()[2]:
+                print('\nPacketHeaderName: {}'.format(packetHeader.DisplayName))
+                for field in packetHeader.Field.find():
+                    print('\t{}: {}'.format(field.DisplayName, field.FieldValue))
+                assert int(packetHeader.Field.find()[2].FieldValue) == 10, "Vlan ID Field is not as expected in the packet"
+
             request = dataplane.api.metrics_request()
             request.flow.flow_names = [flow1.name]
             rows = dataplane.api.get_metrics(request).flow_metrics
