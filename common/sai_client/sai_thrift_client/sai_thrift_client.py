@@ -201,6 +201,8 @@ class SaiThriftClient(SaiClient):
                 status = ThriftConverter.convert_to_sai_status_str(thrift_attr_value)
             else:
                 status = ThriftConverter.convert_to_sai_status_str(sai_adapter.status)
+                if status not in ["SAI_STATUS_SUCCESS", "SAI_STATUS_BUFFER_OVERFLOW"]:
+                    return status, []
                 result.extend(ThriftConverter.convert_attributes_from_thrift(thrift_attr_value, obj_type))
 
         return status, result
