@@ -457,8 +457,8 @@ def test_l2_lag_hash_seed(npu, dataplane):
             # Sending 100 packets to verify the order/sequence of distribution
             for i in range(0, max_itrs):
                 src_mac = src_mac_start + str(i % 99).zfill(2)
-                ip_src = ip_src_start + str(i % 99).zfill(3)
-                ip_dst = ip_dst_start + str(i % 99).zfill(3)    
+                ip_src = ip_src_start + str(i % 99)
+                ip_dst = ip_dst_start + str(i % 99)   
                                 
                 pkt = simple_tcp_packet(eth_dst=mac,
                                         eth_src=src_mac,
@@ -478,7 +478,7 @@ def test_l2_lag_hash_seed(npu, dataplane):
                                             ip_id=109,
                                             ip_ttl=64)
 
-                send_packet(dataplane, lag_mbr_num, str(pkt))
+                send_packet(dataplane, lag_mbr_num, pkt)
                 rcv_idx = verify_any_packet_any_port(dataplane, [exp_pkt], [0, 1, 2, 3])
                 count1[rcv_idx] += 1
                 laglist1.append(rcv_idx)
@@ -499,8 +499,8 @@ def test_l2_lag_hash_seed(npu, dataplane):
             # Sending 100 packets to verify the order/sequence of distribution
             for i in range(0, max_itrs):
                 src_mac = src_mac_start + str(i % 99).zfill(2)
-                ip_src = ip_src_start + str(i % 99).zfill(3)
-                ip_dst = ip_dst_start + str(i % 99).zfill(3)    
+                ip_src = ip_src_start + str(i % 99)
+                ip_dst = ip_dst_start + str(i % 99)
                                 
                 pkt = simple_tcp_packet(eth_dst=mac,
                                         eth_src=src_mac,
@@ -520,7 +520,7 @@ def test_l2_lag_hash_seed(npu, dataplane):
                                             ip_id=109,
                                             ip_ttl=64)
 
-                send_packet(dataplane, lag_mbr_num, str(pkt))
+                send_packet(dataplane, lag_mbr_num, pkt)
                 rcv_idx = verify_any_packet_any_port(dataplane, [exp_pkt], [0, 1, 2, 3])
                 count2[rcv_idx] += 1
                 laglist2.append(rcv_idx)
