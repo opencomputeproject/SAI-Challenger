@@ -634,7 +634,7 @@ class Sai():
                         G_oids += G_output[start_idx:].split(",")
                     elif "oid:" in G_output:
                         G_oids.append(G_output)
-                assert len(oids) == len(G_oids)
+                assert len(oids) == len(G_oids), f"Expected data {oids}. Actual data {G_oids}"
 
                 for idx, oid in enumerate(G_oids):
                     self.rec2vid[oid] = oids[idx]
