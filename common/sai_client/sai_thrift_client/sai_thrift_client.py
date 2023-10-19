@@ -1,5 +1,6 @@
 import json
 import logging
+import paramiko
 import subprocess
 import time
 from functools import wraps
@@ -211,14 +212,20 @@ class SaiThriftClient(SaiClient):
         if self.thrift_transport:
             self.thrift_transport.close()
 
-        # Handle cleanup for saivs target
-        if self.config["saivs"]:
-            # Handle cleanup for saivs target running in standalone mode
-            if self.config["ip"] in ["localhost", "127.0.0.1"]:
-                subprocess.run(["supervisorctl", "restart", "saiserver"])
-                time.sleep(1)
-
-        # TODO: Handle cleanup in generic way..
+        init_time = 1 if self.config["saivs"] else 5
+        if self.config.get("username") and self.config.get("password"):
+            # Perform cleanup of SAI target through SSH
+            with paramiko.SSHClient() as ssh:
+                ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                ssh.connect(self.config["ip"],
+                            username=self.config.get("username"),
+                            password=self.config.get("password"))
+                ssh.exec_command("supervisorctl restart saiserver")
+            time.sleep(init_time)
+        elif self.config["ip"] in ["localhost", "127.0.0.1"]:
+            # Perform cleanup of SAI target running in standalone mode
+            subprocess.run(["supervisorctl", "restart", "saiserver"])
+            time.sleep(init_time)
 
         self.thrift_transport = TSocket.TSocket(self.config['ip'], self.config['port'])
         self.thrift_transport = TTransport.TBufferedTransport(self.thrift_transport)
