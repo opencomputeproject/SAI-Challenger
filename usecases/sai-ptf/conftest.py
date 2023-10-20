@@ -35,7 +35,7 @@ def set_ptf_params(request):
                 # Clean-up saiserver after previous test session
                 subprocess.run(["supervisorctl", "restart", "saiserver"], check=True)
             except Exception as e:
-                raise RuntimeError(f"Failed to apply the patch: {e}")
+                raise RuntimeError(f"Failed to restart the saiserver: {e}")
 
         tb_params.generate_sai_ptf_config_files()
         ports = to_ptf_int_list(tb_params.config['dataplane'][0]['port_groups'])
@@ -46,7 +46,7 @@ def set_ptf_params(request):
     # provide required PTF runner params to avoid exiting with an error
     sys.argv = ['ptf.py','--test-dir', '/sai-challenger/usecases/sai-ptf/SAI/ptf', *ports]
     sys.argv.append("--test-params")
-    sys.argv.append("thrift_server='127.0.0.1';config_db_json='/sai-challenger/testbeds/config_db.json'")
+    sys.argv.append(f"thrift_server='{tb_params.config['npu'][0]['client']['config']['ip']}';config_db_json='/sai-challenger/testbeds/config_db.json'")
 
     # load PTF runner module to let it collect test params into ptf.config
     import imp
