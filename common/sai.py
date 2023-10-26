@@ -180,7 +180,6 @@ class Sai():
         self.sku = cfg.get("sku")
         self.asic_dir = cfg.get("asic_dir")
         self._switch_oid = None
-        self.cache = {}
         self.rec2vid = {}
 
         cfg["client"]["config"]["saivs"] = self.libsaivs
@@ -219,7 +218,7 @@ class Sai():
         if dut:
             dut.cleanup()
         self.sai_client.cleanup()
-        self.cache = {}
+        self.command_processor.objects_registry = {}
         self.rec2vid = {}
 
     def set_loglevel(self, sai_api, loglevel):
@@ -485,7 +484,14 @@ class Sai():
                                  ["SAI_SWITCH_ATTR_PORT_LIST", self.make_list(port_num, "oid:0x0")]).oids()
             for idx, oid in enumerate(port_oids):
                 self.create_alias(f"PORT_{idx}", 'SAI_OBJECT_TYPE_PORT', oid)
-
+                status, data = self.get(oid, ["SAI_PORT_ATTR_TYPE"], False)
+                if status == "SAI_STATUS_SUCCESS" and data.value() != "SAI_PORT_TYPE_LOGICAL":
+                    continue
+                status, data = self.get(oid, ["SAI_PORT_ATTR_HW_LANE_LIST"], False)
+                if status != "SAI_STATUS_SUCCESS":
+                    continue
+                # Create port alias by lane
+                self.create_alias(f"port{data.to_list()[0]}", 'SAI_OBJECT_TYPE_PORT', oid)
 
             status, data = self.get(dot1q_br_oid, ["SAI_BRIDGE_ATTR_PORT_LIST", "1:oid:0x0"], False)
             bport_num = data.uint32()
@@ -496,6 +502,45 @@ class Sai():
                                      ["SAI_BRIDGE_ATTR_PORT_LIST", self.make_list(bport_num, "oid:0x0")]).oids()
             for idx, oid in enumerate(dot1q_bp_oids):
                 self.create_alias(f"BRIDGE_PORT_{idx}", 'SAI_OBJECT_TYPE_BRIDGE_PORT', oid)
+
+    def get_attr_by_name(self, name, attrs):
+        for i in range(0, len(attrs), 2):
+            if attrs[i] == name:
+                return attrs[i + 1]
+        return None
+
+    def get_alias_by_key(self, obj_key):
+        for key, value in self.command_processor.objects_registry.items():
+            if value["oid"] == obj_key or value["key"] == obj_key:
+                return key
+        return ""
+
+    def create_rec_alias(self, obj_type, attrs, key=None):
+        if obj_type == "SAI_OBJECT_TYPE_SWITCH":
+            self.create_alias(f"switch", obj_type, key)
+            # Discover objects implicitly created
+            # during switch object creation
+            self.objects_discovery()
+        elif obj_type == "SAI_OBJECT_TYPE_PORT":
+            lanes = self.get_attr_by_name("SAI_PORT_ATTR_HW_LANE_LIST", attrs).split(':')[1].split(',')
+            # Create port alias by lane
+            self.create_alias(f"port{lanes[0]}", obj_type, key)
+        elif obj_type == "SAI_OBJECT_TYPE_VLAN":
+            vlan_id = self.get_attr_by_name("SAI_VLAN_ATTR_VLAN_ID", attrs)
+            self.create_alias(f"vlan{vlan_id}", obj_type, key)
+        elif obj_type == "SAI_OBJECT_TYPE_ROUTER_INTERFACE":
+            port_oid = self.get_attr_by_name("SAI_ROUTER_INTERFACE_ATTR_PORT_ID", attrs)
+            if port_oid:
+                port_alias = self.get_alias_by_key(port_oid)
+                self.create_alias(f"rif_{port_alias}", obj_type, key)
+            else:
+                vlan_oid = self.get_attr_by_name("SAI_ROUTER_INTERFACE_ATTR_VLAN_ID", attrs)
+                if vlan_oid:
+                    vlan_alias = self.get_alias_by_key(vlan_oid)
+                    self.create_alias(f"rif_vlan{vlan_alias}", obj_type, key)
+
+    def remove_rec_alias(self, obj_key):
+        self.remove_alias(self.get_alias_by_key(obj_key))
 
     def apply_rec(self, fname):
         # Since it's expected that sairedis.rec file contains a full configuration,
@@ -519,12 +564,16 @@ class Sai():
                     if "oid:" in attrs[idx]:
                         attrs[idx] = self.rec2vid[attrs[idx]]
 
-                status, key = self.create(self.__update_key(rec[0], rec[1]), attrs, False)
+                obj_key = self.__update_key(rec[0], rec[1])
+                status, key = self.create(obj_key, attrs, False)
                 if status != "SAI_STATUS_SUCCESS":
                     continue
                 if "{" not in key:
                     key_list = rec[1].split(":", 1)
                     self.rec2vid[key_list[1]] = key
+
+                obj_type = obj_key.split(":")[0]
+                self.create_rec_alias(obj_type, attrs, key)
 
             elif rec[0] == 'C':
                 # record = [["action", "sai-object-type"], ["key", "attr1", "attr2"], ..., [key-n", "attr1", "attr2"]]
@@ -586,7 +635,9 @@ class Sai():
                 self.bulk_set(record[0][1], bulk_keys, bulk_attrs)
 
             elif rec[0] == 'r':
-                self.remove(self.__update_key(rec[0], rec[1]))
+                obj_key = self.__update_key(rec[0], rec[1])
+                self.remove(obj_key)
+                self.remove_rec_alias(obj_key)
 
             elif rec[0] == 'R':
                 # record = [["action", "sai-object-type"], ["key"], ..., [key-n"]]
