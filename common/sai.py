@@ -511,9 +511,12 @@ class Sai():
 
     def get_alias_by_key(self, obj_key):
         for key, value in self.command_processor.objects_registry.items():
-            if value["oid"] == obj_key or value["key"] == obj_key:
+            if (value["oid"] == obj_key or value["key"] == obj_key) and key[0].islower():
                 return key
         return ""
+
+    def get_key_by_alias(self, alias):
+        return self.command_processor.objects_registry.get(alias)
 
     def create_rec_alias(self, obj_type, attrs, key=None):
         if obj_type == "SAI_OBJECT_TYPE_SWITCH":
@@ -538,6 +541,13 @@ class Sai():
                 if vlan_oid:
                     vlan_alias = self.get_alias_by_key(vlan_oid)
                     self.create_alias(f"rif_vlan{vlan_alias}", obj_type, key)
+        elif obj_type == "SAI_OBJECT_TYPE_ROUTE_ENTRY":
+            nh_oid = self.get_attr_by_name("SAI_ROUTE_ENTRY_ATTR_NEXT_HOP_ID", attrs)
+            nh_type = self.vid_to_type(nh_oid)
+            if nh_type == "SAI_OBJECT_TYPE_ROUTER_INTERFACE":
+                # Directly connected route
+                rif_alias = self.get_alias_by_key(nh_oid)
+                self.create_alias(f"route_{rif_alias}", obj_type, oid=None, key=key)
 
     def remove_rec_alias(self, obj_key):
         self.remove_alias(self.get_alias_by_key(obj_key))
@@ -603,6 +613,8 @@ class Sai():
                     bulk_attrs.append(attrs)
 
                 self.bulk_create(record[0][1], bulk_keys, bulk_attrs)
+                for idx in range(len(bulk_keys)):
+                    self.create_rec_alias(record[0][1], bulk_attrs[idx], bulk_keys[idx])
 
             elif rec[0] == 's':
                 data = rec[2].split('=')
@@ -655,6 +667,8 @@ class Sai():
                     bulk_keys.append(key)
 
                 self.bulk_remove(record[0][1], bulk_keys)
+                for key in bulk_keys:
+                    self.remove_rec_alias(key)
 
             elif rec[0] == 'g':
                 attrs = []
