@@ -543,11 +543,12 @@ class Sai():
                     self.create_alias(f"rif_vlan{vlan_alias}", obj_type, key)
         elif obj_type == "SAI_OBJECT_TYPE_ROUTE_ENTRY":
             nh_oid = self.get_attr_by_name("SAI_ROUTE_ENTRY_ATTR_NEXT_HOP_ID", attrs)
-            nh_type = self.vid_to_type(nh_oid)
-            if nh_type == "SAI_OBJECT_TYPE_ROUTER_INTERFACE":
-                # Directly connected route
-                rif_alias = self.get_alias_by_key(nh_oid)
-                self.create_alias(f"route_{rif_alias}", obj_type, oid=None, key=key)
+            if nh_oid and nh_oid != "oid:0x0":
+                nh_type = self.vid_to_type(nh_oid)
+                if nh_type == "SAI_OBJECT_TYPE_ROUTER_INTERFACE":
+                    # Directly connected route
+                    rif_alias = self.get_alias_by_key(nh_oid)
+                    self.create_alias(f"route_{rif_alias}", obj_type, oid=None, key=key)
 
     def remove_rec_alias(self, obj_key):
         self.remove_alias(self.get_alias_by_key(obj_key))
