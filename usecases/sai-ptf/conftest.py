@@ -1,6 +1,9 @@
-import sys
+import paramiko
 import pytest
 import subprocess
+import sys
+import time
+
 from saichallenger.common.sai_testbed import SaiTestbedMeta
 
 sys.path.insert(0, '/sai-challenger/ptf/src')
@@ -27,15 +30,24 @@ def pytest_sessionstart(session):
 
 @pytest.fixture(scope="session", autouse=True)
 def set_ptf_params(request):
+    server_ip = '127.0.0.1'
     if request.config.option.testbed:
         tb_params = SaiTestbedMeta("/sai-challenger", request.config.option.testbed)
-        if tb_params.config['npu'][0]['target'] == 'saivs' and \
-           tb_params.config['npu'][0]['client']['config']['ip'] in ['localhost', '127.0.0.1']:
+        server_ip = tb_params.config['npu'][0]['client']['config']['ip']
+        username = tb_params.config['npu'][0]['client']['config'].get('username', None)
+        password = tb_params.config['npu'][0]['client']['config'].get('password', None)
+        if tb_params.config['npu'][0]['target'] == 'saivs' and server_ip in ['localhost', '127.0.0.1']:
             try:
                 # Clean-up saiserver after previous test session
                 subprocess.run(["supervisorctl", "restart", "saiserver"], check=True)
             except Exception as e:
                 raise RuntimeError(f"Failed to restart the saiserver: {e}")
+        elif username and password:
+            with paramiko.SSHClient() as ssh:
+                ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                ssh.connect(server_ip, username=username, password=password)
+                ssh.exec_command("supervisorctl restart saiserver")
+            time.sleep(5)
 
         tb_params.generate_sai_ptf_config_files()
         ports = to_ptf_int_list(tb_params.config['dataplane'][0]['port_groups'])
@@ -43,16 +55,10 @@ def set_ptf_params(request):
         ports = ""
     
     arg_back = sys.argv
-    server_ip = tb_params.config['npu'][0]['client']['config']['ip']
-    username = tb_params.config['npu'][0]['client']['config'].get('username', None)
-    password = tb_params.config['npu'][0]['client']['config'].get('password', None)
-    ptf_test_params = f"thrift_server='{server_ip}';config_db_json='/sai-challenger/testbeds/config_db.json'"
-    if server_ip not in ['localhost', '127.0.0.1'] and username and password:
-        ptf_test_params += f";username='{username}';password='{password}'"
     # provide required PTF runner params to avoid exiting with an error
     sys.argv = ['ptf.py','--test-dir', '/sai-challenger/usecases/sai-ptf/SAI/ptf', *ports]
     sys.argv.append("--test-params")
-    sys.argv.append(ptf_test_params)
+    sys.argv.append(f"thrift_server='{server_ip}';config_db_json='/sai-challenger/testbeds/config_db.json'")
 
     # load PTF runner module to let it collect test params into ptf.config
     import imp
