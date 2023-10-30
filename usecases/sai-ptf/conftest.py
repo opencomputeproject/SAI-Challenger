@@ -1,3 +1,4 @@
+import os
 import paramiko
 import pytest
 import subprocess
@@ -11,21 +12,23 @@ sys.path.insert(0, '/sai-challenger/ptf/src')
 
 @pytest.hookimpl(tryfirst=True)
 def pytest_sessionstart(session):
-    patch_file = "/sai-challenger/usecases/sai-ptf/patches/0001-sai-base-test.patch"
+    patch_files = [p for p in os.listdir("/sai-challenger/usecases/sai-ptf/patches/") if p.endswith('patch')]
     target_directory = "/sai-challenger/usecases/sai-ptf/SAI/"
 
-    try:
-        command = ["patch", "--dry-run", "--silent", "-N", "-p1", "-i", patch_file, "-d", target_directory]
-        result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
-        if result.returncode == 0:
-            subprocess.run(["patch", "-p1", "-i", patch_file, "-d", target_directory], check=True)
-        elif result.returncode == 1:
-            # The patch is already applied
-            return
-        else:
-            raise RuntimeError(f"Failed to check whether the patch is already applied: {result}")
-    except Exception as e:
-        raise RuntimeError(f"Failed to apply the patch: {e}")
+    for patch_file in patch_files:
+        patch_file = f"/sai-challenger/usecases/sai-ptf/patches/{patch_file}"
+        try:
+            command = ["patch", "--dry-run", "--silent", "-N", "-p1", "-i", patch_file, "-d", target_directory]
+            result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+            if result.returncode == 0:
+                subprocess.run(["patch", "-p1", "-i", patch_file, "-d", target_directory], check=True)
+            elif result.returncode == 1:
+                # The patch is already applied
+                return
+            else:
+                raise RuntimeError(f"Failed to check whether the patch is already applied: {result}")
+        except Exception as e:
+            raise RuntimeError(f"Failed to apply the patch: {e}")
 
 
 @pytest.fixture(scope="session", autouse=True)
