@@ -43,10 +43,16 @@ def set_ptf_params(request):
         ports = ""
     
     arg_back = sys.argv
+    server_ip = tb_params.config['npu'][0]['client']['config']['ip']
+    username = tb_params.config['npu'][0]['client']['config'].get('username', None)
+    password = tb_params.config['npu'][0]['client']['config'].get('password', None)
+    ptf_test_params = f"thrift_server='{server_ip}';config_db_json='/sai-challenger/testbeds/config_db.json'"
+    if server_ip not in ['localhost', '127.0.0.1'] and username and password:
+        ptf_test_params += f";username='{username}';password='{password}'"
     # provide required PTF runner params to avoid exiting with an error
     sys.argv = ['ptf.py','--test-dir', '/sai-challenger/usecases/sai-ptf/SAI/ptf', *ports]
     sys.argv.append("--test-params")
-    sys.argv.append(f"thrift_server='{tb_params.config['npu'][0]['client']['config']['ip']}';config_db_json='/sai-challenger/testbeds/config_db.json'")
+    sys.argv.append(ptf_test_params)
 
     # load PTF runner module to let it collect test params into ptf.config
     import imp
