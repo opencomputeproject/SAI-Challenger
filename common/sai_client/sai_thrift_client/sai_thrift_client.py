@@ -235,7 +235,7 @@ class SaiThriftClient(SaiClient):
 
     def flush_fdb_entries(self, obj, attrs=None):
         obj_type, _, _ = self.obj_to_items(obj)
-        attr_kwargs = dict(ThriftConverter.convert_attributes_to_thrift(attrs))
+        attr_kwargs = dict(ThriftConverter.convert_attributes_to_thrift(attrs)) if attrs else {}
         result = sai_adapter.sai_thrift_flush_fdb_entries(self.thrift_client, **attr_kwargs)
 
     def bulk_create(self, obj_type, keys, attrs, obj_count=0, do_assert=True):
