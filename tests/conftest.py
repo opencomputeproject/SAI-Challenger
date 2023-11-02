@@ -7,8 +7,10 @@ from saichallenger.common.sai_npu import SaiNpu
 from saichallenger.common.sai_phy import SaiPhy
 from saichallenger.common.sai_testbed import SaiTestbed
 from saichallenger.common.sai_data import SaiObjType
+from saichallenger.common.sai_logger import SaiAttrsJsonLogger
 
 _previous_test_failed = False
+log_attrs = False
 
 @pytest.hookimpl(tryfirst=True, hookwrapper=True)
 def pytest_runtest_makereport(item, call):
@@ -40,6 +42,17 @@ def pytest_runtest_makereport(item, call):
     elif not _previous_test_failed:
         # Update the outcome only in case all previous phases were successful
         _previous_test_failed = rep.outcome not in ["passed", "skipped"]
+    
+    if log_attrs:
+        log_file_path = f"{curdir}/sai_attr_log.json"
+        SaiAttrsJsonLogger.dump(log_file_path)
+
+
+@pytest.hookimpl
+def pytest_report_teststatus(report):
+    if report.when == "call":
+        if report.outcome == "failed" and log_attrs:
+            SaiAttrsJsonLogger.update_test_result(report.head_line, report.outcome)
 
 
 @pytest.fixture
@@ -51,6 +64,7 @@ def prev_test_failed():
 def pytest_addoption(parser):
     parser.addoption("--traffic", action="store_true", help="run tests with traffic")
     parser.addoption("--testbed", action="store", help="Testbed name", required=True)
+    parser.addoption("--log_attrs", action="store_true", help="run tests with traffic")
 
 
 def pytest_sessionstart(session):
@@ -64,7 +78,11 @@ def exec_params(request):
         # Generic parameters
         "traffic": request.config.getoption("--traffic"),
         "testbed": request.config.getoption("--testbed"),
+        "log_attrs": request.config.getoption("--log_attrs"),
     }
+    if config_param["log_attrs"]:
+        global log_attrs
+        log_attrs = True
     return config_param
 
 

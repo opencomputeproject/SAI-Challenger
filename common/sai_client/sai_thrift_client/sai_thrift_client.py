@@ -8,6 +8,7 @@ from saichallenger.common.sai_client.sai_client import SaiClient
 from saichallenger.common.sai_client.sai_thrift_client.sai_thrift_utils import *
 from saichallenger.common.sai_data import SaiData
 from saichallenger.common.sai_data import SaiObjType
+from saichallenger.common.sai_logger import SaiAttrsJsonLogger
 from sai_thrift import sai_rpc, sai_adapter
 from thrift.protocol import TBinaryProtocol
 from thrift.transport import TSocket, TTransport
@@ -164,6 +165,10 @@ class SaiThriftClient(SaiClient):
             result = key if key is not None else result
         else:
             result = None
+
+        for attr in attrs[::2]:
+            SaiAttrsJsonLogger.insert_attr_use(f"SAI_OBJECT_TYPE_{obj_type_name.upper()}", attr, operation)
+
         return status, result
 
     def _operate_attributes(self, operation, attrs=(), oid=None, obj_type=None, key=None):

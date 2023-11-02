@@ -5,6 +5,7 @@ import pytest
 
 from saichallenger.common.sai_client.sai_client import SaiClient
 from saichallenger.common.sai_data import SaiObjType
+from saichallenger.common.sai_logger import SaiAttrsJsonLogger
 
 
 class CommandProcessor:
@@ -241,6 +242,7 @@ class Sai():
             attr = attrs[0]
             attr_type = self.get_obj_attr_type(obj_type, attr)
             status, data = self.get_by_type(obj, attr, attr_type)
+            SaiAttrsJsonLogger.insert_attr_use(obj_type, attr, "get")
             if do_assert:
                 assert status == "SAI_STATUS_SUCCESS", f"Failed to retrieve {attr}: {status}"
                 return data

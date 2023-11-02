@@ -5,6 +5,7 @@ import os
 
 from saichallenger.common.sai_client.sai_client import SaiClient
 from saichallenger.common.sai_data import SaiObjType, SaiData
+from saichallenger.common.sai_logger import SaiAttrsJsonLogger
 
 
 class SaiRedisClient(SaiClient):
@@ -120,6 +121,10 @@ class SaiRedisClient(SaiClient):
         self.r.delete("GETRESPONSE_KEY_VALUE_OP_QUEUE")
 
         assert len(status) == 3, f"SAI \"{op[1:]}\" operation failure!"
+        attrs_list = json.loads(attrs)
+        if attrs_list:
+            for attr in attrs_list[::2]:
+                SaiAttrsJsonLogger.insert_attr_use(obj.split(":")[0], attr, op[1:])
         return status
 
     def create(self, obj, attrs, do_assert=True):
