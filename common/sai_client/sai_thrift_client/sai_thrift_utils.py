@@ -15,6 +15,8 @@ class ThriftConverter():
         [ "SAI_SWITCH_ATTR_PORT_LIST", "2:oid:0x0,oid:0x0" ] => { "port_list": sai_thrift_object_list_t(count=2, idlist=[0x0, 0x0]) }
         """
         for name, value in ThriftConverter.chunks(attributes, 2):
+            if name == "NULL":
+                continue
             yield ThriftConverter.convert_attribute_name_to_thrift(name), ThriftConverter.convert_value_to_thrift(value, attr_name=name)
 
     def convert_key_to_thrift(object_type, key = None):
