@@ -531,6 +531,10 @@ class Sai():
         elif obj_type == "SAI_OBJECT_TYPE_VLAN":
             vlan_id = self.get_attr_by_name("SAI_VLAN_ATTR_VLAN_ID", attrs)
             self.create_alias(f"vlan{vlan_id}", obj_type, key)
+        elif obj_type == "SAI_OBJECT_TYPE_LAG_MEMBER":
+            port_oid = self.get_attr_by_name("SAI_LAG_MEMBER_ATTR_PORT_ID", attrs)
+            port_alias = self.get_alias_by_key(port_oid)
+            self.create_alias(f"lag_mbr_{port_alias}", obj_type, key)
         elif obj_type == "SAI_OBJECT_TYPE_ROUTER_INTERFACE":
             port_oid = self.get_attr_by_name("SAI_ROUTER_INTERFACE_ATTR_PORT_ID", attrs)
             if port_oid:
