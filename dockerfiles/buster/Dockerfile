@@ -30,17 +30,17 @@ RUN apt-get -o Acquire::Check-Valid-Until=false update && apt-get install -y \
         supervisor
 
 # Add support for supervisord to handle startup dependencies
-RUN pip3 install supervisord-dependent-startup==1.4.0
+RUN pip3 install supervisord-dependent-startup==1.4.0 redis>=3.5.0
 
 # Install dependencies
-RUN apt-get install -y redis-server libhiredis0.14 python3-redis libc-ares2
+RUN apt-get install -y redis-server libhiredis0.14 libc-ares2
 
 # Install sonic-swss-common & sonic-sairedis building dependencies
 RUN apt-get install -y \
         make libtool m4 autoconf dh-exec debhelper automake cmake pkg-config \
         libhiredis-dev libnl-3-dev libnl-genl-3-dev libnl-route-3-dev swig3.0 \
         libgtest-dev libgmock-dev libboost-dev autoconf-archive \
-        uuid-dev libboost-serialization-dev libyang-dev libyang0.16
+        uuid-dev libboost-serialization-dev libyang-dev libyang1
 
 RUN apt-get install -y \
         libnl-3-dev libnl-genl-3-dev libnl-route-3-dev libnl-nf-3-dev libzmq3-dev

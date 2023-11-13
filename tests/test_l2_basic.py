@@ -389,15 +389,15 @@ def test_l2_lag_hash_seed(npu, dataplane):
     Check that the packets are equally divided among LAG members.
 
     Test scenario:
-    1. Create a LAG group with 4 ports 1 through 4.
+    1. Create a LAG group with 3 ports 1 through 3.
     2. Setup static FDB entries for the LAG and send packet to this destination MAC address.
-    3. Send 100 packets with varying 5-tuple and check order/sequence of the distribution of packets received on ports 1 through 4.
-    4. Change the LAG Hash seed value to 10 and compare the order/sequence of the distribution of packets received for the same set of 100 packets on ports 1 through 4.
+    3. Send 100 packets with varying 5-tuple and check order/sequence of the distribution of packets received on ports 1 through 3.
+    4. Change the LAG Hash seed value to 10 and compare the order/sequence of the distribution of packets received for the same set of 100 packets on ports 1 through 3.
     5. Verify that it is different after changing the hash seed.
     """
     vlan_id = "10"
     mac = '00:11:11:11:11:11'
-    lag_mbr_num = 4
+    lag_mbr_num = 3
     lag_mbr_oids = []
     lag_hashseed_value = "10"
 
@@ -445,7 +445,7 @@ def test_l2_lag_hash_seed(npu, dataplane):
 
     try:
         if npu.run_traffic:
-            count1 = [0, 0, 0, 0]
+            count1 = [0, 0, 0]
             laglist1 = list()
             src_mac_start = '00:22:22:22:22:'
             ip_src_start = '192.168.12.'
@@ -457,8 +457,8 @@ def test_l2_lag_hash_seed(npu, dataplane):
             # Sending 100 packets to verify the order/sequence of distribution
             for i in range(0, max_itrs):
                 src_mac = src_mac_start + str(i % 99).zfill(2)
-                ip_src = ip_src_start + str(i % 99).zfill(3)
-                ip_dst = ip_dst_start + str(i % 99).zfill(3)    
+                ip_src = ip_src_start + str(i % 99)
+                ip_dst = ip_dst_start + str(i % 99)   
                                 
                 pkt = simple_tcp_packet(eth_dst=mac,
                                         eth_src=src_mac,
@@ -478,8 +478,8 @@ def test_l2_lag_hash_seed(npu, dataplane):
                                             ip_id=109,
                                             ip_ttl=64)
 
-                send_packet(dataplane, lag_mbr_num, str(pkt))
-                rcv_idx = verify_any_packet_any_port(dataplane, [exp_pkt], [0, 1, 2, 3])
+                send_packet(dataplane, lag_mbr_num, pkt)
+                rcv_idx = verify_any_packet_any_port(dataplane, [exp_pkt], [0, 1, 2])
                 count1[rcv_idx] += 1
                 laglist1.append(rcv_idx)
                 sport += 1
@@ -487,7 +487,7 @@ def test_l2_lag_hash_seed(npu, dataplane):
             
             npu.set(npu.switch_oid, ["SAI_SWITCH_ATTR_LAG_DEFAULT_HASH_SEED", lag_hashseed_value])
 
-            count2 = [0, 0, 0, 0]
+            count2 = [0, 0, 0]
             laglist2 = list()
             max_itrs = 101
             src_mac_start = '00:22:22:22:22:'
@@ -499,8 +499,8 @@ def test_l2_lag_hash_seed(npu, dataplane):
             # Sending 100 packets to verify the order/sequence of distribution
             for i in range(0, max_itrs):
                 src_mac = src_mac_start + str(i % 99).zfill(2)
-                ip_src = ip_src_start + str(i % 99).zfill(3)
-                ip_dst = ip_dst_start + str(i % 99).zfill(3)    
+                ip_src = ip_src_start + str(i % 99)
+                ip_dst = ip_dst_start + str(i % 99)
                                 
                 pkt = simple_tcp_packet(eth_dst=mac,
                                         eth_src=src_mac,
@@ -520,8 +520,8 @@ def test_l2_lag_hash_seed(npu, dataplane):
                                             ip_id=109,
                                             ip_ttl=64)
 
-                send_packet(dataplane, lag_mbr_num, str(pkt))
-                rcv_idx = verify_any_packet_any_port(dataplane, [exp_pkt], [0, 1, 2, 3])
+                send_packet(dataplane, lag_mbr_num, pkt)
+                rcv_idx = verify_any_packet_any_port(dataplane, [exp_pkt], [0, 1, 2])
                 count2[rcv_idx] += 1
                 laglist2.append(rcv_idx)
                 sport += 1

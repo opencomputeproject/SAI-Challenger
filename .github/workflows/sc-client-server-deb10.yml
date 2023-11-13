@@ -8,6 +8,7 @@ on:
       - '.github/workflows/sc-client-server-deb10.yml'
       - 'dockerfiles/buster/Dockerfile.client'
       - 'dockerfiles/buster/Dockerfile.server'
+      - 'dockerfiles/buster/Dockerfile.saithrift-server'
       - 'npu/broadcom/BCM56850/saivs/Dockerfile.server'
       - 'common/**'
       - 'cli/**'

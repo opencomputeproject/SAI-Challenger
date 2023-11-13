@@ -1,4 +1,4 @@
-import imp
+import importlib
 import os
 import json
 import glob
@@ -109,6 +109,11 @@ class SaiTestbed():
         self.skip_dataplane = skip_dataplane
 
     @staticmethod
+    def __import_module(root_path, module_name):
+        module_specs = importlib.util.find_spec(module_name, [root_path])
+        return module_specs.loader.load_module()
+
+    @staticmethod
     def spawn_asic(base_dir, cfg, asic_type="npu"):
         params = cfg.copy()
 
@@ -118,13 +123,13 @@ class SaiTestbed():
         asic_mod = None
         module_name = f"sai_{asic_type}"
         try:
-            asic_mod = imp.load_module(module_name, *imp.find_module(module_name, [asic_dir]))
+            asic_mod = self.__import_module(asic_dir, module_name)
         except:
             logging.info("No {} specific module defined..".format(params["asic"]))
             try:
-                asic_mod = imp.load_module(module_name, *imp.find_module(module_name, [asic_dir + "/../"]))
+                asic_mod = self.__import_module(asic_dir + "/../", module_name)
             except:
-                logging.warn("No NPU specific module defined.")
+                logging.warning("No NPU specific module defined.")
 
         asic = None
         if asic_mod is not None:

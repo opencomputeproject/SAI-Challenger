@@ -31,6 +31,9 @@ RUN apt-get -o Acquire::Check-Valid-Until=false update \
         && apt purge -y ${SAIGEN_DEPS} \
         && rm -rf /var/lib/apt/lists/*
 
+# Install PTF dependencies
+RUN pip3 install pysubnettree
+
 WORKDIR /sai-challenger/tests
 
 CMD ["/usr/bin/supervisord"]
