@@ -34,7 +34,8 @@ RUN apt-get install -y \
         make libtool m4 autoconf dh-exec debhelper automake cmake pkg-config \
         libhiredis-dev libnl-3-dev libnl-genl-3-dev libnl-route-3-dev swig \
         libgtest-dev libgmock-dev libboost-dev autoconf-archive \
-        uuid-dev libboost-serialization-dev libyang-dev libyang1
+        uuid-dev libboost-serialization-dev libyang-dev libyang1 \
+        nlohmann-json3-dev
 
 RUN apt-get install -y \
         libnl-3-dev libnl-genl-3-dev libnl-route-3-dev libnl-nf-3-dev libzmq3-dev
@@ -98,7 +99,6 @@ RUN echo "#mock" > /ptf/ptf && pip3 install /ptf
 
 # Install SAI attributes metadata JSON generator
 COPY scripts/gen_attr_list /sai/gen_attr_list
-RUN apt-get install -y nlohmann-json3-dev
 
 # Install SAI-C dependencies
 RUN pip3 install pytest pytest_dependency pytest-html aenum pdbpp macaddress click==8.0
