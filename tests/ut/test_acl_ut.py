@@ -26,12 +26,16 @@ class TestIngressACL:
             "SAI_ACL_TABLE_GROUP_ATTR_ACL_STAGE", "SAI_ACL_STAGE_INGRESS",
             "SAI_ACL_TABLE_ATTR_ACL_BIND_POINT_TYPE_LIST",
                     "2:SAI_ACL_BIND_POINT_TYPE_PORT,SAI_ACL_BIND_POINT_TYPE_LAG",
+            "SAI_ACL_TABLE_ATTR_ACL_ACTION_TYPE_LIST",
+                    "2:SAI_ACL_ACTION_TYPE_PACKET_ACTION,SAI_ACL_ACTION_TYPE_COUNTER",
             # ACL table fields
             "SAI_ACL_TABLE_ATTR_FIELD_ETHER_TYPE",      "true",
+            "SAI_ACL_TABLE_ATTR_FIELD_DST_MAC",         "true",
             "SAI_ACL_TABLE_ATTR_FIELD_OUTER_VLAN_ID",   "true",
             "SAI_ACL_TABLE_ATTR_FIELD_ACL_IP_TYPE",     "true",
             "SAI_ACL_TABLE_ATTR_FIELD_SRC_IP",          "true",
             "SAI_ACL_TABLE_ATTR_FIELD_DST_IP",          "true",
+            "SAI_ACL_TABLE_ATTR_FIELD_SRC_IPV6",        "true",
             "SAI_ACL_TABLE_ATTR_FIELD_ICMP_TYPE",       "true",
             "SAI_ACL_TABLE_ATTR_FIELD_ICMP_CODE",       "true",
             "SAI_ACL_TABLE_ATTR_FIELD_IP_PROTOCOL",     "true",
@@ -43,6 +47,11 @@ class TestIngressACL:
         ]
         acl_state["table_oid"] = npu.create(SaiObjType.ACL_TABLE, attrs)
         assert acl_state["table_oid"] != "oid:0x0"
+
+        status, data = npu.get(acl_state["table_oid"], ["SAI_ACL_TABLE_ATTR_AVAILABLE_ACL_COUNTER"], False)
+        npu.assert_status_success(status)
+
+        acl_state["table_counters"] = data.uint32()
 
 
     @pytest.mark.parametrize(
@@ -99,13 +108,16 @@ class TestIngressACL:
     )
     @pytest.mark.dependency(depends=['TestIngressACL::test_create_table'])
     def test_create_entry(self, npu, acl_state, match, action, priority):
-        # Create ACL counter
-        counter_attrs = [
-            "SAI_ACL_COUNTER_ATTR_TABLE_ID",            acl_state["table_oid"],
-            "SAI_ACL_COUNTER_ATTR_ENABLE_BYTE_COUNT",   "true",
-            "SAI_ACL_COUNTER_ATTR_ENABLE_PACKET_COUNT", "true",
-        ]
-        counter_oid = npu.create(SaiObjType.ACL_COUNTER, counter_attrs)
+        counter_oid = None
+        if acl_state["table_counters"] > 0:
+            # Create ACL counter
+            counter_attrs = [
+                "SAI_ACL_COUNTER_ATTR_TABLE_ID",            acl_state["table_oid"],
+                "SAI_ACL_COUNTER_ATTR_ENABLE_BYTE_COUNT",   "true",
+                "SAI_ACL_COUNTER_ATTR_ENABLE_PACKET_COUNT", "true",
+            ]
+            counter_oid = npu.create(SaiObjType.ACL_COUNTER, counter_attrs)
+            acl_state["table_counters"] -= 1
 
         # Create ACL entry
         entry_attrs = [
@@ -122,18 +134,20 @@ class TestIngressACL:
                 entry_attrs.append(field[0])
                 entry_attrs.append(field[1] + "&mask:" + field[2])
 
-        # Add ACL entry action counter
-        entry_attrs.append("SAI_ACL_ENTRY_ATTR_ACTION_COUNTER")
-        entry_attrs.append(counter_oid)
+        if counter_oid:
+            # Add ACL entry action counter
+            entry_attrs.append("SAI_ACL_ENTRY_ATTR_ACTION_COUNTER")
+            entry_attrs.append(counter_oid)
 
         status, entry_oid = npu.create(SaiObjType.ACL_ENTRY, entry_attrs, do_assert=False)
-        if status != "SAI_STATUS_SUCCESS":
+        if status != "SAI_STATUS_SUCCESS" and counter_oid:
             npu.remove(counter_oid)
-        assert status == "SAI_STATUS_SUCCESS"
+        assert status == "SAI_STATUS_SUCCESS", f"Failed to create ACL entry {entry_attrs}"
 
         # Cache OIDs
         acl_state["entries"].append(entry_oid)
-        acl_state["entries"].append(counter_oid)
+        if counter_oid:
+            acl_state["entries"].append(counter_oid)
 
 
     @pytest.mark.dependency(depends=['TestIngressACL::test_create_table'])
