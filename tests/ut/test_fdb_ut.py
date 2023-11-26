@@ -1,6 +1,9 @@
 import pytest
 import json
+from saichallenger.common.sai import Sai
 from saichallenger.common.sai_data import SaiObjType
+
+fdb_entry_attrs = Sai.get_obj_attrs("SAI_OBJECT_TYPE_FDB_ENTRY")
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -29,15 +32,27 @@ class TestFdbEntry:
     def test_create_dynamic(self, npu):
         npu.create_fdb(npu.default_vlan_oid, TestFdbEntry.mac, npu.dot1q_bp_oids[0], "SAI_FDB_ENTRY_TYPE_DYNAMIC")
 
+    @pytest.mark.parametrize(
+        "attr,attr_type",
+        fdb_entry_attrs
+    )
+    @pytest.mark.dependency(depends=['TestFdbEntry::test_create_dynamic'])
+    def test_get_attr(self, npu, attr, attr_type):
+        status, data = npu.get_by_type(TestFdbEntry.key(npu, npu.default_vlan_oid), attr, attr_type, False)
+        if attr == "SAI_FDB_ENTRY_ATTR_ALLOW_MAC_MOVE":
+            assert status != "SAI_STATUS_SUCCESS", "Attribute invalid for dynamic MAC entry"
+        else:
+            npu.assert_status_success(status)
+
     @pytest.mark.dependency(depends=['TestFdbEntry::test_create_dynamic'])
     def test_create_duplicated_dynamic(self, npu):
         status, _ = npu.create_fdb(npu.default_vlan_oid, TestFdbEntry.mac, npu.dot1q_bp_oids[0], "SAI_FDB_ENTRY_TYPE_DYNAMIC", do_assert=False)
-        assert status == "SAI_STATUS_ITEM_ALREADY_EXISTS"
+        assert status == "SAI_STATUS_ITEM_ALREADY_EXISTS", "Unexpected status returned"
 
     @pytest.mark.dependency(depends=['TestFdbEntry::test_create_dynamic'])
     def test_create_duplicated_static(self, npu):
         status, _ = npu.create_fdb(npu.default_vlan_oid, TestFdbEntry.mac, npu.dot1q_bp_oids[0], "SAI_FDB_ENTRY_TYPE_STATIC", do_assert=False)
-        assert status == "SAI_STATUS_ITEM_ALREADY_EXISTS"
+        assert status == "SAI_STATUS_ITEM_ALREADY_EXISTS", "Unexpected status returned"
 
     @pytest.mark.dependency(depends=['TestFdbEntry::test_create_dynamic'])
     def test_change_to_static(self, npu):
@@ -87,7 +102,7 @@ class TestFdbEntry:
     @pytest.mark.dependency(depends=['TestFdbEntry::test_create_dynamic'])
     def test_duplicated_remove(self, npu):
         status = npu.remove_fdb(npu.default_vlan_oid, TestFdbEntry.mac, do_assert=False)
-        assert status == "SAI_STATUS_ITEM_NOT_FOUND"
+        assert status == "SAI_STATUS_ITEM_NOT_FOUND", "Unexpected status returned"
 
 
 class TestFlushFdbEntries:
