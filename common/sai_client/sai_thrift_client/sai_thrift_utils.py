@@ -84,6 +84,7 @@ class ThriftConverter():
         """
         if value_type is None:
             value_type = ThriftConverter.get_attribute_type(attr_name)
+            assert value_type, f"Unknown attribute {attr_name}"
 
         if value_type in [ 's8', 'u8', 's16', 'u16', 's32',
                            'u32', 's64', 'u64', 'ptr',
@@ -399,6 +400,8 @@ class ThriftConverter():
         sai_thrift_ip_address_t('192.168.0.1'...), "ipaddr" => "192.168.0.1"
         """
         value_type = ThriftConverter.get_attribute_type(attr_name)
+        assert value_type, f"Unknown attribute {attr_name}"
+
         if value_type in [ 's8', 's16',
                            'u32', 's64', 'u64',
                            'ptr', 'mac', 'ipv4', 'ipv6',
