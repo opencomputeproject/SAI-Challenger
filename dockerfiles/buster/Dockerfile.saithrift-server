@@ -4,7 +4,7 @@ RUN echo "deb [arch=amd64] http://debian-archive.trafficmanager.net/debian/ bust
         echo "deb-src [arch=amd64] http://debian-archive.trafficmanager.net/debian/ buster main contrib non-free" >> /etc/apt/sources.list && \
         echo "deb [arch=amd64] http://debian-archive.trafficmanager.net/debian-security/ buster/updates main contrib non-free" >> /etc/apt/sources.list && \
         echo "deb-src [arch=amd64] http://debian-archive.trafficmanager.net/debian-security/ buster/updates main contrib non-free" >> /etc/apt/sources.list && \
-        echo "deb [arch=amd64] http://debian-archive.trafficmanager.net/debian buster-backports main" >> /etc/apt/sources.list
+        echo "deb [arch=amd64] http://archive.debian.org/debian buster-backports main contrib non-free" >> /etc/apt/sources.list
 
 ## Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
