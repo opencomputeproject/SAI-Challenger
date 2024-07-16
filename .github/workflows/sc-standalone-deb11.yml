@@ -80,7 +80,7 @@ jobs:
     - name: Run data-driven tests
       run: ./exec.sh --no-tty pytest --testbed=saivs_standalone -v test_l2_basic_dd.py
     - name: Run API tests
-      run: ./exec.sh --no-tty pytest --testbed=saivs_standalone -v -k "api/test"
+      run: ./exec.sh --no-tty pytest --testbed=saivs_standalone -v api/
 
     - name: Build standalone docker image with SAI thrift
       run: ./build.sh -i standalone -s thrift -o deb11
