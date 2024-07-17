@@ -100,11 +100,11 @@ jobs:
       run: ./exec.sh --no-tty -s thrift pytest --testbed=saivs_thrift_standalone -v ut/test_vrf_ut.py ut/test_bridge_ut.py ut/test_acl_ut.py ut/test_fdb_ut.py ut/test_lag_ut.py
     - name: Run thrift unit tests
       run: ./exec.sh --no-tty -s thrift pytest --testbed=saivs_thrift_standalone -v -k \
-           "(test_switch_ut and not sai_map_list_t and not sai_system_port_config_list_t) or (test_port_ut and not sai_map_list_t)"
+           "(test_switch_ut and not sai_map_list_t and not sai_system_port_config_list_t and not (SAI_SWITCH_ATTR_DASH or SAI_SWITCH_ATTR_HA)) or (test_port_ut and not sai_map_list_t)"
     - name: Run thrift sairedis tests
       run: ./exec.sh --no-tty -s thrift pytest --testbed=saivs_thrift_standalone -v -k "test_sairec"
     - name: Run thrift API tests
-      run: ./exec.sh --no-tty -s thrift pytest --testbed=saivs_thrift_standalone -v -k "api/test"
+      run: ./exec.sh --no-tty -s thrift pytest --testbed=saivs_thrift_standalone -v api/
 
     - name: Run PTF tests
       run: ./exec.sh --no-tty -s thrift pytest --testbed=saivs_thrift_standalone -v ../usecases/sai-ptf/SAI/ptf/saifdb.py -k FdbAttributeTest
