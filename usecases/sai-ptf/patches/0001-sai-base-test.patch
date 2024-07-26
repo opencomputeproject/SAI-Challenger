@@ -1,8 +1,8 @@
 diff --git a/ptf/sai_base_test.py b/ptf/sai_base_test.py
-index 392e861..41d0127 100644
+index 501c5e9..7c1fff3 100644
 --- a/ptf/sai_base_test.py
 +++ b/ptf/sai_base_test.py
-@@ -444,7 +444,10 @@ class SaiHelperBase(ThriftInterfaceDataPlane):
+@@ -447,7 +447,10 @@ class SaiHelperBase(ThriftInterfaceDataPlane):
          '''
          #TODO check if this is common behivor or specified after check on more platform
          print("For Common platform, Only check Port status.")
@@ -14,7 +14,7 @@ index 392e861..41d0127 100644
  
          # For brcm devices, need to init and setup the ports at once after start the switch.
          retries = 10
-@@ -452,6 +455,9 @@ class SaiHelperBase(ThriftInterfaceDataPlane):
+@@ -455,6 +458,9 @@ class SaiHelperBase(ThriftInterfaceDataPlane):
          for index, oid in enumerate(self.port_list):
              port_attr = sai_thrift_get_port_attribute(
                  self.client, oid, oper_status=True)
@@ -24,7 +24,7 @@ index 392e861..41d0127 100644
              print("Turn up port {}".format(oid))
              port_up = True
              if port_attr['oper_status'] != SAI_PORT_OPER_STATUS_UP:
-@@ -463,12 +469,12 @@ class SaiHelperBase(ThriftInterfaceDataPlane):
+@@ -466,12 +472,12 @@ class SaiHelperBase(ThriftInterfaceDataPlane):
                          port_up = True
                          break
                      time.sleep(5)
@@ -39,7 +39,7 @@ index 392e861..41d0127 100644
  
  
      def shell(self):
-@@ -556,6 +562,9 @@ class SaiHelperBase(ThriftInterfaceDataPlane):
+@@ -559,6 +565,9 @@ class SaiHelperBase(ThriftInterfaceDataPlane):
                  port=True,
                  index=True,
                  parent_scheduler_node=True)
@@ -49,7 +49,7 @@ index 392e861..41d0127 100644
              self.assertEqual(queue, q_attr['index'])
              self.assertEqual(self.cpu_port_hdl, q_attr['port'])
  
-@@ -835,7 +844,7 @@ class SaiHelperBase(ThriftInterfaceDataPlane):
+@@ -847,7 +856,7 @@ class SaiHelperBase(ThriftInterfaceDataPlane):
              number_of_ecmp_groups=True,
              ecmp_members=True)
  
@@ -58,7 +58,7 @@ index 392e861..41d0127 100644
              self.printNumberOfAvaiableResources(switch_resources)
  
          return switch_resources
-@@ -870,6 +879,9 @@ class SaiHelperBase(ThriftInterfaceDataPlane):
+@@ -882,6 +891,9 @@ class SaiHelperBase(ThriftInterfaceDataPlane):
              number_of_ecmp_groups=True,
              ecmp_members=True)
  
@@ -68,7 +68,7 @@ index 392e861..41d0127 100644
          for key, value in available_resources.items():
              if value != init_resources[key]:
                  if debug:
-@@ -915,7 +927,6 @@ class SaiHelperUtilsMixin:
+@@ -927,7 +939,6 @@ class SaiHelperUtilsMixin:
              port_id = getattr(self, 'port%s' % port_index)
              port_bp = sai_thrift_create_bridge_port(
                  self.client,
@@ -76,7 +76,7 @@ index 392e861..41d0127 100644
                  port_id=port_id,
                  type=SAI_BRIDGE_PORT_TYPE_PORT,
                  admin_state=True)
-@@ -937,7 +948,6 @@ class SaiHelperUtilsMixin:
+@@ -949,7 +960,6 @@ class SaiHelperUtilsMixin:
          # add LAG to bridge
          lag_bp = sai_thrift_create_bridge_port(
              self.client,
@@ -84,7 +84,7 @@ index 392e861..41d0127 100644
              port_id=lag_id,
              type=SAI_BRIDGE_PORT_TYPE_PORT,
              admin_state=True)
-@@ -1131,7 +1141,8 @@ class SaiHelper(SaiHelperUtilsMixin, SaiHelperBase):
+@@ -1144,7 +1154,8 @@ class SaiHelper(SaiHelperUtilsMixin, SaiHelperBase):
                                              addr=sai_thrift_ip_addr_t(
                                                  ip6=DEFAULT_IP_V6_PREFIX),
                                              mask=sai_thrift_ip_addr_t(ip6=DEFAULT_IP_V6_PREFIX))
@@ -94,7 +94,7 @@ index 392e861..41d0127 100644
                                                                   destination=v6_default)
          status = sai_thrift_create_route_entry(
              self.client,
-@@ -1139,7 +1150,8 @@ class SaiHelper(SaiHelperUtilsMixin, SaiHelperBase):
+@@ -1152,7 +1163,8 @@ class SaiHelper(SaiHelperUtilsMixin, SaiHelperBase):
              packet_action=SAI_PACKET_ACTION_DROP)
          self.assertEqual(status, SAI_STATUS_SUCCESS)
  
@@ -104,7 +104,7 @@ index 392e861..41d0127 100644
                                                                   destination=sai_ipprefix(DEFAULT_IP_V4_PREFIX))
          status = sai_thrift_create_route_entry(
              self.client,
-@@ -1245,7 +1257,7 @@ class MinimalPortVlanConfig(SaiHelperBase):
+@@ -1258,7 +1270,7 @@ class MinimalPortVlanConfig(SaiHelperBase):
          # create bridge ports
          for port in self.port_list:
              bp = sai_thrift_create_bridge_port(
@@ -112,4 +112,23 @@ index 392e861..41d0127 100644
 +                self.client,
                  port_id=port, type=SAI_BRIDGE_PORT_TYPE_PORT,
                  admin_state=True)
+ 
+@@ -1345,7 +1357,7 @@ class PlatformSaiHelper(SaiHelper):
+     Class uses to extend from SaiHelper, base on the [platform] class attribute,
+     dynamic select a subclass from the platform_helper.
+     """
+-    def __new__(cls, *args, **kwargs):
++    def __new__(cls, _testMethodName='', *args, **kwargs):
+         sai_helper_subclass_map = {subclass.platform: subclass for subclass in SaiHelper.__subclasses__()}
+         common_sai_helper_subclass_map = {subclass.platform: subclass for subclass in CommonSaiHelper.__subclasses__()}
+         pl = get_platform()
+@@ -1358,6 +1370,9 @@ class PlatformSaiHelper(SaiHelper):
+         cur_cls = cls
+         while cur_cls.__base__ != PlatformSaiHelper:
+             cur_cls = cur_cls.__base__
++            if cur_cls == object:
++                cur_cls = CommonSaiHelper
++                break
+ 
+         cur_cls.__bases__ = (target_base_class,)
  
