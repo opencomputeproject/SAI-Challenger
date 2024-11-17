@@ -123,7 +123,9 @@ nlohmann::json attribute_properties(const sai_attr_metadata_t *meta)
         nlohmann::json j;
         for (size_t i = 0; i < meta->allowedobjecttypeslength; i++)
         {
-            j.push_back(sai_metadata_all_object_type_infos[obj_list[i]]->objecttypename);
+            int type_idx = (obj_list[i] > SAI_OBJECT_TYPE_EXTENSIONS_RANGE_START) ?
+                            obj_list[i] - SAI_OBJECT_TYPE_EXTENSIONS_RANGE_START : obj_list[i];
+            j.push_back(sai_metadata_all_object_type_infos[type_idx]->objecttypename);
         }
         json["objects"] = j;
     }
