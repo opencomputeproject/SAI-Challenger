@@ -21,6 +21,8 @@ base_os_map["deb10"]="buster"
 base_os_map["buster"]="buster"
 base_os_map["deb11"]="bullseye"
 base_os_map["bullseye"]="bullseye"
+base_os_map["deb12"]="bookworm"
+base_os_map["bookworm"]="bookworm"
 
 
 print-help() {
@@ -36,7 +38,7 @@ print-help() {
     echo "     Target device with this NPU"
     echo "  -s [redis|thrift]"
     echo "     SAI interface"
-    echo "  -o [buster|bullseye]"
+    echo "  -o [buster|bullseye|bookworm]"
     echo "     Docker image base OS"
     echo "  --nosnappi"
     echo "     Do not include snappi to the final image"
@@ -142,6 +144,14 @@ print-build-options() {
 }
 
 trap print-build-options EXIT
+
+# Link the pip configuration file to copy to the Docker image
+if [ "${BASE_OS}" = "bookworm" ]; then
+    rm -f pip.conf
+    if [ -f dockerfiles/${BASE_OS}/pip.conf ]; then
+        ln -s dockerfiles/${BASE_OS}/pip.conf pip.conf
+    fi
+fi
 
 # Build base Docker image
 if [ "${IMAGE_TYPE}" = "standalone" ]; then
