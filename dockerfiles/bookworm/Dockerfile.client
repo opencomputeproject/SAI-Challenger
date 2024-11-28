@@ -3,8 +3,10 @@ FROM debian:bookworm-slim
 ## Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Copy the pip.conf file
-COPY pip.conf /root/.config/pip/pip.conf
+# Generate the pip configuration file
+RUN mkdir -p /root/.config/pip \
+        && echo "[global]" > /root/.config/pip/pip.conf \
+        && echo "break-system-packages = true" >> /root/.config/pip/pip.conf
 
 # Install generic packages
 RUN apt-get -o Acquire::Check-Valid-Until=false update && apt-get install -y \

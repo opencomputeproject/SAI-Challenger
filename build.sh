@@ -145,14 +145,6 @@ print-build-options() {
 
 trap print-build-options EXIT
 
-# Link the pip configuration file to copy to the Docker image
-if [ "${BASE_OS}" = "bookworm" ]; then
-    rm -f pip.conf
-    if [ -f dockerfiles/${BASE_OS}/pip.conf ]; then
-        ln -s dockerfiles/${BASE_OS}/pip.conf pip.conf
-    fi
-fi
-
 # Build base Docker image
 if [ "${IMAGE_TYPE}" = "standalone" ]; then
     docker build -f dockerfiles/${BASE_OS}/Dockerfile -t sc-base:${BASE_OS} .

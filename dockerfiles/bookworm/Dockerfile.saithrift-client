@@ -1,7 +1,9 @@
 FROM sc-client:bookworm
 
-# Copy the pip.conf file
-COPY pip.conf /root/.config/pip/pip.conf
+# Generate the pip configuration file
+RUN mkdir -p /root/.config/pip \
+        && echo "[global]" > /root/.config/pip/pip.conf \
+        && echo "break-system-packages = true" >> /root/.config/pip/pip.conf
 
 ENV SAIGEN_DEPS    libgetopt-long-descriptive-perl libconst-fast-perl \
                    libtemplate-perl libnamespace-autoclean-perl \
