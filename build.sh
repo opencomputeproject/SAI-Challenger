@@ -21,6 +21,8 @@ base_os_map["deb10"]="buster"
 base_os_map["buster"]="buster"
 base_os_map["deb11"]="bullseye"
 base_os_map["bullseye"]="bullseye"
+base_os_map["deb12"]="bookworm"
+base_os_map["bookworm"]="bookworm"
 
 
 print-help() {
@@ -36,7 +38,7 @@ print-help() {
     echo "     Target device with this NPU"
     echo "  -s [redis|thrift]"
     echo "     SAI interface"
-    echo "  -o [buster|bullseye]"
+    echo "  -o [buster|bullseye|bookworm]"
     echo "     Docker image base OS"
     echo "  --nosnappi"
     echo "     Do not include snappi to the final image"
