@@ -568,6 +568,10 @@ class Sai():
         for cnt, record in records.items():
             print("#{}: {}".format(cnt, record))
             rec = record[0]
+            if rec[1] and not rec[1].startswith("SAI_"):
+                print("Ignored line {}: {}".format(cnt, rec))
+                continue
+
             if rec[0] == 'c':
                 attrs = []
                 if len(rec) > 2:
@@ -713,7 +717,7 @@ class Sai():
                 # It's expected that the previous command has failed
                 assert status in [rec[1], "SAI_STATUS_SUCCESS"], f"Expected fail reason is {rec[1]}. Actual fail reason is {status}"
             else:
-                print("Iggnored line {}: {}".format(cnt, rec))
+                print("Ignored line {}: {}".format(cnt, rec))
 
         print("Current SAI objects: {}".format(self.rec2vid))
 
