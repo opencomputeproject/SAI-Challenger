@@ -614,14 +614,21 @@ class Sai():
                     # Update OIDs in the key
                     key = self.__update_key(rec[0], key)
                     # Convert into ["sai-object-type", "key"]
-                    key = key.split(":", 1)[1]
+                    if ":" in key:
+                        key = key.split(":", 1)[1]
 
-                    if key.startswith("{"):
+                    if type(key) is dict or key.startswith("{"):
                         key = json.loads(key)
                     bulk_keys.append(key)
                     bulk_attrs.append(attrs)
 
-                self.bulk_create(record[0][1], bulk_keys, bulk_attrs)
+                if type(key) is dict or key.startswith("{"):
+                    self.bulk_create(record[0][1], bulk_keys, bulk_attrs)
+                else:
+                    _, new_keys, _ = self.bulk_create(record[0][1], None, bulk_attrs, len(record)-1)
+                    for idx in range(0, len(new_keys)):
+                        if "oid:" in new_keys[idx]:
+                            self.rec2vid[record[idx + 1][0]] = new_keys[idx]
                 for idx in range(len(bulk_keys)):
                     self.create_rec_alias(record[0][1], bulk_attrs[idx], bulk_keys[idx])
 
@@ -646,7 +653,8 @@ class Sai():
                     # Update OIDs in the key
                     key = self.__update_key(rec[0], key)
                     # Convert into ["sai-object-type", "key"]
-                    key = key.split(":", 1)[1]
+                    if ":" in key:
+                        key = key.split(":", 1)[1]
 
                     if key.startswith("{"):
                         key = json.loads(key)
@@ -669,7 +677,8 @@ class Sai():
                     # Update OIDs in the key
                     key = self.__update_key(rec[0], key)
                     # Convert into ["sai-object-type", "key"]
-                    key = key.split(":", 1)[1]
+                    if ":" in key:
+                        key = key.split(":", 1)[1]
 
                     if key.startswith("{"):
                         key = json.loads(key)
