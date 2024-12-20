@@ -98,6 +98,11 @@ class SaiRedisClient(SaiClient):
             obj = obj.replace("bv_id", "bvid")
             obj = obj.replace("mac_address", "mac")
 
+        # Required by sai_deserialize_neighbor_entry() in sonic-sairedis.
+        if "ip_address" in obj:
+            obj = obj.replace("ip_address", "ip")
+            obj = obj.replace("rif_id", "rif")
+
         self.r.lpush("ASIC_STATE_KEY_VALUE_OP_QUEUE", obj, attrs, op)
         self.r.publish(self.asic_channel, "G")
 
