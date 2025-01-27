@@ -90,6 +90,23 @@ while [[ $# -gt 0 ]]; do
             BASE_OS="$2"
             shift
         ;;
+        *)
+            # Starting from the first unknown parameter,
+            # pass all parameters as a docker run options.
+            while [[ $# -gt 0 ]]; do
+                if [ -z "${OPTS}" ]; then
+                    OPTS=${1}
+                elif [[ ${1} = *" "* ]]; then
+                    # parameter contains spaces
+                    # E.g., docker run ... --shm-size=256m -v /some/path/:/some/path/:rw
+                    OPTS="${OPTS} \"${1}\""
+                else
+                    OPTS="${OPTS} ${1}"
+                fi
+                shift
+            done
+            break
+        ;;
     esac
     shift
 done
