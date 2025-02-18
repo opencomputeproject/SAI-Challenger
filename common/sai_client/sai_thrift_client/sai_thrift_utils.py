@@ -6,6 +6,8 @@ from sai_thrift import sai_headers
 from sai_thrift.ttypes import *
 from sai_thrift import ttypes
 from sai_thrift.sai_headers import *
+from sai_thrift.sai_adapter import *
+import sai_thrift.sai_adapter as adapter
 from saichallenger.common.sai_data import SaiObjType, SaiStatus
 
 
@@ -18,6 +20,14 @@ class ThriftConverter():
             if name == "NULL":
                 continue
             yield ThriftConverter.convert_attribute_name_to_thrift(name), ThriftConverter.convert_value_to_thrift(value, attr_name=name)
+
+    def convert_counter_ids_to_thrift(counter_ids, obj_type_name):
+        """
+        [ 'SAI_PORT_STAT_IF_IN_OCTETS', '', 'SAI_PORT_STAT_IF_IN_UCAST_PKTS', '' ] => { "counter_ids": [SAI_PORT_STAT_IF_IN_OCTETS, SAI_PORT_STAT_IF_IN_UCAST_PKTS]) }
+        [ 'SAI_QUEUE_STAT_PACKETS' ] => { "counter_ids": [SAI_QUEUE_STAT_PACKETS]) }
+        """
+        cnt_ids = ThriftConverter.convert_counter_ids_name_to_thrift(counter_ids, obj_type_name)
+        return {"counter_ids": cnt_ids}
 
     def convert_key_to_thrift(object_type, key = None):
         """
@@ -58,6 +68,24 @@ class ThriftConverter():
         "SAI_SWITCH_ATTR_PORT_LIST" => "port_list"
         """
         return re.search('SAI_.*_ATTR_(.*)', attr).group(1).lower()
+
+    @staticmethod
+    def convert_counter_ids_name_to_thrift(counter_ids, obj_type_name):
+        """
+        [ 'SAI_PORT_STAT_IF_IN_OCTETS', '', 'SAI_PORT_STAT_IF_IN_UCAST_PKTS', '' ] =>  [SAI_PORT_STAT_IF_IN_OCTETS,SAI_PORT_STAT_IF_IN_UCAST_PKTS]
+        """
+        cnts_list = []
+        id_dict_name = "sai_get_{}_stats_counter_ids_dict".format(obj_type_name)
+        id_dict = getattr(adapter, id_dict_name)        
+        reverse_id_dict = {v: k for k, v in id_dict.items()}
+        for counter_id in counter_ids:
+            if counter_id == '':
+                continue
+            if counter_id in reverse_id_dict:
+                cnts_list.append(reverse_id_dict[counter_id])
+            else:
+                raise ValueError("Counter id {} is not supported for {}".format(counter_id, obj_type_name))
+        return cnts_list
 
     @staticmethod
     def convert_u8_to_thrift(u8_str):
