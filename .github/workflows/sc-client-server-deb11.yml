@@ -73,7 +73,7 @@ jobs:
     - name: Save server Docker image
       run: docker save sc-server-trident2-saivs > sc-server.tar
     - name: Upload server image
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: Server Image
         path: sc-server.tar
@@ -118,7 +118,7 @@ jobs:
     - name: Save client Docker image
       run: docker save sc-client > sc-client.tar
     - name: Upload client Docker image
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: Client Image
         path: sc-client.tar
@@ -133,13 +133,13 @@ jobs:
       run: git submodule update --init
     
     - name: Download client Docker image
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: Client Image
     - name: Load client image
       run: docker load < sc-client.tar
     - name: Download server Docker image
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: Server Image
     - name: Load server image
