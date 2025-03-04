@@ -109,7 +109,7 @@ class SaiTestbed():
         self.skip_dataplane = skip_dataplane
 
     @staticmethod
-    def __import_module(root_path, module_name):
+    def import_module(root_path, module_name):
         module_specs = importlib.util.spec_from_file_location(module_name, os.path.join(root_path, f"{module_name}.py"))
         return module_specs.loader.load_module()
 
@@ -123,11 +123,11 @@ class SaiTestbed():
         asic_mod = None
         module_name = f"sai_{asic_type}"
         try:
-            asic_mod = SaiTestbed.__import_module(asic_dir, module_name)
+            asic_mod = SaiTestbed.import_module(asic_dir, module_name)
         except:
             logging.info("No {} specific module defined..".format(params["asic"]))
             try:
-                asic_mod = SaiTestbed.__import_module(asic_dir + "/../", module_name)
+                asic_mod = SaiTestbed.import_module(asic_dir + "/../", module_name)
             except:
                 logging.warning("No NPU specific module defined.")
 
