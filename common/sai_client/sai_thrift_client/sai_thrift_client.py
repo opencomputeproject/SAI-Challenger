@@ -208,6 +208,30 @@ class SaiThriftClient(SaiClient):
 
         return status, result
 
+    def _operate_stats(self, operation, attrs=(), oid=None, obj_type=None):
+        """
+        Get/Clear stats for given object
+        
+        operation (str): operation type, get or clear
+        """
+        if oid is not None:
+            oid = ThriftConverter.object_id(oid)
+
+        obj_type_name = self.get_object_type(oid, default=obj_type).name.lower()
+        object_oid = {f'{obj_type_name}_oid':oid}
+        sai_thrift_function = getattr(sai_adapter, f'sai_thrift_{operation}_{obj_type_name}_stats')
+        
+        result = {}
+
+        attr_kwargs = ThriftConverter.convert_counter_ids_to_thrift(attrs, obj_type_name)
+        result = sai_thrift_function(self.thrift_client, **object_oid, **attr_kwargs)
+        status = ThriftConverter.convert_to_sai_status_str(sai_adapter.status)
+
+        if status != 'SAI_STATUS_SUCCESS':
+            result = None
+
+        return status, result
+
     def cleanup(self):
         if self.thrift_transport:
             self.thrift_transport.close()
@@ -296,5 +320,27 @@ class SaiThriftClient(SaiClient):
                 self.set(obj_type + ":" + json.dumps(keys[i]), attr, do_assert)
         return "SAI_STATUS_SUCCESS", statuses
 
+    def get_stats(self, obj, attrs, do_assert=True):
+        obj_type, oid, _ = self.obj_to_items(obj)
+        status, result = self._operate_stats('get', attrs=attrs, oid=oid, obj_type=obj_type)
+
+        if do_assert:
+            assert status == 'SAI_STATUS_SUCCESS', f"get({obj}, {attrs}) --> {status}"
+        
+        result = [key for pair in result.items() for key in pair]
+        result = SaiData(json.dumps(result))
+
+        if do_assert:
+            return result
+        return status, result
+
+    def clear_stats(self, obj, attrs, do_assert=True):
+        obj_type, oid, _ = self.obj_to_items(obj)
+        status, _ = self._operate_stats('clear', attrs=attrs, oid=oid, obj_type=obj_type)
+
+        if do_assert:
+            assert status == 'SAI_STATUS_SUCCESS', f"clear({obj}, {attrs}) --> {status}"
+        return status
+    
     def get_object_key(self, obj_type=None):
         return dict()
