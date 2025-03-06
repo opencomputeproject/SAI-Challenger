@@ -467,6 +467,8 @@ class ThriftConverter():
             raise NotImplementedError(f"{value_type}, {value}")
         elif value_type in [ 'aclfield' ]:
             raise NotImplementedError(f"{value_type}, {value}")
+        elif value_type in [ 'ipaddr' ]:
+            return ThriftConverter.from_sai_ip_address(value)
 
         # TODO: Add more thrift->string convertes here
         raise NotImplementedError(f"{value_type}, {value}")
@@ -553,6 +555,16 @@ class ThriftConverter():
                 }
             )
         return json.dumps(result).replace(" ", "")
+    
+    @staticmethod
+    def from_sai_ip_address(value):
+        """
+        sai_thrift_ip_address_t(addr_family=0, addr=sai_thrift_ip_addr_t(ip4='10.1.1.2', ip6='')) => "10.1.1.2"
+        """
+        if value.addr_family == SAI_IP_ADDR_FAMILY_IPV6:
+            return value.addr.ip6
+        else:
+            return value.addr.ip4
 
 # AUXILARY
 
