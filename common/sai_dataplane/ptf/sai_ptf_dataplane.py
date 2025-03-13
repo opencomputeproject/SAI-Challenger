@@ -149,7 +149,10 @@ class SaiPtfDataPlane(SaiDataPlane, TestCase):
     @staticmethod
     def __import_module(root_path, module_name):
         module_specs = importlib.util.find_spec(module_name, [root_path])
-        return module_specs.loader.load_module()
+        module = importlib.util.module_from_spec(module_specs)
+        sys.modules[module_name] = module
+        module_specs.loader.exec_module(module)
+        return module
 
     def init(self):
         global ptf

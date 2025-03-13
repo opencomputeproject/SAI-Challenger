@@ -3,6 +3,7 @@ import os
 import json
 import glob
 import logging
+import sys
 
 from saichallenger.common.sai_dut import SaiDut
 from saichallenger.common.sai_npu import SaiNpu
@@ -111,7 +112,10 @@ class SaiTestbed():
     @staticmethod
     def import_module(root_path, module_name):
         module_specs = importlib.util.spec_from_file_location(module_name, os.path.join(root_path, f"{module_name}.py"))
-        return module_specs.loader.load_module()
+        module = importlib.util.module_from_spec(module_specs)
+        sys.modules[module_name] = module
+        module_specs.loader.exec_module(module)
+        return module
 
     @staticmethod
     def spawn_asic(base_dir, cfg, asic_type="npu"):
