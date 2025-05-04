@@ -35,7 +35,7 @@ env:
 jobs:
   build-sc-server:
     name: Build SAI Challenger server image
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v3
       with:
@@ -85,7 +85,7 @@ jobs:
 
   build-sc-client:
     name: Build SAI Challenger client image
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v3
       with:
@@ -127,7 +127,7 @@ jobs:
   run-sc-tests:
     name: Run SAI Challenger tests in client-server mode
     needs: [build-sc-client, build-sc-server]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v3
     - name: Update submodules.
