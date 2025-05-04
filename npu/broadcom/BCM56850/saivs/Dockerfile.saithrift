@@ -69,11 +69,6 @@ RUN git clone https://github.com/sonic-net/sonic-sairedis.git \
         && rm -rf /sai/sonic-sairedis/* \
         && mv /sai/tests /sai/sonic-sairedis/
 
-# Temporary workaround fix until the OCP community fixes the sai_adapter.py generation
-RUN SAI_ADAPTER_PY=$(find / -name sai_adapter.py 2>/dev/null | head -n 1) \
-        && sed -i 's/(=object_type)/(s32=object_type)/g' ${SAI_ADAPTER_PY} \
-        && sed -i 's/attr\.value\.$/attr.value.s32/' ${SAI_ADAPTER_PY}
-
 # Build SAI attributes metadata JSON generator and generate /etc/sai/sai.json
 RUN cd /sai/gen_attr_list \
         && mkdir build && cd build \
