@@ -23,7 +23,7 @@ on:
 jobs:
   build-sc-server:
     name: Build SAI Challenger server image
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v3
     - name: Update submodules

@@ -11,7 +11,9 @@
 DOCKER1=$1
 DOCKER2=$2
 
-if [ -z $DOCKER1 ]; then
+mkdir -p /var/run/netns  # Ensure the directory exists
+
+if [ -z "$DOCKER1" ]; then
     echo "Server Docker name must be specified."
     exit 1
 fi
@@ -20,7 +22,7 @@ PID=$(docker inspect --format '{{ .State.Pid }}' $DOCKER1)
 DOCKER1_NETNS="$DOCKER1_$PID"
 ln -s /proc/$PID/ns/net /var/run/netns/$DOCKER1_NETNS
 
-if [ ! -z $DOCKER2 ]; then
+if [ ! -z "$DOCKER2" ]; then
     PID=$(docker inspect --format '{{ .State.Pid }}' $DOCKER2)
     DOCKER2_NETNS="$DOCKER2_$PID"
     ln -s /proc/$PID/ns/net /var/run/netns/$DOCKER2_NETNS
@@ -30,7 +32,7 @@ for num in {1..32}; do
     ip link add veth"$num" type veth peer name eth"$num" netns $DOCKER1_NETNS
     ip netns exec $DOCKER1_NETNS ip link set eth"$num" up
     ip link set veth"$num" up
-    if [ ! -z $DOCKER2 ]; then
+    if [ ! -z "$DOCKER2" ]; then
         ip link set dev veth"$num" netns $DOCKER2_NETNS
         ip netns exec $DOCKER2_NETNS ip link set veth"$num" up
     fi
