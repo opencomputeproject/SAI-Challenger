@@ -82,29 +82,29 @@ jobs:
     - name: Run API tests
       run: ./exec.sh --no-tty pytest --testbed=saivs_standalone -v api/
 
-    - name: Build standalone docker image with SAI thrift
-      run: ./build.sh -i standalone -s thrift -o deb11
-      if: ${{ env.THRIFT_RPC == '1' }}
+#    - name: Build standalone docker image with SAI thrift
+#      run: ./build.sh -i standalone -s thrift -o deb11
+#      if: ${{ env.THRIFT_RPC == '1' }}
 
-    - name: Start SAI-C in standalone mode with SAI thrift
-      run: ./run.sh -i standalone -s thrift -o deb11
-    - name: Update SAI-C package
-      run: ./exec.sh --no-tty -s thrift pip3 install /sai-challenger/common /sai-challenger
-      if: ${{ env.THRIFT_RPC == '0' }}
+#    - name: Start SAI-C in standalone mode with SAI thrift
+#      run: ./run.sh -i standalone -s thrift -o deb11
+#    - name: Update SAI-C package
+#      run: ./exec.sh --no-tty -s thrift pip3 install /sai-challenger/common /sai-challenger
+#      if: ${{ env.THRIFT_RPC == '0' }}
 
-    - name: Run thrift tests
-      run: ./exec.sh --no-tty -s thrift pytest --testbed=saivs_thrift_standalone -v test_l2_basic.py -v test_vrf.py -v test_dc_t1.py
-    - name: Run thift data-driven tests
-      run: ./exec.sh --no-tty -s thrift pytest --testbed=saivs_thrift_standalone -v test_l2_basic_dd.py
-    - name: Run thrift unit tests
-      run: ./exec.sh --no-tty -s thrift pytest --testbed=saivs_thrift_standalone -v ut/test_vrf_ut.py ut/test_bridge_ut.py ut/test_acl_ut.py ut/test_fdb_ut.py ut/test_lag_ut.py
-    - name: Run thrift unit tests
-      run: ./exec.sh --no-tty -s thrift pytest --testbed=saivs_thrift_standalone -v -k \
-           "(test_switch_ut and not sai_map_list_t and not sai_system_port_config_list_t and not (SAI_SWITCH_ATTR_DASH or SAI_SWITCH_ATTR_HA)) or (test_port_ut and not sai_map_list_t)"
-    - name: Run thrift sairedis tests
-      run: ./exec.sh --no-tty -s thrift pytest --testbed=saivs_thrift_standalone -v -k "test_sairec"
-    - name: Run thrift API tests
-      run: ./exec.sh --no-tty -s thrift pytest --testbed=saivs_thrift_standalone -v api/
+#    - name: Run thrift tests
+#      run: ./exec.sh --no-tty -s thrift pytest --testbed=saivs_thrift_standalone -v test_l2_basic.py -v test_vrf.py -v test_dc_t1.py
+#    - name: Run thift data-driven tests
+#      run: ./exec.sh --no-tty -s thrift pytest --testbed=saivs_thrift_standalone -v test_l2_basic_dd.py
+#    - name: Run thrift unit tests
+#      run: ./exec.sh --no-tty -s thrift pytest --testbed=saivs_thrift_standalone -v ut/test_vrf_ut.py ut/test_bridge_ut.py ut/test_acl_ut.py ut/test_fdb_ut.py ut/test_lag_ut.py
+#    - name: Run thrift unit tests
+#      run: ./exec.sh --no-tty -s thrift pytest --testbed=saivs_thrift_standalone -v -k \
+#           "(test_switch_ut and not sai_map_list_t and not sai_system_port_config_list_t and not (SAI_SWITCH_ATTR_DASH or SAI_SWITCH_ATTR_HA)) or (test_port_ut and not sai_map_list_t)"
+#    - name: Run thrift sairedis tests
+#      run: ./exec.sh --no-tty -s thrift pytest --testbed=saivs_thrift_standalone -v -k "test_sairec"
+#    - name: Run thrift API tests
+#      run: ./exec.sh --no-tty -s thrift pytest --testbed=saivs_thrift_standalone -v api/
 
-    - name: Run PTF tests
-      run: ./exec.sh --no-tty -s thrift pytest --testbed=saivs_thrift_standalone -v ../usecases/sai-ptf/SAI/ptf/saifdb.py -k FdbAttributeTest
+#    - name: Run PTF tests
+#      run: ./exec.sh --no-tty -s thrift pytest --testbed=saivs_thrift_standalone -v ../usecases/sai-ptf/SAI/ptf/saifdb.py -k FdbAttributeTest

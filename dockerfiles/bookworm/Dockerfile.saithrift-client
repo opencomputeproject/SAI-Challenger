@@ -51,6 +51,11 @@ RUN apt-get -o Acquire::Check-Valid-Until=false update \
         && apt purge -y ${SAIGEN_DEPS} \
         && rm -rf /var/lib/apt/lists/*
 
+# Temporary workaround fix until the OCP community fixes the sai_adapter.py generation
+RUN SAI_ADAPTER_PY=$(find / -name sai_adapter.py 2>/dev/null | head -n 1) \
+        && sed -i 's/(=object_type)/(s32=object_type)/g' ${SAI_ADAPTER_PY} \
+        && sed -i 's/attr\.value\.$/attr.value.s32/' ${SAI_ADAPTER_PY}
+
 # Install PTF dependencies
 RUN pip3 install pysubnettree
 

@@ -61,6 +61,8 @@ RUN git clone https://github.com/opencomputeproject/SAI.git \
     # Old branches have "saitypes.h" which conflicts with latest metadata Makefile
     && sed -i 's/#include "saitypes.h"/#include <saitypes.h>/g' inc/saiwred.h \
     && cd meta \
+    # Workaround for SAI issue #2018
+    && sed -i 's/\.\/checkenumlock.sh/#\.\/checkenumlock.sh/g' Makefile \
     && make all \
     # Verify and update build targets from the stable commit ID
     && if ! $(grep -q "libsai.so" Makefile) || ! $(grep -q "lsai -lsaimetadata" ../test/saithriftv2/Makefile); then \
