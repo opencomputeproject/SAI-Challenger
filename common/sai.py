@@ -364,6 +364,11 @@ class Sai():
             if status == "SAI_STATUS_BUFFER_OVERFLOW":
                 length = json.loads(data.to_json()[1])["count"]
                 status, data = self.get(obj, [attr, self.make_map_list(length)], do_assert)
+        elif attr_type == "sai_qos_map_list_t":
+            status, data = self.get(obj, [attr, self.make_qos_map_list(1)], do_assert)
+            if status == "SAI_STATUS_BUFFER_OVERFLOW":
+                length = json.loads(data.to_json()[1])["count"]
+                status, data = self.get(obj, [attr, self.make_qos_map_list(length)], do_assert)
         elif attr_type == "sai_system_port_config_list_t":
             status, data = self.get(obj, [attr, self.make_system_port_config_list(1)], do_assert)
             if status == "SAI_STATUS_BUFFER_OVERFLOW":
@@ -436,6 +441,17 @@ class Sai():
         attr_value = {
             "count": length,
             "list": [{"key": 0, "value": 0}] * length
+        }
+        return json.dumps(attr_value).replace(" ", "")
+
+    def make_qos_map_list(self, length):
+        attr_value = {
+            "count": length,
+            "list": [{"key":
+                      {"color":"SAI_PACKET_COLOR_GREEN","dot1p":0,"dscp":0,"fc":0,"mpls_exp":0,"pg":0,"prio":0,"qidx":0,"tc":0},
+                      "value":
+                      {"color":"SAI_PACKET_COLOR_GREEN","dot1p":0,"dscp":0,"fc":0,"mpls_exp":0,"pg":0,"prio":0,"qidx":0,"tc":0}
+                    }] * length
         }
         return json.dumps(attr_value).replace(" ", "")
 
