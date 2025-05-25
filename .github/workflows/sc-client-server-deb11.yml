@@ -145,11 +145,11 @@ jobs:
     - name: Load server image
       run: docker load < sc-server.tar
     - name: Delete client image artifact
-      uses: geekyeggo/delete-artifact@v2
+      uses: geekyeggo/delete-artifact@v5
       with:
         name: Client Image
     - name: Delete server image artifact
-      uses: geekyeggo/delete-artifact@v2
+      uses: geekyeggo/delete-artifact@v5
       with:
         name: Server Image
     

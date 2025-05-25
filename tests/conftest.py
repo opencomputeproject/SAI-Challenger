@@ -10,6 +10,11 @@ from saichallenger.common.sai_data import SaiObjType
 
 _previous_test_failed = False
 
+_last_failed_module = None
+_previous_test_module = None
+_current_test_module = None
+_module_failed = {}
+
 @pytest.hookimpl(tryfirst=True, hookwrapper=True)
 def pytest_runtest_makereport(item, call):
     '''
@@ -41,11 +46,45 @@ def pytest_runtest_makereport(item, call):
         # Update the outcome only in case all previous phases were successful
         _previous_test_failed = rep.outcome not in ["passed", "skipped"]
 
+    global _last_failed_module
+
+    if rep.when == "call" and rep.failed:
+        module_name = item.module.__name__
+        _last_failed_module = module_name
+        _module_failed[module_name] = True
+
 
 @pytest.fixture
 def prev_test_failed():
     global _previous_test_failed
     return _previous_test_failed
+
+
+@pytest.fixture(scope="module", autouse=True)
+def track_module(request):
+    global _current_test_module
+    global _previous_test_module
+    global _last_failed_module
+
+    _previous_test_module = _current_test_module
+    _current_test_module = request.module.__name__
+
+    if _previous_test_module != _last_failed_module:
+        _last_failed_module = None
+
+
+@pytest.fixture(scope="module")
+def prev_module_failed(track_module):
+    global _last_failed_module
+    global _current_test_module
+    return _last_failed_module is not None and _last_failed_module != _current_test_module
+
+
+def has_module_failed(request, clear_on_read = False):
+    if clear_on_read:
+        global _last_failed_module
+        _last_failed_module = None
+    return _module_failed.get(request.module.__name__, False)
 
 
 def pytest_addoption(parser):
