@@ -15,6 +15,8 @@ TARGET=""
 SAI_INTERFACE="redis"
 BASE_OS="buster"
 NOSNAPPI=""
+GIT_UNAME=""
+GIT_TOKEN=""
 
 declare -A base_os_map
 base_os_map["deb10"]="buster"
@@ -40,6 +42,8 @@ print-help() {
     echo "     SAI interface"
     echo "  -o [buster|bullseye|bookworm]"
     echo "     Docker image base OS"
+    echo "  -g [uname git_hub_token]"
+    echo "     Provide the private repository user name and token"
     echo "  --nosnappi"
     echo "     Do not include snappi to the final image"
     echo
@@ -72,6 +76,11 @@ while [[ $# -gt 0 ]]; do
         "-o"|"--base_os")
             BASE_OS="$2"
             shift
+        ;;
+        "-g"|"--git_login")
+            GIT_UNAME="$2"
+            GIT_TOKEN="$3"
+            shift 2
         ;;
         "--nosnappi")
             NOSNAPPI="y"
@@ -147,20 +156,36 @@ trap print-build-options EXIT
 
 # Build base Docker image
 if [ "${IMAGE_TYPE}" = "standalone" ]; then
-    docker build -f dockerfiles/${BASE_OS}/Dockerfile -t sc-base:${BASE_OS} .
+    docker build -f dockerfiles/${BASE_OS}/Dockerfile \
+        --build-arg GIT_UNAME="${GIT_UNAME}" \
+        --build-arg GIT_TOKEN="${GIT_TOKEN}" \
+        -t sc-base:${BASE_OS} .
 elif [ "${IMAGE_TYPE}" = "server" ]; then
     find ${ASIC_PATH}/../ -type f -name \*.py -exec install -D {} .build/{} \;
     find ${ASIC_PATH}/../ -type f -name \*.json -exec install -D {} .build/{} \;
     if [ "${SAI_INTERFACE}" = "thrift" ]; then
-        docker build -f dockerfiles/${BASE_OS}/Dockerfile.saithrift-server -t sc-thrift-server-base:${BASE_OS} .
+        docker build -f dockerfiles/${BASE_OS}/Dockerfile.saithrift-server \
+            --build-arg GIT_UNAME="${GIT_UNAME}" \
+            --build-arg GIT_TOKEN="${GIT_TOKEN}" \
+            -t sc-thrift-server-base:${BASE_OS} .
     else
-        docker build -f dockerfiles/${BASE_OS}/Dockerfile.server -t sc-server-base:${BASE_OS} .
+        docker build -f dockerfiles/${BASE_OS}/Dockerfile.server \
+            --build-arg GIT_UNAME="${GIT_UNAME}" \
+            --build-arg GIT_TOKEN="${GIT_TOKEN}" \
+            -t sc-server-base:${BASE_OS} .
     fi
     rm -rf .build/
 else
-    docker build -f dockerfiles/${BASE_OS}/Dockerfile.client --build-arg NOSNAPPI=${NOSNAPPI} -t sc-client:${BASE_OS} .
+    docker build -f dockerfiles/${BASE_OS}/Dockerfile.client \
+        --build-arg NOSNAPPI=${NOSNAPPI} \
+        --build-arg GIT_UNAME="${GIT_UNAME}" \
+        --build-arg GIT_TOKEN="${GIT_TOKEN}" \
+        -t sc-client:${BASE_OS} .
     if [ "${SAI_INTERFACE}" = "thrift" ]; then
-        docker build -f dockerfiles/${BASE_OS}/Dockerfile.saithrift-client -t sc-thrift-client:${BASE_OS} .
+        docker build -f dockerfiles/${BASE_OS}/Dockerfile.saithrift-client \
+            --build-arg GIT_UNAME="${GIT_UNAME}" \
+            --build-arg GIT_TOKEN="${GIT_TOKEN}" \
+            -t sc-thrift-client:${BASE_OS} .
     fi
     exit 0
 fi
@@ -170,15 +195,31 @@ pushd "${ASIC_PATH}/${TARGET}"
 IMG_NAME=$(echo "${ASIC_TYPE}-${TARGET}" | tr '[:upper:]' '[:lower:]')
 if [ "${IMAGE_TYPE}" = "standalone" ]; then
     if [ "${SAI_INTERFACE}" = "thrift" ]; then
-        docker build -f Dockerfile.saithrift --build-arg BASE_OS=${BASE_OS} -t sc-thrift-${IMG_NAME}:${BASE_OS} .
+        docker build -f Dockerfile.saithrift \
+            --build-arg BASE_OS=${BASE_OS} \
+            --build-arg GIT_UNAME="${GIT_UNAME}" \
+            --build-arg GIT_TOKEN="${GIT_TOKEN}" \
+            -t sc-thrift-${IMG_NAME}:${BASE_OS} .
     else
-        docker build -f Dockerfile --build-arg BASE_OS=${BASE_OS} -t sc-${IMG_NAME}:${BASE_OS} .
+        docker build -f Dockerfile \
+            --build-arg BASE_OS="${BASE_OS}" \
+            --build-arg GIT_UNAME="${GIT_UNAME}" \
+            --build-arg GIT_TOKEN="${GIT_TOKEN}" \
+            -t sc-${IMG_NAME}:${BASE_OS} .
     fi
 elif [ "${IMAGE_TYPE}" = "server" ]; then
     if [ "${SAI_INTERFACE}" = "thrift" ]; then
-        docker build -f Dockerfile.saithrift-server --build-arg BASE_OS=${BASE_OS} -t sc-thrift-server-${IMG_NAME}:${BASE_OS} .
+        docker build -f Dockerfile.saithrift-server \
+            --build-arg BASE_OS=${BASE_OS} \
+            --build-arg GIT_UNAME="${GIT_UNAME}" \
+            --build-arg GIT_TOKEN="${GIT_TOKEN}" \
+            -t sc-thrift-server-${IMG_NAME}:${BASE_OS} .
     else
-        docker build -f Dockerfile.server --build-arg BASE_OS=${BASE_OS} -t sc-server-${IMG_NAME}:${BASE_OS} .
+        docker build -f Dockerfile.server \
+            --build-arg BASE_OS=${BASE_OS} \
+            --build-arg GIT_UNAME="${GIT_UNAME}" \
+            --build-arg GIT_TOKEN="${GIT_TOKEN}" \
+            -t sc-server-${IMG_NAME}:${BASE_OS} .
     fi
 fi
 popd

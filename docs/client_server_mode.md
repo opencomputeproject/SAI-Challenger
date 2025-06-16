@@ -12,6 +12,34 @@ Build server Docker image for ASIC `trident2` target `saivs`:
 ./build.sh -i server -a trident2 -t saivs
 ```
 
+In case the target Docker image is intended to be built using the private repo that includes some sairedis and/or sai headers extensions the repository credentials should be passed.
+For example: the sonic-sairedis git-hub URL for the npu/broadcom/BCM56850/saivs/Dockerfile target is changed to: https://${GIT_UNAME}:${GIT_TOKEN}@github.com/private-repo/sonic-sairedis.git
+```bash
+ARG BASE_OS
+FROM sc-base:${BASE_OS}
+
+ARG GIT_UNAME
+ARG GIT_TOKEN
+
+ENV SC_PLATFORM=broadcom
+ENV SC_ASIC=BCM56850
+ENV SC_TARGET=saivs
+
+WORKDIR /sai
+
+RUN git clone https://${GIT_UNAME}:${GIT_TOKEN}@github.com/private-repo/sonic-sairedis.git \
+        && cd sonic-sairedis \
+... # 
+```
+
+Build the Docker image for ASIC `trident2` target `saivs` from the private repositories: ${GIT_UNAME}:${GIT_TOKEN}
+```sh
+./build.sh -i client -g user_mame user_token
+./build.sh -i server -a trident2 -t saivs -g user_mame user_token
+```
+
+**NOTE:** The "user_mame" and "user_token" are private repository user name and http token.
+
 ### Start docker environment
 
 Start SAI Challenger client:
