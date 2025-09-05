@@ -333,7 +333,7 @@ class Sai():
                                 "sai_port_err_status_list_t", "sai_fabric_port_reachability_t",
                                 "sai_port_lane_latch_status_list_t", "sai_latch_status_t",
                                 "sai_port_frequency_offset_ppm_list_t", "sai_port_snr_list_t",
-                                "sai_acl_chain_list_t"
+                                "sai_acl_chain_list_t", "sai_port_pam4_lane_eye_values_t"
                             ]
         if attr_type == "sai_object_list_t":
             status, data = self.get(obj, [attr, "1:oid:0x0"], do_assert)
