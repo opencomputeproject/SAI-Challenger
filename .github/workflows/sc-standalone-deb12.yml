@@ -1,12 +1,12 @@
-name: sc-standalone-deb10
+name: sc-standalone-deb12
 
 on:
   pull_request:
     types: [ opened, synchronize, reopened ]
     branches: [ "**" ]
     paths:
-      - '.github/workflows/sc-standalone-deb10.yml'
-      - 'dockerfiles/buster/Dockerfile'
+      - '.github/workflows/sc-standalone-deb12.yml'
+      - 'dockerfiles/bookworm/Dockerfile'
       - 'npu/broadcom/BCM56850/saivs/Dockerfile'
       - 'npu/broadcom/BCM56850/saivs/Dockerfile.saithrift'
       - 'common/**'
@@ -22,7 +22,7 @@ on:
       - 'sai.env'
 
 env:
-  DOCKER_BASE: 'dockerfiles/buster/Dockerfile'
+  DOCKER_BASE: 'dockerfiles/bookworm/Dockerfile'
   DOCKER_REDIS: 'npu/broadcom/BCM56850/saivs/Dockerfile'
   DOCKER_THRIFT: 'npu/broadcom/BCM56850/saivs/Dockerfile.saithrift'
   REDIS_RPC: 0
@@ -60,11 +60,11 @@ jobs:
         done
 
     - name: Build standalone Docker image
-      run: ./build.sh -i standalone -o deb10
+      run: ./build.sh -i standalone -o deb12
       if: ${{ env.REDIS_RPC == '1' }}
 
     - name: Start SAI-C in standalone mode
-      run: ./run.sh -i standalone -o deb10
+      run: ./run.sh -i standalone -o deb12
     - name: Update SAI-C package
       run: ./exec.sh --no-tty pip3 install /sai-challenger/common /sai-challenger
       if: ${{ env.REDIS_RPC == '0' }}
@@ -83,11 +83,11 @@ jobs:
       run: ./exec.sh --no-tty pytest --testbed=saivs_standalone -v api/
 
 #    - name: Build standalone docker image with SAI thrift
-#      run: ./build.sh -i standalone -s thrift -o deb10
+#      run: ./build.sh -i standalone -s thrift -o deb12
 #      if: ${{ env.THRIFT_RPC == '1' }}
 
 #    - name: Start SAI-C in standalone mode with SAI thrift
-#      run: ./run.sh -i standalone -s thrift -o deb10
+#      run: ./run.sh -i standalone -s thrift -o deb12
 #    - name: Update SAI-C package
 #      run: ./exec.sh --no-tty -s thrift pip3 install /sai-challenger/common /sai-challenger
 #      if: ${{ env.THRIFT_RPC == '0' }}

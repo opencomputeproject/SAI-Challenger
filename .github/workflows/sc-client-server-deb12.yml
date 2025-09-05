@@ -1,14 +1,14 @@
-name: sc-client-server-deb10
+name: sc-client-server-deb12
 
 on:
   pull_request:
     types: [ opened, synchronize, reopened ]
     branches: [ "**" ]
     paths:
-      - '.github/workflows/sc-client-server-deb10.yml'
-      - 'dockerfiles/buster/Dockerfile.client'
-      - 'dockerfiles/buster/Dockerfile.server'
-      - 'dockerfiles/buster/Dockerfile.saithrift-server'
+      - '.github/workflows/sc-client-server-deb12.yml'
+      - 'dockerfiles/bookworm/Dockerfile.client'
+      - 'dockerfiles/bookworm/Dockerfile.server'
+      - 'dockerfiles/bookworm/Dockerfile.saithrift-server'
       - 'npu/broadcom/BCM56850/saivs/Dockerfile.server'
       - 'common/**'
       - 'cli/**'
@@ -23,14 +23,13 @@ on:
       - 'sai.env'
 
 env:
-  DOCKER_CLIENT: 'dockerfiles/buster/Dockerfile.client'
-  DOCKER_SERVER_BASE: 'dockerfiles/buster/Dockerfile.server'
+  DOCKER_CLIENT: 'dockerfiles/bookworm/Dockerfile.client'
+  DOCKER_SERVER_BASE: 'dockerfiles/bookworm/Dockerfile.server'
   DOCKER_SERVER: 'npu/broadcom/BCM56850/saivs/Dockerfile.server'
-  DOCKER_THRIFT_SERVER: 'dockerfiles/buster/Dockerfile.saithrift-server'
+  DOCKER_THRIFT_SERVER: 'dockerfiles/bookworm/Dockerfile.saithrift-server'
   REDIS_CLIENT: 0
   REDIS_SERVER: 0
   THRIFT_SERVER: 0
-
 
 jobs:
   build-sc-server:
@@ -64,13 +63,13 @@ jobs:
         done
     
     - name: Build server Docker image
-      run: ./build.sh -i server -o deb10
+      run: ./build.sh -i server -o deb12
       if: ${{ env.REDIS_SERVER == '1' }}
-    
+
     - name: Pull SAI-C server
-      run: ./run.sh -i server -o deb10
+      run: ./run.sh -i server -o deb12
       if: ${{ env.REDIS_SERVER == '0' }}
-    
+        
     - name: Save server Docker image
       run: docker save sc-server-trident2-saivs > sc-server.tar
     - name: Upload server image
@@ -78,9 +77,9 @@ jobs:
       with:
         name: Server Image
         path: sc-server.tar
-    
+
     - name: Build Thrift server Docker image
-      run: ./build.sh -i server -o deb10 -s thrift
+      run: ./build.sh -i server -o deb12 -s thrift
       if: ${{ env.THRIFT_SERVER == '1' }}
 
   build-sc-client:
@@ -109,11 +108,11 @@ jobs:
         done
 
     - name: Build client Docker image
-      run: ./build.sh -i client -o deb10 --nosnappi
+      run: ./build.sh -i client -o deb12 --nosnappi
       if: ${{ env.REDIS_CLIENT == '1' }}
     
     - name: Pull SAI-C client
-      run: ./run.sh -i client -o deb10
+      run: ./run.sh -i client -o deb12
       if: ${{ env.REDIS_CLIENT == '0' }}
     
     - name: Save client Docker image
@@ -155,11 +154,11 @@ jobs:
         name: Server Image
     
     - name: Start SAI-C client
-      run: ./run.sh -i client -o deb10
+      run: ./run.sh -i client -o deb12
     - name: Wait for the client to get the IP address first
       run: sleep 5s
     - name: Start SAI-C server
-      run: ./run.sh -i server -o deb10
+      run: ./run.sh -i server -o deb12
     - name: Update SAI-C server package
       run: ./exec.sh -i server --no-tty pip3 install /sai-challenger/common /sai-challenger
       if: ${{ env.REDIS_SERVER == '0' }}
