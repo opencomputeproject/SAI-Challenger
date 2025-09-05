@@ -1,12 +1,12 @@
-name: sc-standalone-deb10-publish
+name: sc-standalone-deb12-publish
 
 on:
   push:
     branches:
       - 'main'
     paths:
-      - '.github/workflows/sc-standalone-deb10-publish.yml'
-      - 'dockerfiles/buster/Dockerfile'
+      - '.github/workflows/sc-standalone-deb12-publish.yml'
+      - 'dockerfiles/bookworm/Dockerfile'
       - 'npu/broadcom/BCM56850/saivs/Dockerfile'
       - 'npu/broadcom/BCM56850/saivs/Dockerfile.saithrift'
       - 'common/**'
@@ -27,19 +27,19 @@ jobs:
     - name: Update submodules
       run: git submodule update --init
     - name: Build standalone Docker image
-      run: ./build.sh -i standalone -o deb10
+      run: ./build.sh -i standalone -o deb12
     - name: Log in to Docker Hub
       uses: docker/login-action@v2
       with:
         username: plvisiondevs
         password: ${{ secrets.DOCKER_TOKEN }}
     - name: Create a tag for DockerHub
-      run: docker tag sc-trident2-saivs:buster plvisiondevs/sc-trident2-saivs:buster-latest
+      run: docker tag sc-trident2-saivs:bookworm plvisiondevs/sc-trident2-saivs:bookworm-latest
     - name: docker push sc-trident2-saivs
-      run: docker push plvisiondevs/sc-trident2-saivs:buster-latest
+      run: docker push plvisiondevs/sc-trident2-saivs:bookworm-latest
     - name: Build standalone Docker image with SAI thrift
-      run: ./build.sh -i standalone -s thrift -o deb10
+      run: ./build.sh -i standalone -s thrift -o deb12
     - name: Create a tag for DockerHub
-      run: docker tag sc-thrift-trident2-saivs:buster plvisiondevs/sc-thrift-trident2-saivs:buster-latest
+      run: docker tag sc-thrift-trident2-saivs:bookworm plvisiondevs/sc-thrift-trident2-saivs:bookworm-latest
     - name: docker push sc-thrift-trident2-saivs
-      run: docker push plvisiondevs/sc-thrift-trident2-saivs:buster-latest
+      run: docker push plvisiondevs/sc-thrift-trident2-saivs:bookworm-latest

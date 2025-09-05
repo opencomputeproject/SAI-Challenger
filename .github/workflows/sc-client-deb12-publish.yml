@@ -1,13 +1,13 @@
-name: sc-client-deb10-publish
+name: sc-client-deb12-publish
 
 on:
   push:
     branches:
       - 'main'
     paths:
-      - '.github/workflows/sc-client-deb10-publish.yml'
-      - 'dockerfiles/buster/Dockerfile.client'
-      - 'dockerfiles/buster/Dockerfile.saithrift-client'
+      - '.github/workflows/sc-client-deb12-publish.yml'
+      - 'dockerfiles/bookworm/Dockerfile.client'
+      - 'dockerfiles/bookworm/Dockerfile.saithrift-client'
       - 'common/**'
       - 'cli/**'
       - 'scripts/**'
@@ -26,19 +26,19 @@ jobs:
     - name: Update submodules
       run: git submodule update --init
     - name: Build client Docker image
-      run: ./build.sh -i client -o deb10 --nosnappi
+      run: ./build.sh -i client -o deb12 --nosnappi
     - name: Build client Docker image with SAI thrift
-      run: ./build.sh -i client -s thrift -o deb10 --nosnappi
+      run: ./build.sh -i client -s thrift -o deb12 --nosnappi
     - name: Log in to Docker Hub
       uses: docker/login-action@v2
       with:
         username: plvisiondevs
         password: ${{ secrets.DOCKER_TOKEN }}
     - name: Create a tag for DockerHub
-      run: docker tag sc-client:buster plvisiondevs/sc-client:buster-latest
+      run: docker tag sc-client:bookworm plvisiondevs/sc-client:bookworm-latest
     - name: docker push sc-client
-      run: docker push plvisiondevs/sc-client:buster-latest
+      run: docker push plvisiondevs/sc-client:bookworm-latest
     - name: Create a tag for DockerHub
-      run: docker tag sc-thrift-client:buster plvisiondevs/sc-thrift-client:buster-latest
+      run: docker tag sc-thrift-client:bookworm plvisiondevs/sc-thrift-client:bookworm-latest
     - name: docker push sc-thrift-client
-      run: docker push plvisiondevs/sc-thrift-client:buster-latest
+      run: docker push plvisiondevs/sc-thrift-client:bookworm-latest
