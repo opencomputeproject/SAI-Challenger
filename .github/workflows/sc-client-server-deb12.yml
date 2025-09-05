@@ -10,6 +10,7 @@ on:
       - 'dockerfiles/bookworm/Dockerfile.server'
       - 'dockerfiles/bookworm/Dockerfile.saithrift-server'
       - 'npu/broadcom/BCM56850/saivs/Dockerfile.server'
+      - 'npu/broadcom/BCM56850/saivs/configs/server/supervisord.conf'
       - 'common/**'
       - 'cli/**'
       - 'scripts/**'
