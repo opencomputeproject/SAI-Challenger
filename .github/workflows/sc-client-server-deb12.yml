@@ -27,6 +27,7 @@ env:
   DOCKER_CLIENT: 'dockerfiles/bookworm/Dockerfile.client'
   DOCKER_SERVER_BASE: 'dockerfiles/bookworm/Dockerfile.server'
   DOCKER_SERVER: 'npu/broadcom/BCM56850/saivs/Dockerfile.server'
+  DOCKER_SERVER_CONF: 'npu/broadcom/BCM56850/saivs/configs/server/supervisord.conf'
   DOCKER_THRIFT_SERVER: 'dockerfiles/bookworm/Dockerfile.saithrift-server'
   REDIS_CLIENT: 0
   REDIS_SERVER: 0
@@ -52,7 +53,7 @@ jobs:
 
     - name: Check what Docker images have to be rebuild
       run: |
-        for file in "$DOCKER_SERVER_BASE" "$DOCKER_SERVER" "sai.env"; do
+        for file in "$DOCKER_SERVER_BASE" "$DOCKER_SERVER" "$DOCKER_SERVER_CONF" "sai.env"; do
           if [[ "${{ steps.check_changes.outputs.changed_files }}" == *"$file"* ]]; then
             echo "REDIS_SERVER=1" >> $GITHUB_ENV
           fi
