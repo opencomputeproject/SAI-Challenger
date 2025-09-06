@@ -40,6 +40,11 @@ RUN apt-get install -y \
 RUN apt-get install -y \
         libnl-3-dev libnl-genl-3-dev libnl-route-3-dev libnl-nf-3-dev libzmq3-dev
 
+ARG RUST_ROOT=/usr/.cargo
+RUN RUSTUP_HOME=$RUST_ROOT CARGO_HOME=$RUST_ROOT bash -c 'curl --proto "=https" -sSf https://sh.rustup.rs | sh -s -- --default-toolchain 1.86.0 -y'
+ENV RUSTUP_HOME $RUST_ROOT
+ENV PATH $PATH:$RUST_ROOT/bin
+
 COPY sai.env /
 RUN git clone --recursive https://github.com/sonic-net/sonic-swss-common \
         && cd sonic-swss-common \
