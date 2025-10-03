@@ -80,11 +80,11 @@ def prev_module_failed(track_module):
     return _last_failed_module is not None and _last_failed_module != _current_test_module
 
 
-def has_module_failed(request, clear_on_read = False):
-    if clear_on_read:
-        global _last_failed_module
-        _last_failed_module = None
-    return _module_failed.get(request.module.__name__, False)
+@pytest.fixture(scope="module")
+def has_module_failed(request):
+    def _check():
+        return _module_failed.get(request.module.__name__, False)
+    yield _check
 
 
 def pytest_addoption(parser):
