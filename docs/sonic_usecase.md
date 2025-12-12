@@ -52,19 +52,19 @@ For more information on the testbed definition, please refer to [testbed_definit
 
 Build SAI Challenger client Docker image with SAI Redis RPC.
 ```sh
-./build.sh -i client
+./build.sh -o bookworm --nosnappi -i client
 ```
 
 Spawn SAI Challenger client Docker container
 ```sh
-./run.sh -i client
+./run.sh -o bookworm -i client
 ```
 
 ### Run SAI Challanger test cases
 
 Run the test cases by specify a testbed name and pytest filter for the test cases
 ```sh
-./exec.sh -i client pytest -v --testbed=sainpu_sonic -k "test_switch_ut"
+./exec.sh -i client pytest -v --testbed=sainpu_sonic_vs -k "test_switch_ut"
 ```
 
 ### Run SAI Challanger CLI

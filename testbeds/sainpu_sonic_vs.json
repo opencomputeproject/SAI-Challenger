@@ -1,0 +1,22 @@
+{
+
+    "npu": [
+      {
+        "alias": "vs",
+        "asic": "generic",
+        "target": null,
+        "sku": null,
+        "client": {
+          "type": "redis",
+          "config": {
+            "mode": "sonic",
+            "username": "admin",
+            "password": "YourPaSsWoRd",
+            "ip": "192.168.122.38",
+            "port": "6379",
+            "loglevel": "NOTICE"
+          }
+        }
+      }
+    ]
+}
