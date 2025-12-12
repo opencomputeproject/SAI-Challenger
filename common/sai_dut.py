@@ -108,7 +108,7 @@ class SaiDutSonic(SaiDut):
 
         if self.container_is_running("database"):
             # Enable Redis server to listen on all interfaces
-            cmd = "echo \"sed -ri 's/--bind.*--port/--bind 0.0.0.0 --port/' /usr/share/sonic/templates/supervisord.conf.j2\" > redis_bind_fix.sh"
+            cmd = "echo \"sed -ri 's/--bind.*--port/--bind 0.0.0.0 --protected-mode no --port/' /usr/share/sonic/templates/supervisord.conf.j2\" > redis_bind_fix.sh"
             self.ssh.exec_command(cmd)
             self.ssh.exec_command("docker cp redis_bind_fix.sh database:/")
             self.ssh.exec_command("docker exec database bash redis_bind_fix.sh")
