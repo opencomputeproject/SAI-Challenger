@@ -13,6 +13,7 @@ ASIC_TYPE=""
 ASIC_PATH=""
 TARGET=""
 SAI_INTERFACE="redis"
+SAI_URL="https://github.com/opencomputeproject/SAI.git"
 BASE_OS="buster"
 NOSNAPPI=""
 GIT_UNAME=""
@@ -40,6 +41,8 @@ print-help() {
     echo "     Target device with this NPU"
     echo "  -s [redis|thrift]"
     echo "     SAI interface"
+    echo "  -u SAI_URL"
+    echo "     SAI repository URL"
     echo "  -o [buster|bullseye|bookworm]"
     echo "     Docker image base OS"
     echo "  -g [uname git_hub_token]"
@@ -71,6 +74,10 @@ while [[ $# -gt 0 ]]; do
         ;;
         "-s"|"--sai_interface")
             SAI_INTERFACE="$2"
+            shift
+        ;;
+        "-u"|"--sai_url")
+            SAI_URL="$2"
             shift
         ;;
         "-o"|"--base_os")
@@ -157,6 +164,7 @@ trap print-build-options EXIT
 # Build base Docker image
 if [ "${IMAGE_TYPE}" = "standalone" ]; then
     docker build -f dockerfiles/${BASE_OS}/Dockerfile \
+        --build-arg SAI_URL="${SAI_URL}" \
         --build-arg GIT_UNAME="${GIT_UNAME}" \
         --build-arg GIT_TOKEN="${GIT_TOKEN}" \
         -t sc-base:${BASE_OS} .
@@ -165,11 +173,13 @@ elif [ "${IMAGE_TYPE}" = "server" ]; then
     find ${ASIC_PATH}/../ -type f -name \*.json -exec install -D {} .build/{} \;
     if [ "${SAI_INTERFACE}" = "thrift" ]; then
         docker build -f dockerfiles/${BASE_OS}/Dockerfile.saithrift-server \
+            --build-arg SAI_URL="${SAI_URL}" \
             --build-arg GIT_UNAME="${GIT_UNAME}" \
             --build-arg GIT_TOKEN="${GIT_TOKEN}" \
             -t sc-thrift-server-base:${BASE_OS} .
     else
         docker build -f dockerfiles/${BASE_OS}/Dockerfile.server \
+            --build-arg SAI_URL="${SAI_URL}" \
             --build-arg GIT_UNAME="${GIT_UNAME}" \
             --build-arg GIT_TOKEN="${GIT_TOKEN}" \
             -t sc-server-base:${BASE_OS} .
@@ -178,11 +188,13 @@ elif [ "${IMAGE_TYPE}" = "server" ]; then
 else
     docker build -f dockerfiles/${BASE_OS}/Dockerfile.client \
         --build-arg NOSNAPPI=${NOSNAPPI} \
+        --build-arg SAI_URL="${SAI_URL}" \
         --build-arg GIT_UNAME="${GIT_UNAME}" \
         --build-arg GIT_TOKEN="${GIT_TOKEN}" \
         -t sc-client:${BASE_OS} .
     if [ "${SAI_INTERFACE}" = "thrift" ]; then
         docker build -f dockerfiles/${BASE_OS}/Dockerfile.saithrift-client \
+            --build-arg SAI_URL="${SAI_URL}" \
             --build-arg GIT_UNAME="${GIT_UNAME}" \
             --build-arg GIT_TOKEN="${GIT_TOKEN}" \
             -t sc-thrift-client:${BASE_OS} .
@@ -197,12 +209,14 @@ if [ "${IMAGE_TYPE}" = "standalone" ]; then
     if [ "${SAI_INTERFACE}" = "thrift" ]; then
         docker build -f Dockerfile.saithrift \
             --build-arg BASE_OS=${BASE_OS} \
+            --build-arg SAI_URL="${SAI_URL}" \
             --build-arg GIT_UNAME="${GIT_UNAME}" \
             --build-arg GIT_TOKEN="${GIT_TOKEN}" \
             -t sc-thrift-${IMG_NAME}:${BASE_OS} .
     else
         docker build -f Dockerfile \
             --build-arg BASE_OS="${BASE_OS}" \
+            --build-arg SAI_URL="${SAI_URL}" \
             --build-arg GIT_UNAME="${GIT_UNAME}" \
             --build-arg GIT_TOKEN="${GIT_TOKEN}" \
             -t sc-${IMG_NAME}:${BASE_OS} .
@@ -211,12 +225,14 @@ elif [ "${IMAGE_TYPE}" = "server" ]; then
     if [ "${SAI_INTERFACE}" = "thrift" ]; then
         docker build -f Dockerfile.saithrift-server \
             --build-arg BASE_OS=${BASE_OS} \
+            --build-arg SAI_URL="${SAI_URL}" \
             --build-arg GIT_UNAME="${GIT_UNAME}" \
             --build-arg GIT_TOKEN="${GIT_TOKEN}" \
             -t sc-thrift-server-${IMG_NAME}:${BASE_OS} .
     else
         docker build -f Dockerfile.server \
             --build-arg BASE_OS=${BASE_OS} \
+            --build-arg SAI_URL="${SAI_URL}" \
             --build-arg GIT_UNAME="${GIT_UNAME}" \
             --build-arg GIT_TOKEN="${GIT_TOKEN}" \
             -t sc-server-${IMG_NAME}:${BASE_OS} .

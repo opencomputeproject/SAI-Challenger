@@ -8,12 +8,13 @@ ENV SAIGEN_DEPS    libgetopt-long-descriptive-perl libconst-fast-perl \
 
 COPY sai.env /sai
 
+ARG SAI_URL
 WORKDIR /sai
 RUN apt-get -o Acquire::Check-Valid-Until=false update \
         && apt install -y libthrift-dev libthrift-0.11.0 \
         && pip3 install ctypesgen thrift==0.11.0 \
         && apt install -y ${SAIGEN_DEPS} \
-        && git clone https://github.com/opencomputeproject/SAI.git \
+        && git clone ${SAI_URL} SAI \
         && cd SAI \
         && . /sai/sai.env \
         && git checkout ${SAI_ID} \
