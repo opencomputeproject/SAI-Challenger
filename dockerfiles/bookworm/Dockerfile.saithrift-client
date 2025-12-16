@@ -31,11 +31,14 @@ RUN apt-get -o Acquire::Check-Valid-Until=false update \
 
 COPY sai.env /sai
 
+ARG GIT_UNAME
+ARG GIT_TOKEN
+
 RUN apt-get -o Acquire::Check-Valid-Until=false update \
         && apt install -y ${SAIGEN_DEPS} \
-        && git clone https://github.com/opencomputeproject/SAI.git \
-        && cd SAI \
         && . /sai/sai.env \
+        && git clone ${SAI_URL} SAI \
+        && cd SAI \
         && git checkout ${SAI_ID} \
         && cp inc/* /usr/include/sai/ \
         && cp experimental/* /usr/include/sai/ \

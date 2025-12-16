@@ -58,9 +58,12 @@ ENV SAITHRIFTV2=y
 ENV GEN_SAIRPC_OPTS="-cve"
 ENV SAIRPC_EXTRA_LIBS="-L/usr/local/lib/ -lpthread"
 
-RUN git clone https://github.com/opencomputeproject/SAI.git \
+ARG GIT_UNAME
+ARG GIT_TOKEN
+
+RUN . /sai.env \
+    && git clone ${SAI_URL} SAI \
     && cd SAI && git fetch origin \
-    && . /sai.env \
     && git checkout ${SAI_ID} \
     && cd meta \
     # Workaround for SAI issue #2018
