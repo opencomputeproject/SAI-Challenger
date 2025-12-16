@@ -37,10 +37,12 @@ WORKDIR /sai
 COPY scripts/gen_attr_list /sai/gen_attr_list
 COPY sai.env /
 
-ARG SAI_URL
-RUN git clone ${SAI_URL} SAI \
+ARG GIT_UNAME
+ARG GIT_TOKEN
+
+RUN . /sai.env \
+        && git clone ${SAI_URL} SAI \
         && cd SAI \
-        && . /sai.env \
         && git checkout ${SAI_ID} \
         && cd meta \
         && make saimetadata.h \

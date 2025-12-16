@@ -54,10 +54,12 @@ ENV SAIRPC_EXTRA_LIBS="-L/usr/local/lib/"
 # Required to build libsaimetadata.so and libsai.so
 ENV SAI_THRIFT_ID="af31a8f"
 
-ARG SAI_URL
-RUN git clone ${SAI_URL} SAI \
+ARG GIT_UNAME
+ARG GIT_TOKEN
+
+RUN . /sai.env \
     && cd SAI && git fetch origin \
-    && . /sai.env \
+    && git clone ${SAI_URL} SAI \
     && git checkout ${SAI_ID} \
     # Old branches have "saitypes.h" which conflicts with latest metadata Makefile
     && sed -i 's/#include "saitypes.h"/#include <saitypes.h>/g' inc/saiwred.h \
