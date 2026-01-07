@@ -74,4 +74,7 @@ FROM sc-server-base
 
 MAINTAINER your@email.com
 ```
+## Syncd Configuration
+
+For correct integration with SAI Challenger, `syncd` must be started in synchronous mode using the `-s` parameter. This ensures that all SAI operations are executed synchronously, which is required for the RPC mechanism to function correctly and for tests to be deterministic. Typically, this flag should be added to the command line arguments of the `syncd` process in your platform's startup script (e.g., `supervisord.conf` or `start.sh`).
 
