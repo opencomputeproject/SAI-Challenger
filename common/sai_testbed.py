@@ -1,8 +1,8 @@
-import importlib
-import os
-import json
 import glob
+import importlib
+import json
 import logging
+import os
 import sys
 
 from saichallenger.common.sai_dut import SaiDut
