@@ -16,8 +16,12 @@ RUN git clone https://github.com/sonic-net/sonic-sairedis.git \
         && git submodule update --init \
         && cd SAI && git fetch origin \
         && git checkout ${SAI_ID} \
+        # Apply Debian 13 metadata generation fix from upstream SAI
+        # https://github.com/opencomputeproject/SAI/commit/56c9c039666b0d8bc40e8ff04c048d7b0e39ca75
+        && wget -O /tmp/sai-deb13-fix.patch https://github.com/opencomputeproject/SAI/commit/56c9c039666b0d8bc40e8ff04c048d7b0e39ca75.patch \
+        && git apply /tmp/sai-deb13-fix.patch \
+        && rm /tmp/sai-deb13-fix.patch \
         && cd meta \
-        && sed -i '/HTML_TIMESTAMP/d; /FORMULA_TRANSPARENT/d; /DOT_FONTNAME/d; /DOT_FONTSIZE/d; /DOT_TRANSPARENT/d' Doxyfile \
         && make saimetadata.h \
         && make saimetadata.c \
         && cp saimetadatautils.c /sai/gen_attr_list/ \
