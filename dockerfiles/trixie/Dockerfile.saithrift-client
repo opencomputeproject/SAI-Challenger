@@ -1,0 +1,67 @@
+FROM sc-client:trixie
+
+# Generate the pip configuration file
+RUN mkdir -p /root/.config/pip \
+        && echo "[global]" > /root/.config/pip/pip.conf \
+        && echo "break-system-packages = true" >> /root/.config/pip/pip.conf
+
+ENV SAIGEN_DEPS    libgetopt-long-descriptive-perl libconst-fast-perl \
+                   libtemplate-perl libnamespace-autoclean-perl \
+                   libmoose-perl libmoosex-aliases-perl
+
+WORKDIR /sai
+
+# Install Thrift code gen
+RUN apt-get -o Acquire::Check-Valid-Until=false update \
+        && apt install -y libtool pkg-config \
+        && wget "http://archive.apache.org/dist/thrift/0.11.0/thrift-0.11.0.tar.gz" \
+        && tar -xf thrift-0.11.0.tar.gz \
+        && cd thrift-0.11.0 \
+        && ./bootstrap.sh \
+        && ./configure --prefix=/usr --with-cpp --with-python \
+            --with-qt4=no --with-qt5=no --with-csharp=no --with-java=no --with-erlang=no \
+            --with-nodejs=no --with-lua=no --with-per=no --with-php=no --with-dart=no \
+            --with-ruby=no --with-haskell=no --with-go=no --with-rs=no --with-haxe=no \
+            --with-dotnetcore=no --with-d=no \
+        && make && make install \
+        && pip3 install ctypesgen lib/py \
+        && cd /sai \
+        && rm -rf thrift-0.11.0 thrift-0.11.0.tar.gz \
+        && rm -rf /var/lib/apt/lists/*
+
+COPY sai.env /sai
+
+ARG GIT_UNAME
+ARG GIT_TOKEN
+
+RUN apt-get -o Acquire::Check-Valid-Until=false update \
+        && apt install -y ${SAIGEN_DEPS} \
+        && . /sai/sai.env \
+        && git clone ${SAI_URL} SAI \
+        && cd SAI \
+        && git checkout ${SAI_ID} \
+        && cp inc/* /usr/include/sai/ \
+        && cp experimental/* /usr/include/sai/ \
+        && cd test/saithriftv2/ \
+        && make meta \
+        && make install-pylib \
+        && cd dist \
+        && tar zxf saithrift-0.9.tar.gz \
+        && cd saithrift-0.9 \
+        && python3 setup.py install \
+        && cd /sai \
+        && rm -rf SAI \
+        && apt purge -y ${SAIGEN_DEPS} \
+        && rm -rf /var/lib/apt/lists/*
+
+# Temporary workaround fix until the OCP community fixes the sai_adapter.py generation
+RUN SAI_ADAPTER_PY=$(find / -name sai_adapter.py 2>/dev/null | head -n 1) \
+        && sed -i 's/(=object_type)/(s32=object_type)/g' ${SAI_ADAPTER_PY} \
+        && sed -i 's/attr\.value\.$/attr.value.s32/' ${SAI_ADAPTER_PY}
+
+# Install PTF dependencies
+RUN pip3 install pysubnettree
+
+WORKDIR /sai-challenger/tests
+
+CMD ["/usr/bin/supervisord"]

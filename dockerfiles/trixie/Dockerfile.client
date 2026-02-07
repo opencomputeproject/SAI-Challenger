@@ -1,0 +1,126 @@
+FROM debian:trixie-slim
+
+## Make apt-get non-interactive
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Generate the pip configuration file
+RUN mkdir -p /root/.config/pip \
+        && echo "[global]" > /root/.config/pip/pip.conf \
+        && echo "break-system-packages = true" >> /root/.config/pip/pip.conf
+
+# Install generic packages
+RUN apt-get -o Acquire::Check-Valid-Until=false update && apt-get install -y \
+        apt-utils \
+        build-essential \
+        python3 \
+        python3-pip \
+        python3-redis \
+        iproute2 \
+        rsyslog \
+        supervisor \
+        cmake \
+        graphviz \
+        doxygen \
+        aspell \
+        git \
+        wget \
+        libffi-dev \
+        nlohmann-json3-dev \
+        python3-paramiko \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /sai
+
+# Install SAI attributes metadata JSON generator
+COPY scripts/gen_attr_list /sai/gen_attr_list
+COPY sai.env /
+
+ARG GIT_UNAME
+ARG GIT_TOKEN
+
+RUN . /sai.env \
+        && git clone ${SAI_URL} SAI \
+        && cd SAI \
+        && git checkout ${SAI_ID} \
+        && cd meta \
+        && make saimetadata.h \
+        && make saimetadata.c \
+        && cd .. \
+        && mkdir /usr/include/sai \
+        && cp inc/* /usr/include/sai/ \
+        && cp experimental/* /usr/include/sai/ \
+        && cp meta/sai*.h /usr/include/sai/ \
+        && cp meta/saimetadatautils.c /sai/gen_attr_list/ \
+        && cp meta/saimetadata.c /sai/gen_attr_list/ \
+        && cp meta/saiserialize.c /sai/gen_attr_list/ \
+        && cd /sai/gen_attr_list \
+        && mkdir build && cd build \
+        && cmake .. \
+        && make -j$(nproc) \
+        && mkdir -p /etc/sai \
+        && ./attr_list_generator > /etc/sai/sai.json.tmp \
+        && python3 -mjson.tool /etc/sai/sai.json.tmp > /etc/sai/sai.json \
+        && rm /etc/sai/sai.json.tmp \
+        && rm -rf /sai/SAI
+
+# Install SAI-C dependencies
+RUN pip3 install pytest pytest_dependency pytest-html aenum pdbpp macaddress click==8.0
+
+ARG NOSNAPPI
+RUN if [ "$NOSNAPPI" != "y" ]; then \
+        pip3 install snappi==0.11.14 snappi_ixnetwork==0.9.1 ; \
+    fi
+
+# Fix invoke/loader.py:3: DeprecationWarning caused by load_module()
+RUN pip3 install --upgrade invoke>=2.2.0
+
+# Install PTF dependencies
+RUN pip3 install scapy dpkt
+
+# Install ptf_nn_agent dependencies
+RUN wget https://github.com/nanomsg/nanomsg/archive/1.0.0.tar.gz \
+        && tar xvfz 1.0.0.tar.gz \
+        && cd nanomsg-1.0.0 \
+        && mkdir -p build \
+        && cd build \
+        && cmake .. \
+        && make install \
+        && ldconfig \
+        && cd ../.. \
+        && rm -rf 1.0.0.tar.gz nanomsg-1.0.0 \
+        && pip3 install nnpy
+
+# Install ptf_nn_agent and PTF helpers (required by sai_dataplane.py)
+COPY ptf/ptf_nn/ptf_nn_agent.py      /ptf/ptf_nn/ptf_nn_agent.py
+COPY ptf/setup.py                    /ptf/setup.py
+COPY ptf/README.md                   /ptf/README.md
+COPY ptf/src/ptf/*.py                /ptf/src/ptf/
+COPY ptf/src/ptf/platforms/*.py      /ptf/src/ptf/platforms/
+COPY ptf/requirements.txt            /ptf/requirements.txt
+RUN echo "#mock" > /ptf/ptf && pip3 install /ptf
+
+# Deploy SAI Challenger
+COPY common              /sai-challenger/common
+COPY cli                 /sai-challenger/cli
+COPY topologies          /sai-challenger/topologies
+COPY setup.py            /sai-challenger/setup.py
+COPY scripts/sai-cli-completion.sh   /sai-challenger/scripts/sai-cli-completion.sh
+RUN echo ". /sai-challenger/scripts/sai-cli-completion.sh" >> /root/.bashrc
+
+# Deploy a remote commands listener (mock for setup.py)
+RUN mkdir -p /sai-challenger/scripts \
+        && echo "#mock" > /sai-challenger/scripts/redis-cmd-listener.py
+
+# Install SAI Challenger
+RUN pip3 install /sai-challenger/common /sai-challenger
+
+# Disable kernel logging support
+RUN sed -ri '/imklog/s/^/#/' /etc/rsyslog.conf
+
+WORKDIR /sai-challenger/tests
+
+# Setup supervisord
+COPY configs/client/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+CMD ["/usr/bin/supervisord"]
+
