@@ -4,6 +4,11 @@ from saichallenger.common.sai_data import SaiObjType
 
 
 class SaiPhy(Sai):
+    """
+    SAI PHY (Physical Layer) interface.
+
+    Extends the base Sai class for managing physical layer SAI objects.
+    """
 
     def __init__(self, cfg):
         cfg["client"]["config"]["asic_type"] = "phy"

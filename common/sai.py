@@ -219,6 +219,12 @@ class CommandProcessor:
 
 
 class Sai():
+    """
+    Main SAI interface class for interacting with SAI objects.
+
+    Provides methods to create, remove, get, and set SAI objects and attributes.
+    Handles metadata loading and command processing through CommandProcessor.
+    """
     metadata = None
 
     def __init__(self, cfg):

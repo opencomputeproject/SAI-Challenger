@@ -5,6 +5,11 @@ from saichallenger.common.sai_data import SaiObjType
 
 
 class SaiDpu(Sai):
+    """
+    SAI DPU (Data Processing Unit) interface.
+
+    Extends the base Sai class for managing DPU-specific SAI objects.
+    """
 
     def __init__(self, cfg):
         cfg["client"]["config"]["asic_type"] = "dpu"

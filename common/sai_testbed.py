@@ -13,6 +13,12 @@ from saichallenger.common.sai_dataplane.sai_dataplane import SaiDataPlane
 
 
 class SaiTestbedMeta():
+    """
+    Metadata container for SAI testbed configuration.
+
+    Loads and manages testbed configuration files including topology, SKU-specific
+    settings, and test parameters.
+    """
 
     def __init__(self, base_dir, name):
         self.base_dir = base_dir

@@ -8,6 +8,11 @@ warnings.filterwarnings("ignore", category=CryptographyDeprecationWarning)
 
 
 class SaiDut:
+    """
+    Base class for SAI Device Under Test (DUT) implementations.
+
+    Manages connections and operations for devices being tested with SAI.
+    """
     def __init__(self, cfg):
         self.alias = cfg.get("alias", "default")
         self.server_ip = cfg.get("ip", "localhost")
@@ -70,6 +75,12 @@ class SaiDut:
 
 
 class SaiDutSonic(SaiDut):
+    """
+    SONiC-specific SAI DUT implementation.
+
+    Extends SaiDut with SONiC-specific functionality for managing and testing
+    SAI operations on SONiC network operating system.
+    """
     def __init__(self, cfg):
         super().__init__(cfg)
         self.port = cfg.get("port", "6379")

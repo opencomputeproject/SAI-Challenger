@@ -7,6 +7,12 @@ from saichallenger.common.sai_dataplane.sai_hostif_dataplane import SaiHostifDat
 
 
 class SaiNpu(Sai):
+    """
+    SAI NPU (Network Processing Unit) interface.
+
+    Extends the base Sai class with NPU-specific functionality for managing
+    network forwarding elements like FDB entries, VLAN members, and routes.
+    """
 
     def __init__(self, cfg):
         cfg["client"]["config"]["asic_type"] = "npu"
