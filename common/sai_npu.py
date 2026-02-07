@@ -75,7 +75,7 @@ class SaiNpu(Sai):
                 # Make sure the bridge ports are added into the default VLAN.
                 for bp_oid in self.dot1q_bp_oids:
                     vlan_mbr_oid = self.get_vlan_member(self.default_vlan_oid, bp_oid)
-                    if vlan_mbr_oid == None:
+                    if vlan_mbr_oid is None:
                         self.create_vlan_member(self.default_vlan_oid, bp_oid, "SAI_VLAN_TAGGING_MODE_UNTAGGED")
 
         # Update SKU

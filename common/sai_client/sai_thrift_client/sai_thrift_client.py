@@ -126,10 +126,10 @@ class SaiThriftClient(SaiClient):
         return status, SaiData(result)
 
     def get_object_type(self, oid, default=None) -> SaiObjType:
-        if default != None:
+        if default is not None:
             return ThriftConverter.convert_to_sai_obj_type(default)
 
-        if oid != None:
+        if oid is not None:
             try:
                 obj_type = self.sai_type_map.get(oid, None)
                 if obj_type is None:

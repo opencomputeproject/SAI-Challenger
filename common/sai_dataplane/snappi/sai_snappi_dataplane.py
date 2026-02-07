@@ -253,7 +253,7 @@ class SaiSnappiDataPlane(SaiDataPlane):
                             src_count=1,
                             src_step="00:00:00:00:00:01"
                             ):
-        if flow == None:
+        if flow is None:
             return None
 
         ether = flow.packet.add().ethernet
@@ -285,7 +285,7 @@ class SaiSnappiDataPlane(SaiDataPlane):
                         src_count=1,
                         src_step="0.0.0.1"
                         ):
-        if flow == None:
+        if flow is None:
             return None
 
         ipv4 = flow.packet.add().ipv4
@@ -309,7 +309,7 @@ class SaiSnappiDataPlane(SaiDataPlane):
                         src_count=1,
                         src_step=1
                         ):
-        if flow == None:
+        if flow is None:
             return None
 
         udp = flow.packet.add().udp
@@ -329,7 +329,7 @@ class SaiSnappiDataPlane(SaiDataPlane):
                         vni_count=1,
                         vni_step=1
                         ):
-        if flow == None:
+        if flow is None:
             return None
 
         vxlan = flow.packet.add().vxlan
