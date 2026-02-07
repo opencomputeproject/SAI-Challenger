@@ -630,6 +630,175 @@ class Sai():
     def remove_rec_alias(self, obj_key):
         self.remove_alias(self.get_alias_by_key(obj_key))
 
+    def _process_create_command(self, rec):
+        """Process single object creation command ('c')."""
+        attrs = []
+        if len(rec) > 2:
+            for attr in rec[2:]:
+                attrs += attr.split('=')
+
+        # Update OIDs in the attributes
+        for idx in range(1, len(attrs), 2):
+            if "oid:" in attrs[idx]:
+                attrs[idx] = self.rec2vid[attrs[idx]]
+
+        obj_key = self.__update_key(rec[0], rec[1])
+        status, key = self.create(obj_key, attrs, False)
+        if status != "SAI_STATUS_SUCCESS":
+            return status
+
+        if "{" not in key:
+            key_list = rec[1].split(":", 1)
+            self.rec2vid[key_list[1]] = key
+
+        obj_type = obj_key.split(":")[0]
+        self.create_rec_alias(obj_type, attrs, key)
+        return status
+
+    def _process_bulk_create_command(self, record):
+        """Process bulk object creation command ('C')."""
+        # record = [["action", "sai-object-type"], ["key", "attr1", "attr2"], ..., [key-n", "attr1", "attr2"]]
+        bulk_keys = []
+        bulk_attrs = []
+        for idx, entry in enumerate(record[1:]):
+            # New bulk entry
+            attrs = []
+            for attr in entry[1:]:
+                attrs += attr.split('=')
+
+            # Update OIDs in the attributes
+            for i in range(1, len(attrs), 2):
+                if "oid:" in attrs[i] and attrs[i] != "oid:0x0":
+                    attrs[i] = self.rec2vid[attrs[i]]
+
+            # Convert into "sai-object-type:key"
+            key = record[0][1] + ":" + record[idx + 1][0]
+            # Update OIDs in the key
+            key = self.__update_key(record[0][0], key)
+            # Convert into ["sai-object-type", "key"]
+            if ":" in key:
+                key = key.split(":", 1)[1]
+
+            if type(key) is dict or key.startswith("{"):
+                key = json.loads(key)
+            bulk_keys.append(key)
+            bulk_attrs.append(attrs)
+
+        if type(key) is dict or key.startswith("{"):
+            self.bulk_create(record[0][1], bulk_keys, bulk_attrs)
+        else:
+            _, new_keys, _ = self.bulk_create(record[0][1], None, bulk_attrs, len(record)-1)
+            for idx in range(0, len(new_keys)):
+                if "oid:" in new_keys[idx]:
+                    self.rec2vid[record[idx + 1][0]] = new_keys[idx]
+
+        for idx in range(len(bulk_keys)):
+            self.create_rec_alias(record[0][1], bulk_attrs[idx], bulk_keys[idx])
+
+    def _process_set_command(self, rec):
+        """Process single attribute set command ('s')."""
+        data = rec[2].split('=')
+        if "oid:" in data[1]:
+            data[1] = self.rec2vid[data[1]]
+
+        self.set(self.__update_key(rec[0], rec[1]), data)
+
+    def _process_bulk_set_command(self, record):
+        """Process bulk attribute set command ('S')."""
+        # record = [["action", "sai-object-type"], ["key", "attr"], ..., [key-n", "attr"]]
+        bulk_keys = []
+        bulk_attrs = []
+        for idx, entry in enumerate(record[1:]):
+            attr = entry[1].split('=')
+            if "oid:" in attr[1] and attr[1] != "oid:0x0":
+                attr[1] = self.rec2vid[attr[1]]
+
+            # Convert into "sai-object-type:key"
+            key = record[0][1] + ":" + record[idx + 1][0]
+            # Update OIDs in the key
+            key = self.__update_key(record[0][0], key)
+            # Convert into ["sai-object-type", "key"]
+            if ":" in key:
+                key = key.split(":", 1)[1]
+
+            if key.startswith("{"):
+                key = json.loads(key)
+            bulk_keys.append(key)
+            bulk_attrs.append(attr)
+
+        self.bulk_set(record[0][1], bulk_keys, bulk_attrs)
+
+    def _process_remove_command(self, rec):
+        """Process single object removal command ('r')."""
+        obj_key = self.__update_key(rec[0], rec[1])
+        self.remove(obj_key)
+        self.remove_rec_alias(obj_key)
+
+    def _process_bulk_remove_command(self, record):
+        """Process bulk object removal command ('R')."""
+        # record = [["action", "sai-object-type"], ["key"], ..., [key-n"]]
+        bulk_keys = []
+        for idx, entry in enumerate(record[1:]):
+            # Convert into "sai-object-type:key"
+            key = record[0][1] + ":" + record[idx + 1][0]
+            # Update OIDs in the key
+            key = self.__update_key(record[0][0], key)
+            # Convert into ["sai-object-type", "key"]
+            if ":" in key:
+                key = key.split(":", 1)[1]
+
+            if key.startswith("{"):
+                key = json.loads(key)
+            bulk_keys.append(key)
+
+        self.bulk_remove(record[0][1], bulk_keys)
+        for key in bulk_keys:
+            self.remove_rec_alias(key)
+
+    def _process_get_command(self, rec, oids):
+        """Process single attribute get command ('g')."""
+        attrs = []
+        if len(rec) > 2:
+            for attr in rec[2:]:
+                attrs += attr.split('=')
+
+        status, data = self.get(self.__update_key(rec[0], rec[1]), attrs, False)
+        if status == "SAI_STATUS_SUCCESS":
+            jdata = data.to_json()
+            for idx in range(1, len(jdata), 2):
+                if ":oid:" in jdata[idx]:
+                    oids += data.oids(idx)
+                elif "oid:" in jdata[idx]:
+                    oids.append(data.oid(idx))
+        return status
+
+    def _process_get_response_command(self, rec, oids):
+        """Process expected get response command ('G')."""
+        attrs = []
+        for attr in rec[2:]:
+            attrs += attr.split('=')
+
+        G_oids = []
+        for idx in range(1, len(attrs), 2):
+            G_output = attrs[idx]
+
+            if ":oid:" in G_output:
+                start_idx = G_output.find(":") + 1
+                G_oids += G_output[start_idx:].split(",")
+            elif "oid:" in G_output:
+                G_oids.append(G_output)
+
+        assert len(oids) == len(G_oids), f"Expected data {oids}. Actual data {G_oids}"
+
+        for idx, oid in enumerate(G_oids):
+            self.rec2vid[oid] = oids[idx]
+        oids.clear()
+
+    def _process_expected_failure_command(self, rec, status):
+        """Process expected failure command ('E')."""
+        assert status in [rec[1], "SAI_STATUS_SUCCESS"], \
+            f"Expected fail reason is {rec[1]}. Actual fail reason is {status}"
+
     def apply_rec(self, fname):
         # Since it's expected that sairedis.rec file contains a full configuration,
         # before we start, we must flush both RPC backend (Redis or Thrift server) and NPU state.
@@ -646,158 +815,23 @@ class Sai():
                 continue
 
             if rec[0] == 'c':
-                attrs = []
-                if len(rec) > 2:
-                    for attr in rec[2:]:
-                        attrs += attr.split('=')
-
-                # Update OIDs in the attributes
-                for idx in range(1, len(attrs), 2):
-                    if "oid:" in attrs[idx]:
-                        attrs[idx] = self.rec2vid[attrs[idx]]
-
-                obj_key = self.__update_key(rec[0], rec[1])
-                status, key = self.create(obj_key, attrs, False)
-                if status != "SAI_STATUS_SUCCESS":
-                    continue
-                if "{" not in key:
-                    key_list = rec[1].split(":", 1)
-                    self.rec2vid[key_list[1]] = key
-
-                obj_type = obj_key.split(":")[0]
-                self.create_rec_alias(obj_type, attrs, key)
-
+                status = self._process_create_command(rec)
             elif rec[0] == 'C':
-                # record = [["action", "sai-object-type"], ["key", "attr1", "attr2"], ..., [key-n", "attr1", "attr2"]]
-                bulk_keys = []
-                bulk_attrs = []
-                for idx, entry in enumerate(record[1:]):
-                    # New bulk entry
-                    attrs = []
-                    for attr in entry[1:]:
-                        attrs += attr.split('=')
-
-                    # Update OIDs in the attributes
-                    for i in range(1, len(attrs), 2):
-                        if "oid:" in attrs[i] and attrs[i] != "oid:0x0":
-                            attrs[i] = self.rec2vid[attrs[i]]
-
-                    # Convert into "sai-object-type:key"
-                    key = record[0][1] + ":" + record[idx + 1][0]
-                    # Update OIDs in the key
-                    key = self.__update_key(rec[0], key)
-                    # Convert into ["sai-object-type", "key"]
-                    if ":" in key:
-                        key = key.split(":", 1)[1]
-
-                    if type(key) is dict or key.startswith("{"):
-                        key = json.loads(key)
-                    bulk_keys.append(key)
-                    bulk_attrs.append(attrs)
-
-                if type(key) is dict or key.startswith("{"):
-                    self.bulk_create(record[0][1], bulk_keys, bulk_attrs)
-                else:
-                    _, new_keys, _ = self.bulk_create(record[0][1], None, bulk_attrs, len(record)-1)
-                    for idx in range(0, len(new_keys)):
-                        if "oid:" in new_keys[idx]:
-                            self.rec2vid[record[idx + 1][0]] = new_keys[idx]
-                for idx in range(len(bulk_keys)):
-                    self.create_rec_alias(record[0][1], bulk_attrs[idx], bulk_keys[idx])
-
+                self._process_bulk_create_command(record)
             elif rec[0] == 's':
-                data = rec[2].split('=')
-                if "oid:" in data[1]:
-                    data[1] = self.rec2vid[data[1]]
-
-                self.set(self.__update_key(rec[0], rec[1]), data)
-
+                self._process_set_command(rec)
             elif rec[0] == 'S':
-                # record = [["action", "sai-object-type"], ["key", "attr"], ..., [key-n", "attr"]]
-                bulk_keys = []
-                bulk_attrs = []
-                for idx, entry in enumerate(record[1:]):
-                    attr = entry[1].split('=')
-                    if "oid:" in attr[1] and attr[1] != "oid:0x0":
-                        attr[1] = self.rec2vid[attr[1]]
-
-                    # Convert into "sai-object-type:key"
-                    key = record[0][1] + ":" + record[idx + 1][0]
-                    # Update OIDs in the key
-                    key = self.__update_key(rec[0], key)
-                    # Convert into ["sai-object-type", "key"]
-                    if ":" in key:
-                        key = key.split(":", 1)[1]
-
-                    if key.startswith("{"):
-                        key = json.loads(key)
-                    bulk_keys.append(key)
-                    bulk_attrs.append(attr)
-
-                self.bulk_set(record[0][1], bulk_keys, bulk_attrs)
-
+                self._process_bulk_set_command(record)
             elif rec[0] == 'r':
-                obj_key = self.__update_key(rec[0], rec[1])
-                self.remove(obj_key)
-                self.remove_rec_alias(obj_key)
-
+                self._process_remove_command(rec)
             elif rec[0] == 'R':
-                # record = [["action", "sai-object-type"], ["key"], ..., [key-n"]]
-                bulk_keys = []
-                for idx, entry in enumerate(record[1:]):
-                    # Convert into "sai-object-type:key"
-                    key = record[0][1] + ":" + record[idx + 1][0]
-                    # Update OIDs in the key
-                    key = self.__update_key(rec[0], key)
-                    # Convert into ["sai-object-type", "key"]
-                    if ":" in key:
-                        key = key.split(":", 1)[1]
-
-                    if key.startswith("{"):
-                        key = json.loads(key)
-                    bulk_keys.append(key)
-
-                self.bulk_remove(record[0][1], bulk_keys)
-                for key in bulk_keys:
-                    self.remove_rec_alias(key)
-
+                self._process_bulk_remove_command(record)
             elif rec[0] == 'g':
-                attrs = []
-                if len(rec) > 2:
-                    for attr in rec[2:]:
-                        attrs += attr.split('=')
-
-                status, data = self.get(self.__update_key(rec[0], rec[1]), attrs, False)
-                if status == "SAI_STATUS_SUCCESS":
-                    jdata = data.to_json()
-                    for idx in range(1, len(jdata), 2):
-                        if ":oid:" in jdata[idx]:
-                            oids += data.oids(idx)
-                        elif "oid:" in jdata[idx]:
-                            oids.append(data.oid(idx))
+                status = self._process_get_command(rec, oids)
             elif rec[0] == 'G':
-                attrs = []
-                for attr in rec[2:]:
-                    attrs += attr.split('=')
-
-                G_oids = []
-
-                for idx in range(1, len(attrs), 2):
-                    G_output = attrs[idx]
-
-                    if ":oid:" in G_output:
-                        start_idx = G_output.find(":") + 1
-                        G_oids += G_output[start_idx:].split(",")
-                    elif "oid:" in G_output:
-                        G_oids.append(G_output)
-                assert len(oids) == len(G_oids), f"Expected data {oids}. Actual data {G_oids}"
-
-                for idx, oid in enumerate(G_oids):
-                    self.rec2vid[oid] = oids[idx]
-                oids = []
+                self._process_get_response_command(rec, oids)
             elif rec[0] == 'E':
-                # It's expected that the previous command has failed
-                assert status in [rec[1], "SAI_STATUS_SUCCESS"], f"Expected fail reason is {rec[1]}. Actual fail reason is {status}"
+                self._process_expected_failure_command(rec, status)
             else:
                 print("Ignored line {}: {}".format(cnt, rec))
 
