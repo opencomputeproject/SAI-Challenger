@@ -84,7 +84,7 @@ class SaiTestbedMeta():
     def get_sku_config(self, alias, asic_type="npu"):
         cfg = self.get_asic_config(alias, asic_type)
         sku = cfg.get("sku", None)
-        if type(sku) == str:
+        if isinstance(sku, str):
             asic_dir = self.get_asic_dir(self.base_dir, cfg["asic"], asic_type)
             try:
                 target = cfg.get("target")

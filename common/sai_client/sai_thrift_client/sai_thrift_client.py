@@ -42,9 +42,9 @@ class SaiThriftClient(SaiClient):
         obj_type = None
         oid = None
         key = None
-        if type(obj) == str and obj.startswith("oid:0x"):
+        if isinstance(obj, str) and obj.startswith("oid:0x"):
             oid = obj
-        elif type(obj) == str:
+        elif isinstance(obj, str):
             obj = obj.split(":", 1)
             obj_type = obj[0]
             if len(obj) > 1:
@@ -57,7 +57,7 @@ class SaiThriftClient(SaiClient):
                             obj[1] = obj[1].replace("bvid", "bv_id")
                             obj[1] = obj[1].replace("mac", "mac_address")
                     key = json.loads(obj[1])
-        elif type(obj) == SaiObjType:
+        elif isinstance(obj, SaiObjType):
             obj_type = obj
         else:
             assert False, "Unsupported OID format type {}".format(type(obj))
@@ -67,8 +67,8 @@ class SaiThriftClient(SaiClient):
     def create(self, obj, attrs, do_assert=True):
         obj_type, _, key = self.obj_to_items(obj)
         status, result = self._operate('create', attrs=attrs, obj_type=obj_type, key=key)
-        if key is None and type(result) == int:
-            if type(obj_type) == str:
+        if key is None and isinstance(result, int):
+            if isinstance(obj_type, str):
                 obj_type = SaiObjType[obj_type.replace("SAI_OBJECT_TYPE_", "")]
             self.sai_type_map[result] = obj_type
 
@@ -268,7 +268,7 @@ class SaiThriftClient(SaiClient):
         entries_num = len(keys) if keys else obj_count
         statuses = [None] * entries_num
 
-        if type(obj_type) == SaiObjType:
+        if isinstance(obj_type, SaiObjType):
             obj_type = "SAI_OBJECT_TYPE_" + obj_type.name
 
         for i in range(entries_num):
@@ -289,7 +289,7 @@ class SaiThriftClient(SaiClient):
         # TODO: Provide proper implementation once Thrift bulk API is available
         statuses = [None] * len(keys)
 
-        if type(obj_type) == SaiObjType:
+        if isinstance(obj_type, SaiObjType):
             obj_type = "SAI_OBJECT_TYPE_" + obj_type.name
 
         for key in keys:
@@ -306,7 +306,7 @@ class SaiThriftClient(SaiClient):
         # TODO: Provide proper implementation once Thrift bulk API is available
         statuses = [None] * len(keys)
 
-        if type(obj_type) == SaiObjType:
+        if isinstance(obj_type, SaiObjType):
             obj_type = "SAI_OBJECT_TYPE_" + obj_type.name
 
         for i in range(len(keys)):

@@ -129,10 +129,10 @@ class SaiRedisClient(SaiClient):
 
     def create(self, obj, attrs, do_assert=True):
         vid = None
-        if type(obj) == SaiObjType:
+        if isinstance(obj, SaiObjType):
             vid = self.alloc_vid(obj)
             obj = "SAI_OBJECT_TYPE_" + obj.name + ":" + vid
-        elif type(obj) == str and obj.startswith("SAI_OBJECT_TYPE_") and ":" not in obj:
+        elif isinstance(obj, str) and obj.startswith("SAI_OBJECT_TYPE_") and ":" not in obj:
             vid = self.alloc_vid(obj)
             obj = obj + ":" + vid
         else:
@@ -240,11 +240,11 @@ class SaiRedisClient(SaiClient):
             The third element contains the list of statuses of each individual object
             creation result.
         '''
-        assert (type(obj_type) == SaiObjType) or (type(obj_type) == str and obj_type.startswith("SAI_OBJECT_TYPE_"))
+        assert isinstance(obj_type, SaiObjType) or (isinstance(obj_type, str) and obj_type.startswith("SAI_OBJECT_TYPE_"))
         assert keys is None or len(keys) == len(attrs) or len(attrs) == 1
 
         entries_num = len(keys) if keys else obj_count
-        key = "SAI_OBJECT_TYPE_" + obj_type.name if type(obj_type) == SaiObjType else obj_type
+        key = "SAI_OBJECT_TYPE_" + obj_type.name if isinstance(obj_type, SaiObjType) else obj_type
         key = key + ":" + str(entries_num)
 
         str_attr = ""
@@ -312,9 +312,9 @@ class SaiRedisClient(SaiClient):
             The second element contains the list of statuses of each individual object
             removal result.
         '''
-        assert (type(obj_type) == SaiObjType) or (type(obj_type) == str and obj_type.startswith("SAI_OBJECT_TYPE_"))
+        assert isinstance(obj_type, SaiObjType) or (isinstance(obj_type, str) and obj_type.startswith("SAI_OBJECT_TYPE_"))
 
-        key = "SAI_OBJECT_TYPE_" + obj_type.name if type(obj_type) == SaiObjType else obj_type
+        key = "SAI_OBJECT_TYPE_" + obj_type.name if isinstance(obj_type, SaiObjType) else obj_type
         key = key + ":" + str(len(keys))
 
         values = []
@@ -524,9 +524,9 @@ class SaiRedisClient(SaiClient):
         return oids_by_type
 
     def alloc_vid(self, obj_type):
-        if type(obj_type) == str and obj_type.startswith("SAI_OBJECT_TYPE_"):
+        if isinstance(obj_type, str) and obj_type.startswith("SAI_OBJECT_TYPE_"):
             obj_type = SaiObjType[obj_type.replace("SAI_OBJECT_TYPE_", "")]
-        assert type(obj_type) == SaiObjType
+        assert isinstance(obj_type, SaiObjType)
 
         vid = None
         if obj_type == SaiObjType.SWITCH:
