@@ -243,7 +243,7 @@ class ThriftConverter():
 
         {"count":1,"list":[{"key":0,"value":0}]} =>  sai_thrift_qos_map_list_t(count=1, maplist=[{"key":0,"value":0}])
         """
-        val = json.loads(value) if type(value) == str else value
+        val = json.loads(value) if isinstance(value, str) else value
         maplist = []
         for entry in val["list"]:
             key = ThriftConverter.sai_qos_map_params(entry["key"])
@@ -624,10 +624,10 @@ class ThriftConverter():
         except IOError:
             return None
 
-        if type(obj_type) == SaiObjType:
+        if isinstance(obj_type, SaiObjType):
             obj_type = "SAI_OBJECT_TYPE_" + SaiObjType(obj_type).name
         else:
-            assert type(obj_type) == str
+            assert isinstance(obj_type, str)
             assert obj_type.startswith("SAI_OBJECT_TYPE_")
 
         for item in sai_json:

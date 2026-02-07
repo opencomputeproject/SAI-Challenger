@@ -43,7 +43,7 @@ class SaiObjType(Enum):
             if variable_name == "SAI_OBJECT_TYPE_EXTENSIONS_RANGE_START":
                 continue
 
-            value = variable_value if type(variable_value) == int else variable_value.value
+            value = variable_value if isinstance(variable_value, int) else variable_value.value
             extend_enum(SaiObjType, variable_name[16:], value)
 
     @staticmethod

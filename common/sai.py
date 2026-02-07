@@ -176,10 +176,10 @@ class CommandProcessor:
 
         if obj_key is None:
             obj_id = obj_type
-        elif type(obj_key) == dict:
+        elif isinstance(obj_key, dict):
             obj_key = json.dumps(obj_key)
             obj_id = obj_type + ":" + obj_key
-        elif type(obj_key) == str and obj_key.startswith("oid:0x"):
+        elif isinstance(obj_key, str) and obj_key.startswith("oid:0x"):
             obj_id = obj_key
         else:
             assert False, f"Failed to process: {obj_type}, {obj_key}, {operation}"
@@ -351,10 +351,10 @@ class Sai():
         if obj_type is None:
             return Sai.metadata
 
-        if type(obj_type) == SaiObjType:
+        if isinstance(obj_type, SaiObjType):
             obj_type = "SAI_OBJECT_TYPE_" + SaiObjType(obj_type).name
         else:
-            assert type(obj_type) == str
+            assert isinstance(obj_type, str)
             assert obj_type.startswith("SAI_OBJECT_TYPE_")
 
         for item in Sai.metadata:
