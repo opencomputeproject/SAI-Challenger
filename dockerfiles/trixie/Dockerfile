@@ -30,7 +30,7 @@ RUN apt-get -o Acquire::Check-Valid-Until=false update && apt-get install -y \
 RUN pip3 install supervisord-dependent-startup==1.4.0
 
 # Install dependencies
-RUN apt-get install -y redis-server libhiredis0.14 python3-redis libc-ares2
+RUN apt-get install -y redis-server libhiredis1.1.0 python3-redis libc-ares2
 
 # Install sonic-swss-common & sonic-sairedis building dependencies
 RUN apt-get install -y \
