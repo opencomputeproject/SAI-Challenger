@@ -1,0 +1,44 @@
+name: sc-client-deb13-publish
+
+on:
+  push:
+    branches:
+      - 'main'
+    paths:
+      - '.github/workflows/sc-client-deb13-publish.yml'
+      - 'dockerfiles/trixie/Dockerfile.client'
+      - 'dockerfiles/trixie/Dockerfile.saithrift-client'
+      - 'common/**'
+      - 'cli/**'
+      - 'scripts/**'
+      - 'configs/**'
+      - 'setup.py'
+      - 'build.sh'
+      - '.dockerignore'
+      - 'sai.env'
+
+jobs:
+  build-sc-client:
+    name: Build SAI Challenger client image
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@v3
+    - name: Update submodules
+      run: git submodule update --init
+    - name: Build client Docker image
+      run: ./build.sh -i client -o deb13 --nosnappi
+    - name: Build client Docker image with SAI thrift
+      run: ./build.sh -i client -s thrift -o deb13 --nosnappi
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: plvisiondevs
+        password: ${{ secrets.DOCKER_TOKEN }}
+    - name: Create a tag for DockerHub
+      run: docker tag sc-client:trixie plvisiondevs/sc-client:trixie-latest
+    - name: docker push sc-client
+      run: docker push plvisiondevs/sc-client:trixie-latest
+    - name: Create a tag for DockerHub
+      run: docker tag sc-thrift-client:trixie plvisiondevs/sc-thrift-client:trixie-latest
+    - name: docker push sc-thrift-client
+      run: docker push plvisiondevs/sc-thrift-client:trixie-latest
