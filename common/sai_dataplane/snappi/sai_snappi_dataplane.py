@@ -8,6 +8,11 @@ from snappi import snappi
 BASE_TENGINE_PORT = 5555
 
 class SaiSnappiDataPlane(SaiDataPlane):
+    """
+    Snappi-based dataplane implementation for SAI testing.
+
+    Uses the Snappi API for traffic generation and packet capture in SAI test scenarios.
+    """
 
     def __init__(self, cfg):
         self.alias = cfg['alias']

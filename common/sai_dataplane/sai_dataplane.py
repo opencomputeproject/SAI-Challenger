@@ -1,4 +1,9 @@
 class SaiDataPlane():
+    """
+    Base class for SAI dataplane implementations.
+
+    Provides interface for packet transmission and reception in SAI test scenarios.
+    """
     def __init__(self, cfg):
         self.config = cfg
         # used by dataplane_redirect() from ptf_testutils

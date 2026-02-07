@@ -13,6 +13,12 @@ default_n_timeout = 2
 
 
 class SnappiDataPlaneUtilsWrapper:
+    """
+    Wrapper for Snappi dataplane utilities.
+
+    Provides a singleton pattern wrapper around Snappi dataplane instances
+    for packet verification and testing utilities.
+    """
 
     _instances = {}
 
