@@ -23,9 +23,8 @@ class SaiPhy(Sai):
         # Load SKU configuration if any
         if self.sku is not None:
             try:
-                f = open(f"{self.asic_dir}/{self.target}/sku/{self.sku}.json")
-                self.sku_config = json.load(f)
-                f.close()
+                with open(f"{self.asic_dir}/{self.target}/sku/{self.sku}.json") as f:
+                    self.sku_config = json.load(f)
             except Exception as e:
                 assert False, f"{e}"
 
