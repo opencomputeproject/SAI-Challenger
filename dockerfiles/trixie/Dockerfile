@@ -67,6 +67,7 @@ WORKDIR /sai
 
 # Install ptf_nn_agent dependencies
 RUN apt-get install -y libffi-dev \
+        && pip3 install pycparser cffi \
         && wget https://github.com/nanomsg/nanomsg/archive/1.0.0.tar.gz \
         && tar xvfz 1.0.0.tar.gz \
         && cd nanomsg-1.0.0 \
