@@ -22,7 +22,7 @@ SAI Challenger has many applications. A partial list is below:
 * CI/CD and regression testing of virtual or physical DUTs
 * DUT performance testing using HW traffic generators
 * PHY (transceiver) device testing & qualification
-* Ubrella test harness for native SAI Challenger test cases as well as legacy SAI-PTF test cases, using a single-pane-of-glass to reduce testbed complexity.
+* Umbrella test harness for native SAI Challenger test cases as well as legacy SAI-PTF test cases, using a single-pane-of-glass to reduce testbed complexity.
 
 # Use-case scenarios
 SAI Challenger has many configuration options, resulting in numerous permutations of:

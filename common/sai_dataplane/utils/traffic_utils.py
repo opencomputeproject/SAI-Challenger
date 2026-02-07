@@ -106,9 +106,9 @@ def compare_pkts2(pkt1, pkt2):
 
 # number - count of iterations to add step to ip
 def get_next_ip(ip="192.168.0.1", step="0.0.0.1", number=1) -> str:
-    if ip == None:
+    if ip is None:
         ip = "192.168.0.1"
-    if step == None:
+    if step is None:
         step = "0.0.0.1"
     if number == 0:
         return str(ipaddress.IPv4Address(ip))
@@ -117,9 +117,9 @@ def get_next_ip(ip="192.168.0.1", step="0.0.0.1", number=1) -> str:
 
 # number - count of iterations to add step to mac
 def get_next_mac(mac="00:00:00:AA:BB:01", step="00:00:00:00:00:01", number=1) -> str:
-    if mac == None:
+    if mac is None:
         mac = "00:00:00:AA:BB:01"
-    if step == None:
+    if step is None:
         step = "00:00:00:00:00:01"
     if number == 0:
         return str(macaddress.MAC(mac)).replace('-', ':')

@@ -17,7 +17,7 @@ class SaiHostifDataPlane(SaiPtfDataPlane):
         _config = copy.deepcopy(config)
         _config["platform"] = "nn"
         self.dataplane = DataPlane(_config)
-        if _config["log_dir"] == None:
+        if _config["log_dir"] is None:
             filename = os.path.splitext(_config["log_file"])[0] + '.pcap'
             self.dataplane.start_pcap(filename)
 

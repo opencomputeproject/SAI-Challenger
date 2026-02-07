@@ -9,19 +9,46 @@ from saichallenger.common.sai_data import SaiObjType
 
 class CommandProcessor:
     """
-    Allow setup scaled configurations with referenced objects.
-    Contain reference object cache.
-    When objects are referenced they are regenerating missing keys/oids from object cache
+    Process SAI commands with object reference substitution.
+
+    This class enables setup of scaled configurations by maintaining a registry
+    of created objects and substituting object references (variables starting with '$')
+    with actual OIDs or keys during command processing.
+
+    Attributes:
+        objects_registry: Dictionary mapping object names to their metadata
+        sai: Reference to parent Sai instance
     """
 
     class SubstitutionError(RuntimeError):
-        ...
+        """Raised when object reference substitution fails."""
+        pass
 
     def __init__(self, sai: 'Sai'):
+        """
+        Initialize CommandProcessor.
+
+        Args:
+            sai: Parent Sai instance for API calls
+        """
         self.objects_registry = {}
         self.sai = sai
 
     def _substitute_from_object_registry(self, obj, *args, **kwargs):
+        """
+        Substitute a reference variable with its actual value from registry.
+
+        Args:
+            obj: Object reference (string starting with '$') or regular value
+            *args: Optional default value as positional argument
+            **kwargs: Optional default value as 'default' keyword argument
+
+        Returns:
+            Registry entry for the referenced object
+
+        Raises:
+            SubstitutionError: If object is not found in registry and no default provided
+        """
         if isinstance(obj, str) and obj.startswith('$'):
             store_name = obj[1:]
             try:
@@ -35,6 +62,19 @@ class CommandProcessor:
             raise self.SubstitutionError
 
     def substitute_command_from_object_registry(self, command):
+        """
+        Substitute all object references in a command with actual values.
+
+        Processes command dictionary and replaces:
+        - '$VARIABLE' references in keys with actual OIDs/keys
+        - '$VARIABLE' references in attributes with actual values
+
+        Args:
+            command: Dictionary containing command with possible references
+
+        Returns:
+            New command dictionary with all references substituted
+        """
         substituted_command = {}
         store_name = command.get("name")
 
@@ -86,7 +126,9 @@ class CommandProcessor:
         return substituted_command
 
     def process_command(self, command):
-        '''
+        """
+        Process a single SAI command (create, set, get, or remove).
+
         Command examples:
             {
                 "name": "vip1"
@@ -105,7 +147,16 @@ class CommandProcessor:
                 "type" : "SAI_OBJECT_TYPE_DASH_ACL_GROUP",
                 "attributes" : [ "SAI_DASH_ACL_GROUP_ATTR_IP_ADDR_FAMILY", "SAI_IP_ADDR_FAMILY_IPV4" ]
             },
-        '''
+
+        Args:
+            command: Dictionary with 'name', 'op', 'type', and optional 'key'/'attributes'
+
+        Returns:
+            Created OID for 'create', attribute values for 'get', or operation status
+
+        Raises:
+            AssertionError: If command format is invalid or operation fails
+        """
         store_name = command.get("name")
         assert store_name, f"Invalid command {command}. Entry name is undefined"
 

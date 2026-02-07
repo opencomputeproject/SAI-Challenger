@@ -3,9 +3,22 @@ from aenum import Enum, extend_enum
 
 
 class SaiObjType(Enum):
+    """
+    Enumeration for SAI object types.
+
+    This enum can be dynamically populated from either Thrift headers
+    or SAI JSON metadata files.
+    """
 
     @staticmethod
     def generate_from_thrift():
+        """
+        Generate SAI object type enum from Thrift headers.
+
+        Dynamically populates the enum with SAI_OBJECT_TYPE_* constants
+        found in the sai_thrift.sai_headers module. Skips if enum is
+        already populated.
+        """
         # Skip generation in case enum is not empty
         if list(SaiObjType):
             return
@@ -35,6 +48,12 @@ class SaiObjType(Enum):
 
     @staticmethod
     def generate_from_json():
+        """
+        Generate SAI object type enum from JSON metadata.
+
+        Dynamically populates the enum with SAI object types from
+        /etc/sai/sai.json metadata file. Skips if enum is already populated.
+        """
         # Skip generation in case enum is not empty
         if list(SaiObjType):
             return
@@ -50,6 +69,12 @@ class SaiObjType(Enum):
 
 
 class SaiStatus(Enum):
+    """
+    Enumeration for SAI operation status codes.
+
+    Contains all standard SAI status codes including success, failures,
+    and attribute-specific error codes.
+    """
     SUCCESS                     =  0x00000000
     FAILURE                     = -0x00000001
     NOT_SUPPORTED               = -0x00000002
@@ -87,22 +112,39 @@ class SaiStatus(Enum):
 
 
 class SaiData:
+    """
+    Wrapper class for SAI data returned from API calls.
+
+    Provides convenient methods to parse and extract data in various
+    formats (JSON, OID, lists, counters, etc.).
+    """
+
     def __init__(self, data):
+        """
+        Initialize SaiData with raw data.
+
+        Args:
+            data: Raw data string from SAI API call
+        """
         self.data = data
 
     def raw(self):
+        """Return raw data string."""
         return self.data
 
     def to_json(self):
+        """Parse and return data as JSON."""
         return json.loads(self.data)
 
     def oid(self, idx=1):
+        """Extract OID from JSON data at the specified index."""
         value = self.to_json()[idx]
         if "oid:" in value:
             return value
         return "oid:0x0"
 
     def to_list(self, idx=1):
+        """Convert data at index to a list by parsing format 'count:item1,item2,...'."""
         value = self.to_json()[idx]
         n_items, _, items = value.partition(':')
         if n_items.isdigit():
@@ -111,6 +153,7 @@ class SaiData:
         return []
 
     def oids(self, idx=1):
+        """Extract list of OIDs from data at the specified index."""
         value = self.to_list(idx)
         if len(value) > 0:
             if "oid:" in value[0]:
@@ -118,6 +161,7 @@ class SaiData:
         return []
 
     def counters(self):
+        """Parse statistics counters into a dictionary."""
         i = 0
         cntrs_dict = {}
         value = self.to_json()
@@ -127,12 +171,14 @@ class SaiData:
         return cntrs_dict
 
     def value(self):
+        """Extract the value from JSON data, normalizing boolean values."""
         if self.to_json()[1].lower() in ["true", "false"]:
             # Thrift to Redis compatibility
             return self.to_json()[1].lower()
         return self.to_json()[1]
 
     def uint32(self):
+        """Extract and return value as unsigned 32-bit integer."""
         v = self.value()
         assert v.isdigit(), f"Unexpected {self.to_json()[0]} value {v} "
         return int(v)

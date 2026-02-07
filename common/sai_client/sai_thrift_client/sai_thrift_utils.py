@@ -120,7 +120,7 @@ class ThriftConverter():
                            'macsecsak', 'macsecauthkey', 'macsecsalt' ]:
             if isinstance(value, str):
                 actual_value = getattr(sai_headers, value, None)
-                if actual_value != None:
+                if actual_value is not None:
                     return actual_value
             if value == '':
                 return 0
@@ -393,7 +393,7 @@ class ThriftConverter():
         "16"       => 16
         "oid:0x10" => 16
         """
-        if oid == None or oid == 'null' or oid == 'SAI_NULL_OBJECT_ID':
+        if oid is None or oid == 'null' or oid == 'SAI_NULL_OBJECT_ID':
             return 0
         if isinstance(oid, str) and oid.startswith('oid:0x'):
             return int(oid[4:], 16)
@@ -412,7 +412,7 @@ class ThriftConverter():
         # FIXME: Sometimes, thrift_spec returns "None" for both "oid" and "int"
         #        E.g., For SAI_OBJECT_TYPE_DIRECTION_LOOKUP_ENTRY, thrift_spec will be
         #        (1, 10, 'switch_id', None, None), (2, 8, 'vni', None, None)
-        if thrift_spec == None:
+        if thrift_spec is None:
             return "oid"
 
         attribute_value_spec = getattr(ttypes, f'sai_thrift_attribute_value_t').thrift_spec
@@ -441,7 +441,7 @@ class ThriftConverter():
             return str(value) if value > 0 else str(value & 0xFFFF)
         elif value_type in [ 's32' ]:
             actual_value = ThriftConverter.get_str_by_enum(obj_type, attr_name, value)
-            if actual_value != None:
+            if actual_value is not None:
                 return actual_value
             return str(value)
         elif value_type in [ 'booldata' ]:
@@ -497,7 +497,7 @@ class ThriftConverter():
         for ii in range(object_list.count):
             if value_type == 's32list' and attr_name is not None:
                 actual_value = ThriftConverter.get_str_by_enum(obj_type, attr_name, listvar[ii])
-                if actual_value != None:
+                if actual_value is not None:
                     listvar[ii] = actual_value
             result += str(listvar[ii])
             result += ","
@@ -644,7 +644,7 @@ class ThriftConverter():
         meta = ThriftConverter.get_sai_meta(obj_type, attr_name)
         if meta is None:
             return None
-        if meta['properties'].get('values') == None:
+        if meta['properties'].get('values') is None:
             return str(enum_value)
         for k, v in meta['properties']['values'].items():
             if v == enum_value:

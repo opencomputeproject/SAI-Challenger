@@ -94,7 +94,7 @@ class SaiPtfDataPlane(SaiDataPlane, TestCase):
     def setUp(self):
         assert self.dataplane is not None
         self.dataplane.flush()
-        if config["log_dir"] != None:
+        if config["log_dir"] is not None:
             filename = os.path.join(config["log_dir"], str(self)) + ".pcap"
             self.dataplane.start_pcap(filename)
 
@@ -106,7 +106,7 @@ class SaiPtfDataPlane(SaiDataPlane, TestCase):
 
     def tearDown(self):
         assert self.dataplane is not None
-        if config["log_dir"] != None:
+        if config["log_dir"] is not None:
             self.dataplane.stop_pcap()
 
     @staticmethod
@@ -135,7 +135,7 @@ class SaiPtfDataPlane(SaiDataPlane, TestCase):
 
         logging.getLogger().setLevel(DEBUG_LEVELS[config["debug"]])
 
-        if config["log_dir"] != None:
+        if config["log_dir"] is not None:
             if os.path.exists(config["log_dir"]):
                 import shutil
                 shutil.rmtree(config["log_dir"])
@@ -234,7 +234,7 @@ class SaiPtfDataPlane(SaiDataPlane, TestCase):
 
         # Set up the dataplane
         dataplane_instance = ptf.dataplane.DataPlane(config)
-        if config["log_dir"] == None:
+        if config["log_dir"] is None:
             filename = os.path.splitext(config["log_file"])[0] + '.pcap'
             dataplane_instance.start_pcap(filename)
 
