@@ -17,6 +17,7 @@ RUN git clone https://github.com/sonic-net/sonic-sairedis.git \
         && cd SAI && git fetch origin \
         && git checkout ${SAI_ID} \
         && cd meta \
+        && sed -i '/HTML_TIMESTAMP/d; /FORMULA_TRANSPARENT/d; /DOT_FONTNAME/d; /DOT_FONTSIZE/d; /DOT_TRANSPARENT/d' Doxyfile \
         && make saimetadata.h \
         && make saimetadata.c \
         && cp saimetadatautils.c /sai/gen_attr_list/ \
