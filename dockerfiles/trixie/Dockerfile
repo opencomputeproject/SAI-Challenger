@@ -52,6 +52,7 @@ RUN git clone --recursive https://github.com/sonic-net/sonic-swss-common \
         && cd sonic-swss-common \
         && . /sai.env \
         && git checkout ${SWSS_COMMON_ID} \
+        && sed -i '/#include <vector>/a #include <cstdint>' common/events.h \
         && ./autogen.sh \
         && export DEB_BUILD_PROFILES="nopython2 noyangmod" \
         && export DEB_DH_SHLIBDEPS_ARGS_ALL=--dpkg-shlibdeps-params=--ignore-missing-info \
