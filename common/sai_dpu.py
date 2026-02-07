@@ -14,7 +14,6 @@ class SaiDpu(Sai):
     def __init__(self, cfg):
         cfg["client"]["config"]["asic_type"] = "dpu"
         super().__init__(cfg)
-        print("__INIT__")
         self.switch_oid = "oid:0x0"
         self.dot1q_br_oid = "oid:0x0"
         self.default_vlan_oid = "oid:0x0"
