@@ -32,6 +32,8 @@ RUN git clone https://github.com/sonic-net/sonic-sairedis.git \
         && find . -type f -name Makefile.am | xargs sed -ri 's/^TESTS =/# TESTS =/' \
         && sed -i "s/^SUBDIRS = py2 py3/SUBDIRS = py3/" pyext/Makefile.am \
         && ./autogen.sh \
+        # Disable -Werror=overloaded-virtual for GCC 14 in Debian 13
+        && export DEB_CXXFLAGS_APPEND="-Wno-error=overloaded-virtual" \
         && dpkg-buildpackage -us -uc -b -Psyncd,vs,nopython2 --jobs=auto \
         && cd .. \
         && dpkg -i libsaimetadata_1.0.0_amd64.deb \
