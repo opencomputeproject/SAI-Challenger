@@ -1,8 +1,8 @@
-import importlib
-import os
-import json
 import glob
+import importlib
+import json
 import logging
+import os
 import sys
 
 from saichallenger.common.sai_dut import SaiDut
@@ -24,9 +24,8 @@ class SaiTestbedMeta():
         self.base_dir = base_dir
         try:
             testbed_file = name if name.endswith(".json") else f"{base_dir}/testbeds/{name}.json"
-            f = open(testbed_file)
-            self.config = json.load(f)
-            f.close()
+            with open(testbed_file) as f:
+                self.config = json.load(f)
         except Exception as e:
             assert False, f"{e}"
 
@@ -94,9 +93,8 @@ class SaiTestbedMeta():
             asic_dir = self.get_asic_dir(self.base_dir, cfg["asic"], asic_type)
             try:
                 target = cfg.get("target")
-                f = open(f"{asic_dir}/{target}/sku/{sku}.json")
-                sku = json.load(f)
-                f.close()
+                with open(f"{asic_dir}/{target}/sku/{sku}.json") as f:
+                    sku = json.load(f)
             except Exception as e:
                 assert False, f"{e}"
         return sku

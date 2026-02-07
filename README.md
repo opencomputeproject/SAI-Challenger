@@ -49,7 +49,7 @@ See [Use-Cases README](usecases/README.md) for more details.
 
 ## Porting SAI Challenger to new platform
 
-For more information on how port SAI Challenger to new platform, please refer to [Porting Guide](docs/porting_guide.md) document.
+For more information on how to port SAI Challenger to new platform, please refer to [Porting Guide](docs/porting_guide.md) document.
 
 ## SAI Challenger internals
 
