@@ -1,0 +1,89 @@
+FROM debian:trixie-slim
+
+## Make apt-get non-interactive
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Generate the pip configuration file
+RUN mkdir -p /root/.config/pip \
+        && echo "[global]" > /root/.config/pip/pip.conf \
+        && echo "break-system-packages = true" >> /root/.config/pip/pip.conf
+
+COPY sai.env /
+
+# Install generic packages
+RUN apt-get -o Acquire::Check-Valid-Until=false update && apt-get install -y \
+        apt-utils \
+        vim \
+        curl \
+        wget \
+        iproute2 \
+        unzip \
+        git \
+        procps \
+        build-essential \
+        graphviz \
+        doxygen \
+        aspell \
+        python3-pip \
+        rsyslog \
+        supervisor
+
+# Add support for supervisord to handle startup dependencies
+RUN pip3 install supervisord-dependent-startup==1.4.0
+
+# Install generic packages
+RUN apt-get install -y \
+        libtemplate-perl \
+        libconst-fast-perl \
+        libmoosex-aliases-perl \
+        libnamespace-autoclean-perl \
+        libgetopt-long-descriptive-perl \
+        aspell-en bison flex g++ \
+        libboost-all-dev libevent-dev libssl-dev \
+        libpython3-dev libpcap-dev
+
+WORKDIR /sai
+
+RUN apt-get install -y pkg-config \
+    && wget "http://archive.apache.org/dist/thrift/0.11.0/thrift-0.11.0.tar.gz" \
+    && tar -xf thrift-0.11.0.tar.gz \
+    && cd thrift-0.11.0 \
+    && ./bootstrap.sh \
+    && ./configure --prefix=/usr --with-cpp --with-python \
+        --with-qt4=no --with-qt5=no --with-csharp=no --with-java=no --with-erlang=no \
+        --with-nodejs=no --with-lua=no --with-per=no --with-php=no --with-dart=no \
+        --with-ruby=no --with-haskell=no --with-go=no --with-rs=no --with-haxe=no \
+        --with-dotnetcore=no --with-d=no \
+    && make && make install \
+    && pip3 install ctypesgen lib/py \
+    && cd /sai \
+    && rm -rf thrift-0.11.0 thrift-0.11.0.tar.gz ;
+
+ENV SAITHRIFTV2=y
+ENV GEN_SAIRPC_OPTS="-cve"
+ENV SAIRPC_EXTRA_LIBS="-L/usr/local/lib/ -lpthread"
+
+ARG GIT_UNAME
+ARG GIT_TOKEN
+
+RUN . /sai.env \
+    && git clone ${SAI_URL} SAI \
+    && cd SAI && git fetch origin \
+    && git checkout ${SAI_ID} \
+    && cd meta \
+    # Workaround for SAI issue #2018
+    && sed -i 's/\.\/checkenumlock.sh/#\.\/checkenumlock.sh/g' Makefile \
+    && make all libsaimetadata.so libsai.so \
+    && cp libsaimetadata.so /usr/lib \
+    && cp libsai.so /usr/lib \
+    && cd .. \
+    && mkdir /usr/include/sai/ \
+    && cp ./inc/sai*.h /usr/include/sai/ \
+    && cp ./experimental/sai*.h /usr/include/sai/ \
+    && make saithrift-install
+
+WORKDIR /sai-challenger
+
+COPY configs/server/supervisord.conf.thrift /etc/supervisor/conf.d/supervisord.conf
+
+CMD ["/usr/bin/supervisord"]

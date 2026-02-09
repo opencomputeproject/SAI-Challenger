@@ -1,0 +1,42 @@
+name: sc-server-deb13-publish
+
+on:
+  push:
+    branches:
+      - 'main'
+    paths:
+      - '.github/workflows/sc-server-deb13-publish.yml'
+      - 'dockerfiles/trixie/Dockerfile.server'
+      - 'npu/broadcom/BCM56850/saivs/Dockerfile.server'
+      - 'npu/broadcom/BCM56850/saivs/configs/sai.profile'
+      - 'npu/broadcom/BCM56850/saivs/configs/lanemap.ini'
+      - 'npu/broadcom/BCM56850/saivs/configs/server/supervisord.conf'
+      - 'common/**'
+      - 'cli/**'
+      - 'scripts/**'
+      - 'configs/**'
+      - 'setup.py'
+      - 'build.sh'
+      - '.dockerignore'
+      - 'sai.env'
+
+jobs:
+  build-sc-server:
+    name: Build SAI Challenger server image
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@v3
+    - name: Update submodules
+      run: git submodule update --init
+    - name: Build server Docker image
+      run: ./build.sh -i server -o deb13
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: plvisiondevs
+        password: ${{ secrets.DOCKER_TOKEN }}
+    - name: Create a tag for DockerHub
+      run: docker tag sc-server-trident2-saivs:trixie plvisiondevs/sc-server-trident2-saivs:trixie-latest
+    - name: docker push sc-server
+      run: docker push plvisiondevs/sc-server-trident2-saivs:trixie-latest
+
