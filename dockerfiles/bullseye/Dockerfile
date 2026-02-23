@@ -51,7 +51,7 @@ RUN git clone --recursive https://github.com/sonic-net/sonic-swss-common \
         && . /sai.env \
         && git checkout ${SWSS_COMMON_ID} \
         && ./autogen.sh \
-        && export DEB_BUILD_PROFILES=nopython2 \
+        && export DEB_BUILD_PROFILES="nopython2 noyangmod" \
         && dpkg-buildpackage -us -uc -b --jobs=auto \
         && cd .. \
         && dpkg -i libswsscommon_1.0.0_amd64.deb \
