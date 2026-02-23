@@ -391,38 +391,10 @@ class Sai():
                                 "sai_port_lane_latch_status_list_t", "sai_latch_status_t",
                                 "sai_port_frequency_offset_ppm_list_t", "sai_port_snr_list_t",
                                 "sai_acl_chain_list_t", "sai_port_pam4_eye_values_list_t",
-                                "sai_prbs_per_lane_rx_status_list_t",
-                                "sai_prbs_per_lane_rx_state_list_t",
-                                "sai_prbs_per_lane_bit_error_rate_list_t",
-                                "sai_pointer_t",
-                                "sai_uint16_range_t",
-                                "sai_uint8_range_t"
+                                "sai_prbs_per_lane_rx_state_list_t", "sai_prbs_per_lane_bit_error_rate_list_t",
+                                "sai_prbs_per_lane_rx_status_list_t", "sai_pointer_t", 
+                                "sai_uint16_range_t", "sai_uint8_range_t"
                             ]
-        unsupported_attrs = [
-                                "SAI_PORT_ATTR_PORT_PG_PKT_DROP_STATUS",
-                                "SAI_PORT_ATTR_LLR_MODE_LOCAL",
-                                "SAI_PORT_ATTR_LLR_MODE_REMOTE",
-                                "SAI_PORT_ATTR_LLR_PROFILE",
-                                "SAI_PORT_ATTR_LLR_TX_STATUS",
-                                "SAI_PORT_ATTR_LLR_RX_STATUS",
-                                "SAI_PORT_ATTR_LINK_UP_DEBOUNCE_TIMEOUT",
-                                "SAI_PORT_ATTR_INT_DELETE",
-                                "SAI_PORT_ATTR_INT_METADATA",
-                                "SAI_PORT_ATTR_PTP_PEER_MEAN_PATH_DELAY",
-                                "SAI_SWITCH_ATTR_FAST_LINKUP_POLLING_TIMEOUT_RANGE",
-                                "SAI_SWITCH_ATTR_FAST_LINKUP_POLLING_TIMEOUT",
-                                "SAI_SWITCH_ATTR_FAST_LINKUP_GUARD_TIMEOUT_RANGE",
-                                "SAI_SWITCH_ATTR_FAST_LINKUP_GUARD_TIMEOUT",
-                                "SAI_SWITCH_ATTR_FAST_LINKUP_BER_THRESHOLD",
-                                "SAI_SWITCH_ATTR_DASH_CAPS_MAX_METER_BUCKET_COUNT_PER_ENI",
-                                "SAI_SWITCH_ATTR_DASH_CAPS_HA_SCOPE_LEVEL",
-                                "SAI_SWITCH_ATTR_DASH_CAPS_HA_OWNER_NEEDED",
-                                "SAI_SWITCH_ATTR_HA_SET_EVENT_NOTIFY",
-                                "SAI_SWITCH_ATTR_HA_SCOPE_EVENT_NOTIFY",
-                                "SAI_SWITCH_ATTR_FLOW_BULK_GET_SESSION_EVENT_NOTIFY"
-                            ]
-        if attr in unsupported_attrs:
-            return f"SAI-C internal failure. Unsupported attr {attr}", None
         if attr_type == "sai_object_list_t":
             status, data = self.get(obj, [attr, "1:oid:0x0"], do_assert)
             if status == "SAI_STATUS_BUFFER_OVERFLOW":
