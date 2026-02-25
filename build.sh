@@ -40,7 +40,7 @@ print-help() {
     echo "     Target device with this NPU"
     echo "  -s [redis|thrift]"
     echo "     SAI interface"
-    echo "  -o [buster|bullseye|bookworm|trixie]"
+    echo "  -o [bullseye|bookworm|trixie]"
     echo "     Docker image base OS"
     echo "  -g [uname git_hub_token]"
     echo "     Provide the private repository user name and token"

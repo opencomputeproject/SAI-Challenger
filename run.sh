@@ -44,7 +44,7 @@ print-help() {
     echo "  -r Remove Docker after run"
     echo "  -s [redis|thrift]"
     echo "     SAI interface"
-    echo "  -o [buster|bullseye|bookworm|trixie]"
+    echo "  -o [bullseye|bookworm|trixie]"
     echo "     Docker image base OS"
     echo
     exit 0

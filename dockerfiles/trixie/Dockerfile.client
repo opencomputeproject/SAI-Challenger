@@ -43,9 +43,6 @@ RUN . /sai.env \
         && git clone ${SAI_URL} SAI \
         && cd SAI \
         && git checkout ${SAI_ID} \
-        && wget -O /tmp/sai-deb13-fix.patch https://github.com/opencomputeproject/SAI/commit/56c9c039666b0d8bc40e8ff04c048d7b0e39ca75.patch \
-        && git apply /tmp/sai-deb13-fix.patch \
-        && rm /tmp/sai-deb13-fix.patch \
         && cd meta \
         && make saimetadata.h \
         && make saimetadata.c \
