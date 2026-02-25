@@ -73,7 +73,7 @@ RUN pip3 install pytest pytest_dependency pytest-html aenum pdbpp macaddress cli
 
 ARG NOSNAPPI
 RUN if [ "$NOSNAPPI" != "y" ]; then \
-        pip3 install snappi==0.11.14 snappi_ixnetwork==0.9.1 ; \
+        pip3 install snappi==1.45.0 snappi_ixnetwork==1.45.0 ; \
     fi
 
 # Fix invoke/loader.py:3: DeprecationWarning caused by load_module()
