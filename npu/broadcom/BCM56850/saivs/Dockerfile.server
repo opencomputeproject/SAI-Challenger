@@ -27,7 +27,14 @@ RUN git clone https://github.com/sonic-net/sonic-sairedis.git \
         && find . -type f -name Makefile.am | xargs sed -ri 's/^TESTS =/# TESTS =/' \
         && sed -i "s/^SUBDIRS = py2 py3/SUBDIRS = py3/" pyext/Makefile.am \
         && ./autogen.sh \
-        && export DEB_CXXFLAGS_APPEND="-Wno-error=overloaded-virtual -Wno-error=template-id-cdtor" \
+        && GCC_VER=$(gcc -dumpversion | cut -d. -f1) \
+        && if [ "$GCC_VER" -ge 14 ]; then \
+                export DEB_CXXFLAGS_APPEND="-Wno-error=overloaded-virtual -Wno-error=template-id-cdtor"; \
+                sed -i 's/ConcurrentQueue<T>(const ConcurrentQueue<T>&)/ConcurrentQueue(const ConcurrentQueue<T>\&)/g' syncd/ConcurrentQueue.h; \
+                sed -i '/#include <string>/a #include <cstdint>' syncd/RequestShutdownCommandLineOptions.h; \
+           else \
+                export DEB_CXXFLAGS_APPEND="-Wno-error=overloaded-virtual"; \
+           fi \
         && dpkg-buildpackage -us -uc -b -Psyncd,vs,nopython2 --jobs=auto \
         && cd .. \
         && dpkg -i libsaimetadata_1.0.0_amd64.deb \
