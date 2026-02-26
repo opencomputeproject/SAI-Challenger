@@ -66,13 +66,21 @@ ENV SAIRPC_EXTRA_LIBS="-L/usr/local/lib/ -lpthread"
 ARG GIT_UNAME
 ARG GIT_TOKEN
 
-RUN . /sai.env \
+RUN curl -fsSL https://downloads.sourceforge.net/project/doxygen/rel-1.8.17/doxygen-1.8.17.linux.bin.tar.gz | tar xz \
+    && mv doxygen-1.8.17/bin/doxygen /usr/bin/doxygen \
+    && rm -rf doxygen-1.8.17 \
+    && . /sai.env \
     && git clone ${SAI_URL} SAI \
-    && cd SAI && git fetch origin \
+    && cd SAI \
     && git checkout ${SAI_ID} \
     && cd meta \
+    && sed -i '/HTML_TIMESTAMP/d; /FORMULA_TRANSPARENT/d; /DOT_FONTNAME/d; /DOT_FONTSIZE/d; /DOT_TRANSPARENT/d' Doxyfile \
     # Workaround for SAI issue #2018
     && sed -i 's/\.\/checkenumlock.sh/#\.\/checkenumlock.sh/g' Makefile \
+    # Workaround for unknown Thrift types
+    && sed -i '/croak colored.*Unknown type/s/.*/        warn "Skipping unknown type"; return "u64";/' gensairpc.pl \
+    # Original workaround: sai_attribute_value_t is a union
+    && sed -i "s/'struct_' );/'struct_' ); %struct_def = ExtractStructInfo( \$name, 'union_' ) unless %struct_def;/" gensairpc.pl \
     && make all libsaimetadata.so libsai.so \
     && cp libsaimetadata.so /usr/lib \
     && cp libsai.so /usr/lib \

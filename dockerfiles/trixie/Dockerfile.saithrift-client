@@ -35,24 +35,35 @@ ARG GIT_UNAME
 ARG GIT_TOKEN
 
 RUN apt-get -o Acquire::Check-Valid-Until=false update \
-        && apt install -y ${SAIGEN_DEPS} \
-        && . /sai/sai.env \
-        && git clone ${SAI_URL} SAI \
-        && cd SAI \
-        && git checkout ${SAI_ID} \
-        && cp inc/* /usr/include/sai/ \
-        && cp experimental/* /usr/include/sai/ \
-        && cd test/saithriftv2/ \
-        && make meta \
-        && make install-pylib \
-        && cd dist \
-        && tar zxf saithrift-0.9.tar.gz \
-        && cd saithrift-0.9 \
-        && python3 setup.py install \
-        && cd /sai \
-        && rm -rf SAI \
-        && apt purge -y ${SAIGEN_DEPS} \
-        && rm -rf /var/lib/apt/lists/*
+    && apt install -y ${SAIGEN_DEPS} curl \
+    && curl -fsSL https://downloads.sourceforge.net/project/doxygen/rel-1.8.17/doxygen-1.8.17.linux.bin.tar.gz | tar xz \
+    && mv doxygen-1.8.17/bin/doxygen /usr/bin/doxygen \
+    && rm -rf doxygen-1.8.17 \
+    && . /sai/sai.env \
+    && git clone ${SAI_URL} SAI \
+    && cd SAI \
+    && git checkout ${SAI_ID} \
+    && cp inc/* /usr/include/sai/ \
+    && cp experimental/* /usr/include/sai/ \
+    && cd meta \
+    && sed -i '/HTML_TIMESTAMP/d; /FORMULA_TRANSPARENT/d; /DOT_FONTNAME/d; /DOT_FONTSIZE/d; /DOT_TRANSPARENT/d' Doxyfile \
+    # Workaround for SAI issue #2018
+    && sed -i 's/\.\/checkenumlock.sh/#\.\/checkenumlock.sh/g' Makefile \
+    # Workaround for unknown Thrift types
+    && sed -i '/croak colored.*Unknown type/s/.*/        warn "Skipping unknown type"; return "u64";/' gensairpc.pl \
+    # Original workaround: sai_attribute_value_t is a union
+    && sed -i "s/'struct_' );/'struct_' ); %struct_def = ExtractStructInfo( \$name, 'union_' ) unless %struct_def;/" gensairpc.pl \
+    && cd ../test/saithriftv2/ \
+    && make meta \
+    && make install-pylib \
+    && cd dist \
+    && tar zxf saithrift-0.9.tar.gz \
+    && cd saithrift-0.9 \
+    && python3 setup.py install \
+    && cd /sai \
+    && rm -rf SAI \
+    && apt purge -y ${SAIGEN_DEPS} curl \
+    && rm -rf /var/lib/apt/lists/*
 
 # Temporary workaround fix until the OCP community fixes the sai_adapter.py generation
 RUN SAI_ADAPTER_PY=$(find / -name sai_adapter.py 2>/dev/null | head -n 1) \
