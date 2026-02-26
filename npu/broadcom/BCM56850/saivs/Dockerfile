@@ -23,10 +23,24 @@ RUN git clone https://github.com/sonic-net/sonic-sairedis.git \
         && cp saimetadata.c /sai/gen_attr_list/ \
         && cp saiserialize.c /sai/gen_attr_list/ \
         && cd ../.. \
+        && GCC_VER=$(gcc -dumpversion | cut -d. -f1) \
+        && if [ "$GCC_VER" -ge 14 ]; then \
+                # Fix C++20 template-id constructor syntax (GCC 14 / Debian 13)
+                sed -i 's/ConcurrentQueue<T>(const ConcurrentQueue<T>&)/ConcurrentQueue(const ConcurrentQueue<T>\&)/' syncd/ConcurrentQueue.h; \
+                # Fix missing cstdint include (GCC 14 / Debian 13)
+                sed -i '/#include <string>/a #include <cstdint>' syncd/RequestShutdownCommandLineOptions.h; \
+           fi \
         # Exclude sairedis tests that require Redis to be running
         && find . -type f -name Makefile.am | xargs sed -ri 's/^TESTS =/# TESTS =/' \
         && sed -i "s/^SUBDIRS = py2 py3/SUBDIRS = py3/" pyext/Makefile.am \
         && ./autogen.sh \
+        # Disable -Werror=overloaded-virtual and -Werror=template-id-cdtor for GCC 14
+        && GCC_VER=$(gcc -dumpversion | cut -d. -f1) \
+        && if [ "$GCC_VER" -ge 14 ]; then \
+                export DEB_CXXFLAGS_APPEND="-Wno-error=overloaded-virtual -Wno-error=template-id-cdtor"; \
+           else \
+                export DEB_CXXFLAGS_APPEND="-Wno-error=overloaded-virtual"; \
+           fi \
         && dpkg-buildpackage -us -uc -b -Psyncd,vs,nopython2 --jobs=auto \
         && cd .. \
         && dpkg -i libsaimetadata_1.0.0_amd64.deb \

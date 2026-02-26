@@ -22,6 +22,8 @@ base_os_map["deb11"]="bullseye"
 base_os_map["bullseye"]="bullseye"
 base_os_map["deb12"]="bookworm"
 base_os_map["bookworm"]="bookworm"
+base_os_map["deb13"]="trixie"
+base_os_map["trixie"]="trixie"
 
 
 print-help() {
@@ -42,7 +44,7 @@ print-help() {
     echo "  -r Remove Docker after run"
     echo "  -s [redis|thrift]"
     echo "     SAI interface"
-    echo "  -o [bullseye|bookworm]"
+    echo "  -o [bullseye|bookworm|trixie]"
     echo "     Docker image base OS"
     echo
     exit 0
