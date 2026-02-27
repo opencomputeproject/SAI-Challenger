@@ -37,9 +37,9 @@ jobs:
       run: docker tag sc-trident2-saivs:trixie plvisiondevs/sc-trident2-saivs:trixie-latest
     - name: docker push sc-trident2-saivs
       run: docker push plvisiondevs/sc-trident2-saivs:trixie-latest
-    - name: Build standalone Docker image with SAI thrift
-      run: ./build.sh -i standalone -s thrift -o deb13
-    - name: Create a tag for DockerHub
-      run: docker tag sc-thrift-trident2-saivs:trixie plvisiondevs/sc-thrift-trident2-saivs:trixie-latest
-    - name: docker push sc-thrift-trident2-saivs
-      run: docker push plvisiondevs/sc-thrift-trident2-saivs:trixie-latest
+    # - name: Build standalone Docker image with SAI thrift
+    #   run: ./build.sh -i standalone -s thrift -o deb13
+    # - name: Create a tag for DockerHub
+    #   run: docker tag sc-thrift-trident2-saivs:trixie plvisiondevs/sc-thrift-trident2-saivs:trixie-latest
+    # - name: docker push sc-thrift-trident2-saivs
+    #   run: docker push plvisiondevs/sc-thrift-trident2-saivs:trixie-latest
