@@ -66,20 +66,10 @@ RUN git clone --recursive https://github.com/sonic-net/sonic-swss-common \
 WORKDIR /sai
 
 # Install ptf_nn_agent dependencies
-RUN apt-get install -y libffi-dev \
-        && pip3 install pycparser cffi \
-        && wget https://github.com/nanomsg/nanomsg/archive/1.0.0.tar.gz \
-        && tar xvfz 1.0.0.tar.gz \
-        && cd nanomsg-1.0.0 \
-        && mkdir -p build \
-        && cd build \
-        && cmake .. \
-        && make install \
-        && ldconfig \
-        && cd ../.. \
-        && rm -rf 1.0.0.tar.gz nanomsg-1.0.0 \
-        && pip3 install nnpy
-
+RUN apt-get install -y libffi-dev libnanomsg-dev \
+        && pip3 install "cffi<2.0.0" pycparser \
+        && pip3 install --no-build-isolation nnpy
+        
 # Update Redis configuration:
 # - Enable keyspace notifications as per sonic-swss-common/README.md
 # - Do not daemonize redis-server since supervisord will manage it
@@ -111,7 +101,7 @@ RUN echo "#mock" > /ptf/ptf && pip3 install /ptf
 COPY scripts/gen_attr_list /sai/gen_attr_list
 
 # Install SAI-C dependencies
-RUN pip3 install pytest pytest_dependency pytest-html aenum pdbpp macaddress click==8.0
+RUN pip3 install pytest pytest_dependency pytest-html aenum pdbpp macaddress click==8.0 zombie-imp
 RUN apt-get install -y python3-paramiko
 
 # Fix invoke/loader.py:3: DeprecationWarning caused by load_module()

@@ -32,6 +32,12 @@ RUN apt-get install -y pkg-config \
 ENV SAITHRIFTV2=y
 ENV platform=vs
 
+RUN wget -O doxygen-1.9.4.linux.bin.tar.gz "https://sourceforge.net/projects/doxygen/files/rel-1.9.4/doxygen-1.9.4.linux.bin.tar.gz/download" \
+    && tar -xf doxygen-1.9.4.linux.bin.tar.gz \
+    && cp doxygen-1.9.4/bin/doxygen /usr/bin/doxygen \
+    && cp doxygen-1.9.4/bin/doxygen /usr/local/bin/doxygen \
+    && rm -rf doxygen-1.9.4*
+
 RUN git clone https://github.com/sonic-net/sonic-sairedis.git \
         && cd sonic-sairedis \
         && . /sai.env \
@@ -45,8 +51,9 @@ RUN git clone https://github.com/sonic-net/sonic-sairedis.git \
         # Exclude sairedis tests that require Redis to be running
         && find . -type f -name Makefile.am | xargs sed -ri 's/^TESTS =/# TESTS =/' \
         && sed -i "s/^SUBDIRS = py2 py3/SUBDIRS = py3/" pyext/Makefile.am \
+        && sed -i '/#include <string>/a #include <cstdint>' syncd/RequestShutdownCommandLineOptions.h \
         && ./autogen.sh \
-        && dpkg-buildpackage -us -uc -b -Psyncd,vs,nopython2 --jobs=auto \
+        && DEB_CXXFLAGS_APPEND="-Wno-error" dpkg-buildpackage -us -uc -b -Psyncd,vs,nopython2 --jobs=auto \
         && cd .. \
         && dpkg -i libsaimetadata_1.0.0_amd64.deb \
         && dpkg -i libsaimetadata-dev_1.0.0_amd64.deb \
@@ -56,13 +63,15 @@ RUN git clone https://github.com/sonic-net/sonic-sairedis.git \
         && dpkg -i syncd-vs_1.0.0_amd64.deb \
         && rm -f *.deb \
         && cd sonic-sairedis/SAI \
+        && sed -i '/^use strict;/a use feature "switch";\nno warnings "experimental::smartmatch";\nno warnings "deprecated";' meta/gensairpc.pl \
         && cp meta/saimetadatautils.c /sai/gen_attr_list/ \
         && cp meta/saimetadata.c /sai/gen_attr_list/ \
         && cp meta/saiserialize.c /sai/gen_attr_list/ \
         && GEN_SAIRPC_OPTS="-cve" make saithrift-install \
         && mv /sai/sonic-sairedis/tests /sai/ \
         && rm -rf /sai/sonic-sairedis/* \
-        && mv /sai/tests /sai/sonic-sairedis/
+        && mv /sai/tests /sai/sonic-sairedis/ \
+        && find /usr/local/lib -name sai_adapter.py -exec bash -c 'grep -o "SAI_[A-Z0-9_]*_STAT_[A-Z0-9_]*" "$1" | sort -u | awk "{print \$1 \" = 0\"}" > /tmp/patch.py && cat "$1" >> /tmp/patch.py && mv /tmp/patch.py "$1"' _ {} +
 
 # Build SAI attributes metadata JSON generator and generate /etc/sai/sai.json
 RUN cd /sai/gen_attr_list \
