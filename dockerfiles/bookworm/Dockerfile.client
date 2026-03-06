@@ -90,6 +90,13 @@ RUN wget https://github.com/nanomsg/nanomsg/archive/1.0.0.tar.gz \
         && rm -rf 1.0.0.tar.gz nanomsg-1.0.0 \
         && pip3 install nnpy
 
+# Install Allure framework
+RUN apt-get update && apt-get install -y default-jre-headless \
+       && wget https://github.com/allure-framework/allure2/releases/download/2.33.0/allure_2.33.0-1_all.deb \
+       && dpkg -i allure_2.33.0-1_all.deb \
+       && rm allure_2.33.0-1_all.deb \
+       && pip3 install allure-pytest
+
 # Install ptf_nn_agent and PTF helpers (required by sai_dataplane.py)
 COPY ptf/ptf_nn/ptf_nn_agent.py      /ptf/ptf_nn/ptf_nn_agent.py
 COPY ptf/setup.py                    /ptf/setup.py
