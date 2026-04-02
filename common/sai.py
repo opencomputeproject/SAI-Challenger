@@ -443,7 +443,7 @@ class Sai():
             status, data = self.get(obj, [attr, "0.0.0.0&mask:0.0.0.0"], do_assert)
         elif attr_type == "sai_ip6_t":
             status, data = self.get(obj, [attr, "::0.0.0.0&mask:0:0:0:0:0:0:0:0"], do_assert)
-        elif attr_type == "sai_u32_range_t" or attr_type == "sai_s32_range_t":
+        elif attr_type.endswith("_range_t"):
             status, data = self.get(obj, [attr, "0,0"], do_assert)
         elif attr_type in unsupported_types:
             status, data = f"SAI-C internal failure. Unsupported type {attr_type}", None

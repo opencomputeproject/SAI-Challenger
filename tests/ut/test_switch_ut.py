@@ -4,6 +4,20 @@ from saichallenger.common.sai import Sai
 
 switch_attrs = Sai.get_obj_attrs("SAI_OBJECT_TYPE_SWITCH")
 
+unsupported_thrift_attrs = [
+    "SAI_SWITCH_ATTR_DASH_CAPS_MAX_METER_BUCKET_COUNT_PER_ENI",
+    "SAI_SWITCH_ATTR_DASH_CAPS_HA_SCOPE_LEVEL",
+    "SAI_SWITCH_ATTR_DASH_CAPS_HA_OWNER_NEEDED",
+    "SAI_SWITCH_ATTR_HA_SET_EVENT_NOTIFY",
+    "SAI_SWITCH_ATTR_HA_SCOPE_EVENT_NOTIFY",
+    "SAI_SWITCH_ATTR_FLOW_BULK_GET_SESSION_EVENT_NOTIFY",
+    "SAI_SWITCH_ATTR_IPSEC_ENABLE_POST",
+    "SAI_SWITCH_ATTR_SWITCH_MACSEC_POST_STATUS_NOTIFY",
+    "SAI_SWITCH_ATTR_SWITCH_IPSEC_POST_STATUS_NOTIFY",
+    "SAI_SWITCH_ATTR_DEFAULT_CPU_INGRESS_BUFFER_POOL"
+]
+
+switch_attrs = [a for a in switch_attrs if a[0] not in unsupported_thrift_attrs]
 
 @pytest.fixture(scope="module", autouse=True)
 def skip_all(testbed_instance):
