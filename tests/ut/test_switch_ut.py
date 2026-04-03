@@ -4,7 +4,6 @@ from saichallenger.common.sai import Sai
 
 switch_attrs = Sai.get_obj_attrs("SAI_OBJECT_TYPE_SWITCH")
 
-
 @pytest.fixture(scope="module", autouse=True)
 def skip_all(testbed_instance):
     testbed = testbed_instance
