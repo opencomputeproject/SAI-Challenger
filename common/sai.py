@@ -390,7 +390,10 @@ class Sai():
                                 "sai_port_err_status_list_t", "sai_fabric_port_reachability_t",
                                 "sai_port_lane_latch_status_list_t", "sai_latch_status_t",
                                 "sai_port_frequency_offset_ppm_list_t", "sai_port_snr_list_t",
-                                "sai_acl_chain_list_t", "sai_port_pam4_eye_values_list_t"
+                                "sai_acl_chain_list_t", "sai_port_pam4_eye_values_list_t",
+                                "sai_prbs_per_lane_rx_status_list_t",
+                                "sai_prbs_per_lane_rx_state_list_t",
+                                "sai_prbs_per_lane_bit_error_rate_list_t"
                             ]
         if attr_type == "sai_object_list_t":
             status, data = self.get(obj, [attr, "1:oid:0x0"], do_assert)
@@ -443,7 +446,7 @@ class Sai():
             status, data = self.get(obj, [attr, "0.0.0.0&mask:0.0.0.0"], do_assert)
         elif attr_type == "sai_ip6_t":
             status, data = self.get(obj, [attr, "::0.0.0.0&mask:0:0:0:0:0:0:0:0"], do_assert)
-        elif attr_type == "sai_u32_range_t" or attr_type == "sai_s32_range_t":
+        elif attr_type.endswith("_range_t"):
             status, data = self.get(obj, [attr, "0,0"], do_assert)
         elif attr_type in unsupported_types:
             status, data = f"SAI-C internal failure. Unsupported type {attr_type}", None

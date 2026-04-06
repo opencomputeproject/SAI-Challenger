@@ -12,6 +12,35 @@ from sai_thrift import sai_rpc, sai_adapter
 from thrift.protocol import TBinaryProtocol
 from thrift.transport import TSocket, TTransport
 
+# Thrift adapter/saiserver cannot handle these yet.
+THRIFT_UNSUPPORTED_ATTRS = frozenset(
+    {
+        "SAI_SWITCH_ATTR_DASH_CAPS_MAX_METER_BUCKET_COUNT_PER_ENI",
+        "SAI_SWITCH_ATTR_DASH_CAPS_HA_SCOPE_LEVEL",
+        "SAI_SWITCH_ATTR_DASH_CAPS_HA_OWNER_NEEDED",
+        "SAI_SWITCH_ATTR_HA_SET_EVENT_NOTIFY",
+        "SAI_SWITCH_ATTR_HA_SCOPE_EVENT_NOTIFY",
+        "SAI_SWITCH_ATTR_FLOW_BULK_GET_SESSION_EVENT_NOTIFY",
+        "SAI_SWITCH_ATTR_IPSEC_ENABLE_POST",
+        "SAI_SWITCH_ATTR_SWITCH_MACSEC_POST_STATUS_NOTIFY",
+        "SAI_SWITCH_ATTR_SWITCH_IPSEC_POST_STATUS_NOTIFY",
+        "SAI_SWITCH_ATTR_DEFAULT_CPU_INGRESS_BUFFER_POOL",
+    }
+)
+
+
+def first_blocked_thrift_attr(attrs):
+    """Return first blocked SAI attribute name in flat [name, value, ...] attrs, or None."""
+    if not attrs:
+        return None
+    for i in range(0, len(attrs), 2):
+        name = attrs[i]
+        if name == "NULL":
+            continue
+        if isinstance(name, str) and name in THRIFT_UNSUPPORTED_ATTRS:
+            return name
+    return None
+
 
 class SaiThriftClient(SaiClient):
     """Thrift SAI client implementation to wrap low level SAI calls"""
@@ -156,6 +185,9 @@ class SaiThriftClient(SaiClient):
             object_key[f'{obj_type_name}_oid'] = oid
         sai_thrift_function = getattr(sai_adapter, f'sai_thrift_{operation}_{obj_type_name}')
 
+        if first_blocked_thrift_attr(attrs):
+            return 'SAI_STATUS_NOT_SUPPORTED', None
+
         attr_kwargs = dict(ThriftConverter.convert_attributes_to_thrift(attrs))
 
         result = sai_thrift_function(self.thrift_client, **object_key, **attr_kwargs)
@@ -179,6 +211,9 @@ class SaiThriftClient(SaiClient):
         obj_type_name = self.get_object_type(oid, default=obj_type).name.lower()
         object_key = ThriftConverter.convert_key_to_thrift(obj_type_name, key)
         sai_thrift_function = getattr(sai_adapter, f'sai_thrift_{operation}_{obj_type_name}_attribute')
+
+        if first_blocked_thrift_attr(attrs):
+            return 'SAI_STATUS_NOT_SUPPORTED', []
 
         result = []
 
