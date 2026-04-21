@@ -75,6 +75,10 @@ Run SAI Challenger testcases:
 ```sh
 ./exec.sh -i client pytest --testbed=saivs_client_server -v -k "test_l2_basic"
 ```
+**NOTE:** Ensure that `saivs_client_server.json` contains the correct IP of the server container. To obtain the container's IP use the following command:
+```sh
+docker inspect -f '{{.NetworkSettings.Networks.bridge.IPAddress}}' sc-server-trident2-saivs-run
+```
 
 Run SAI Challenger testcases and generate HTML report:
 ```sh
