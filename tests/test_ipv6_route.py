@@ -21,6 +21,37 @@ def on_prev_test_failure(prev_test_failed, npu):
         npu.reset()
 
 
+@pytest.fixture(scope="module", autouse=True)
+def ipv6_route_switch_init(npu):
+    original_src_mac = npu.get(
+        npu.switch_oid, ["SAI_SWITCH_ATTR_SRC_MAC_ADDRESS"]
+    ).value()
+    original_admin_state = {}
+
+    for port_oid in npu.port_oids:
+        original_admin_state[port_oid] = npu.get(
+            port_oid, ["SAI_PORT_ATTR_ADMIN_STATE"]
+        ).value()
+        npu.set(port_oid, ["SAI_PORT_ATTR_ADMIN_STATE", "true"])
+
+    if npu.run_traffic:
+        cpu_port_oid = npu.get(
+            npu.switch_oid, ["SAI_SWITCH_ATTR_CPU_PORT"]
+        ).oid()
+        for port_oid in npu.port_oids:
+            if port_oid != cpu_port_oid:
+                npu.assert_port_oper_up(port_oid, tout=200)
+
+    yield
+
+    npu.set(
+        npu.switch_oid,
+        ["SAI_SWITCH_ATTR_SRC_MAC_ADDRESS", original_src_mac],
+    )
+    for port_oid, admin_state in original_admin_state.items():
+        npu.set(port_oid, ["SAI_PORT_ATTR_ADMIN_STATE", admin_state])
+
+
 @pytest.fixture
 def port_rif_topology(npu):
     """
