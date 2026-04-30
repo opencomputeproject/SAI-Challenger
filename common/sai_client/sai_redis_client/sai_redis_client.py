@@ -24,6 +24,7 @@ class SaiRedisClient(SaiClient):
 
         self.r = redis.Redis(host=self.server_ip, port=self.port, db=self.asic_db)
         self.loglevel_db = redis.Redis(host=self.server_ip, port=self.port, db=3)
+        self.counters_db = redis.Redis(host=self.server_ip, port=self.port, db=2, decode_responses=True)
 
     def cleanup(self):
         '''
@@ -443,6 +444,76 @@ class SaiRedisClient(SaiClient):
         if do_assert:
             assert status[2] == 'SAI_STATUS_SUCCESS'
         return status[2]
+    
+    def set_counter_group(self, group_name, attrs, do_assert=True):
+        if type(attrs) != str:
+            for i, attr in enumerate(attrs):
+                if type(attr) != str:
+                    attrs[i] = json.dumps(attr)
+            attrs = json.dumps(attrs)
+
+        status = self.operate(group_name, attrs, "Sset_counter_group")
+        status[2] = status[2].decode("utf-8")
+
+        if do_assert:
+            assert status[2] == 'SAI_STATUS_SUCCESS'
+        return status[2]
+
+    def del_counter_group(self, group_name, attrs, do_assert=True):
+        if type(attrs) != str:
+            for i, attr in enumerate(attrs):
+                if type(attr) != str:
+                    attrs[i] = json.dumps(attr)
+            attrs = json.dumps(attrs)
+
+        status = self.operate(group_name, attrs, "Ddel_counter_group")
+        status[2] = status[2].decode("utf-8")
+
+        if do_assert:
+            assert status[2] == 'SAI_STATUS_SUCCESS'
+        return status[2]
+
+    def start_counter_poll(self, obj, attrs, do_assert=True):
+        if type(attrs) != str:
+            for i, attr in enumerate(attrs):
+                if type(attr) != str:
+                    attrs[i] = json.dumps(attr)
+            attrs = json.dumps(attrs)
+
+        status = self.operate(obj, attrs, "Sstart_poll")
+        status[2] = status[2].decode("utf-8")
+
+        if do_assert:
+            assert status[2] == 'SAI_STATUS_SUCCESS'
+        return status[2]
+
+    def stop_counter_poll(self, obj, attrs, do_assert=True):
+        if type(attrs) != str:
+            for i, attr in enumerate(attrs):
+                if type(attr) != str:
+                    attrs[i] = json.dumps(attr)
+            attrs = json.dumps(attrs)
+        
+        status = self.operate(obj, attrs, "Dstop_poll")
+        status[2] = status[2].decode("utf-8")
+
+        if do_assert:
+            assert status[2] == 'SAI_STATUS_SUCCESS'
+        return status[2]
+    
+    def get_counter(self, obj, attrs):
+        counter = "COUNTERS:" + obj
+        exists = self.counters_db.exists(counter)
+        if attrs:
+            data = self.counters_db.hmget(counter, attrs)
+            return exists, dict(zip(attrs, data))
+        else:
+            data = self.counters_db.hgetall(counter)
+            return exists, data
+
+    def del_counter(self, obj):
+        counter = "COUNTERS:" + obj
+        return self.counters_db.delete(counter)
 
     def flush_fdb_entries(self, obj, attrs=None):
         """
