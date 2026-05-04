@@ -136,13 +136,12 @@ def test_ipv6_host_route(npu, dataplane, port_rif_topology):
     route_prefix = None
 
     try:
-        neighbor_key = {
-            "switch_id": npu.switch_oid,
-            "rif_id": rif_oid_eg,
-            "ip_address": str(ipv6_host),
-        }
         neighbor_obj = "SAI_OBJECT_TYPE_NEIGHBOR_ENTRY:" + json.dumps(
-            neighbor_key, separators=(",", ":")
+            {
+                "switch_id":  npu.switch_oid,
+                "rif_id":     rif_oid_eg,
+                "ip_address": str(ipv6_host),
+            }
         )
         npu.create(neighbor_obj, ["SAI_NEIGHBOR_ENTRY_ATTR_DST_MAC_ADDRESS", neighbor_mac])
 
@@ -213,13 +212,12 @@ def test_ipv6_lpm_route(npu, dataplane, port_rif_topology):
     route_prefix = None
 
     try:
-        neighbor_key = {
-            "switch_id": npu.switch_oid,
-            "rif_id": rif_oid_eg,
-            "ip_address": str(ipv6_host),
-        }
         neighbor_obj = "SAI_OBJECT_TYPE_NEIGHBOR_ENTRY:" + json.dumps(
-            neighbor_key, separators=(",", ":")
+            {
+                "switch_id":  npu.switch_oid,
+                "rif_id":     rif_oid_eg,
+                "ip_address": str(ipv6_host),
+            }
         )
         npu.create(neighbor_obj, ["SAI_NEIGHBOR_ENTRY_ATTR_DST_MAC_ADDRESS", neighbor_mac])
 
@@ -289,13 +287,12 @@ def test_ipv6_prefix_lengths(npu, dataplane, port_rif_topology):
     neighbor_obj = None
 
     try:
-        neighbor_key = {
-            "switch_id": npu.switch_oid,
-            "rif_id": rif_oid_eg,
-            "ip_address": str(ipv6_host),
-        }
         neighbor_obj = "SAI_OBJECT_TYPE_NEIGHBOR_ENTRY:" + json.dumps(
-            neighbor_key, separators=(",", ":")
+            {
+                "switch_id":  npu.switch_oid,
+                "rif_id":     rif_oid_eg,
+                "ip_address": str(ipv6_host),
+            }
         )
         npu.create(neighbor_obj, ["SAI_NEIGHBOR_ENTRY_ATTR_DST_MAC_ADDRESS", neighbor_mac])
 
@@ -414,23 +411,21 @@ def test_ipv6_ecmp_host(npu, dataplane):
             ],
         )
 
-        neighbor_key1 = {
-            "switch_id": npu.switch_oid,
-            "rif_id": rif_oid_eg1,
-            "ip_address": str(ipv6_host),
-        }
         neighbor_obj1 = "SAI_OBJECT_TYPE_NEIGHBOR_ENTRY:" + json.dumps(
-            neighbor_key1, separators=(",", ":")
+            {
+                "switch_id":  npu.switch_oid,
+                "rif_id":     rif_oid_eg1,
+                "ip_address": str(ipv6_host),
+            }
         )
         npu.create(neighbor_obj1, ["SAI_NEIGHBOR_ENTRY_ATTR_DST_MAC_ADDRESS", neighbor_mac1])
 
-        neighbor_key2 = {
-            "switch_id": npu.switch_oid,
-            "rif_id": rif_oid_eg2,
-            "ip_address": str(ipv6_host),
-        }
         neighbor_obj2 = "SAI_OBJECT_TYPE_NEIGHBOR_ENTRY:" + json.dumps(
-            neighbor_key2, separators=(",", ":")
+            {
+                "switch_id":  npu.switch_oid,
+                "rif_id":     rif_oid_eg2,
+                "ip_address": str(ipv6_host),
+            }
         )
         npu.create(neighbor_obj2, ["SAI_NEIGHBOR_ENTRY_ATTR_DST_MAC_ADDRESS", neighbor_mac2])
 
@@ -608,13 +603,12 @@ def test_ipv6_ecmp_lpm(npu, dataplane):
             )
 
         for i in range(3):
-            neighbor_key = {
-                "switch_id": npu.switch_oid,
-                "rif_id": rif_oid_eg[i],
-                "ip_address": str(ipv6_dst),
-            }
             neighbor_obj[i] = "SAI_OBJECT_TYPE_NEIGHBOR_ENTRY:" + json.dumps(
-                neighbor_key, separators=(",", ":")
+                {
+                    "switch_id":  npu.switch_oid,
+                    "rif_id":     rif_oid_eg[i],
+                    "ip_address": str(ipv6_dst),
+                }
             )
             npu.create(neighbor_obj[i], ["SAI_NEIGHBOR_ENTRY_ATTR_DST_MAC_ADDRESS", neighbor_macs[i]])
 
@@ -807,13 +801,12 @@ def test_ipv6_lag_route(npu, dataplane):
             ],
         )
 
-        neighbor_key = {
-            "switch_id": npu.switch_oid,
-            "rif_id": rif_oid_lag,
-            "ip_address": str(ipv6_dst),
-        }
         neighbor_obj = "SAI_OBJECT_TYPE_NEIGHBOR_ENTRY:" + json.dumps(
-            neighbor_key, separators=(",", ":")
+            {
+                "switch_id":  npu.switch_oid,
+                "rif_id":     rif_oid_lag,
+                "ip_address": str(ipv6_dst),
+            }
         )
         npu.create(neighbor_obj, ["SAI_NEIGHBOR_ENTRY_ATTR_DST_MAC_ADDRESS", neighbor_mac])
 
@@ -967,13 +960,12 @@ def test_ipv6_neighbor_mac_update(npu, dataplane):
             ],
         )
 
-        neighbor_key = {
-            "switch_id": npu.switch_oid,
-            "rif_id": rif_oid_vlan,
-            "ip_address": str(ipv6_host),
-        }
         neighbor_obj = "SAI_OBJECT_TYPE_NEIGHBOR_ENTRY:" + json.dumps(
-            neighbor_key, separators=(",", ":")
+            {
+                "switch_id":  npu.switch_oid,
+                "rif_id":     rif_oid_vlan,
+                "ip_address": str(ipv6_host),
+            }
         )
         npu.create(neighbor_obj, ["SAI_NEIGHBOR_ENTRY_ATTR_DST_MAC_ADDRESS", neighbor_mac1])
 
@@ -999,13 +991,12 @@ def test_ipv6_neighbor_mac_update(npu, dataplane):
                 ipv6_hlim=64,
             )
 
-            fdb_key1 = {
-                "switch_id": npu.switch_oid,
-                "mac_address": neighbor_mac1,
-                "bv_id": vlan_oid,
-            }
             fdb_entry1 = "SAI_OBJECT_TYPE_FDB_ENTRY:" + json.dumps(
-                fdb_key1, separators=(",", ":")
+                {
+                    "switch_id":   npu.switch_oid,
+                    "mac_address": neighbor_mac1,
+                    "bv_id":       vlan_oid,
+                }
             )
             npu.create(fdb_entry1,
                 [
@@ -1036,13 +1027,12 @@ def test_ipv6_neighbor_mac_update(npu, dataplane):
             send_packet(dataplane, 0, pkt)
             verify_no_packet(dataplane, exp_pkt_old, 1)
 
-            fdb_key2 = {
-                "switch_id": npu.switch_oid,
-                "mac_address": neighbor_mac2,
-                "bv_id": vlan_oid,
-            }
             fdb_entry2 = "SAI_OBJECT_TYPE_FDB_ENTRY:" + json.dumps(
-                fdb_key2, separators=(",", ":")
+                {
+                    "switch_id":   npu.switch_oid,
+                    "mac_address": neighbor_mac2,
+                    "bv_id":       vlan_oid,
+                }
             )
             npu.create(fdb_entry2,
                 [
@@ -1178,13 +1168,12 @@ def test_ipv6_neighbor_fdb_ageout(npu, dataplane):
             ],
         )
 
-        neighbor_key = {
-            "switch_id": npu.switch_oid,
-            "rif_id": rif_oid_vlan,
-            "ip_address": str(ipv6_host),
-        }
         neighbor_obj = "SAI_OBJECT_TYPE_NEIGHBOR_ENTRY:" + json.dumps(
-            neighbor_key, separators=(",", ":")
+            {
+                "switch_id":  npu.switch_oid,
+                "rif_id":     rif_oid_vlan,
+                "ip_address": str(ipv6_host),
+            }
         )
         npu.create(neighbor_obj, ["SAI_NEIGHBOR_ENTRY_ATTR_DST_MAC_ADDRESS", neighbor_mac])
 
@@ -1217,13 +1206,12 @@ def test_ipv6_neighbor_fdb_ageout(npu, dataplane):
                 ipv6_hlim=63,
             )
 
-            fdb_key = {
-                "switch_id": npu.switch_oid,
-                "mac_address": neighbor_mac,
-                "bv_id": vlan_oid,
-            }
             fdb_entry = "SAI_OBJECT_TYPE_FDB_ENTRY:" + json.dumps(
-                fdb_key, separators=(",", ":")
+                {
+                    "switch_id":   npu.switch_oid,
+                    "mac_address": neighbor_mac,
+                    "bv_id":       vlan_oid,
+                }
             )
             npu.create(fdb_entry,
                 [
@@ -1241,7 +1229,11 @@ def test_ipv6_neighbor_fdb_ageout(npu, dataplane):
             verify_no_packet(dataplane, exp_pkt, 1)
 
             fdb_entry = "SAI_OBJECT_TYPE_FDB_ENTRY:" + json.dumps(
-                fdb_key, separators=(",", ":")
+                {
+                    "switch_id":   npu.switch_oid,
+                    "mac_address": neighbor_mac,
+                    "bv_id":       vlan_oid,
+                }
             )
             npu.create(fdb_entry,
                 [
@@ -1384,13 +1376,12 @@ def test_ipv6_ecmp_group_member_update(npu, dataplane):
             )
 
         for i in range(2):
-            neighbor_key = {
-                "switch_id": npu.switch_oid,
-                "rif_id": rif_oid_eg[i],
-                "ip_address": str(ipv6_host),
-            }
             neighbor_obj[i] = "SAI_OBJECT_TYPE_NEIGHBOR_ENTRY:" + json.dumps(
-                neighbor_key, separators=(",", ":")
+                {
+                    "switch_id":  npu.switch_oid,
+                    "rif_id":     rif_oid_eg[i],
+                    "ip_address": str(ipv6_host),
+                }
             )
             npu.create(neighbor_obj[i], ["SAI_NEIGHBOR_ENTRY_ATTR_DST_MAC_ADDRESS", neighbor_macs[i]])
             nh_oid[i] = npu.create(SaiObjType.NEXT_HOP,
@@ -1437,13 +1428,12 @@ def test_ipv6_ecmp_group_member_update(npu, dataplane):
                 "SAI_ROUTER_INTERFACE_ATTR_VIRTUAL_ROUTER_ID", vrf_oid,
             ],
         )
-        neighbor_key3 = {
-            "switch_id": npu.switch_oid,
-            "rif_id": rif_oid_eg[2],
-            "ip_address": str(ipv6_host),
-        }
         neighbor_obj[2] = "SAI_OBJECT_TYPE_NEIGHBOR_ENTRY:" + json.dumps(
-            neighbor_key3, separators=(",", ":")
+            {
+                "switch_id":  npu.switch_oid,
+                "rif_id":     rif_oid_eg[2],
+                "ip_address": str(ipv6_host),
+            }
         )
         npu.create(neighbor_obj[2], ["SAI_NEIGHBOR_ENTRY_ATTR_DST_MAC_ADDRESS", neighbor_macs[2]])
         nh_oid[2] = npu.create(SaiObjType.NEXT_HOP,
