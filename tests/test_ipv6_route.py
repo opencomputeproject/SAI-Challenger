@@ -85,12 +85,9 @@ def port_rif_topology(npu):
 
         yield {"vrf_oid": vrf_oid, "rif_in": rif_oid_in, "rif_eg": rif_oid_eg}
     finally:
-        if rif_oid_eg is not None:
-            npu.remove(rif_oid_eg)
-        if rif_oid_in is not None:
-            npu.remove(rif_oid_in)
-        if vrf_oid is not None:
-            npu.remove(vrf_oid)
+        npu.remove(rif_oid_eg)
+        npu.remove(rif_oid_in)
+        npu.remove(vrf_oid)
 
         for idx in range(2):
             bp_oid = npu.create(SaiObjType.BRIDGE_PORT,
@@ -178,12 +175,9 @@ def test_ipv6_host_route(npu, dataplane, port_rif_topology):
             verify_packets(dataplane, exp_pkt, [1])
 
     finally:
-        if route_prefix is not None:
-            npu.remove_route(route_prefix, vrf_oid)
-        if nh_oid is not None:
-            npu.remove(nh_oid)
-        if neighbor_obj is not None:
-            npu.remove(neighbor_obj)
+        npu.remove_route(route_prefix, vrf_oid)
+        npu.remove(nh_oid)
+        npu.remove(neighbor_obj)
 
 
 def test_ipv6_lpm_route(npu, dataplane, port_rif_topology):
@@ -254,12 +248,9 @@ def test_ipv6_lpm_route(npu, dataplane, port_rif_topology):
             verify_packets(dataplane, exp_pkt, [1])
 
     finally:
-        if route_prefix is not None:
-            npu.remove_route(route_prefix, vrf_oid)
-        if nh_oid is not None:
-            npu.remove(nh_oid)
-        if neighbor_obj is not None:
-            npu.remove(neighbor_obj)
+        npu.remove_route(route_prefix, vrf_oid)
+        npu.remove(nh_oid)
+        npu.remove(neighbor_obj)
 
 
 def test_ipv6_prefix_lengths(npu, dataplane, port_rif_topology):
@@ -340,10 +331,8 @@ def test_ipv6_prefix_lengths(npu, dataplane, port_rif_topology):
                 verify_no_packet(dataplane, exp_pkt, 1)
 
     finally:
-        if nh_oid is not None:
-            npu.remove(nh_oid)
-        if neighbor_obj is not None:
-            npu.remove(neighbor_obj)
+        npu.remove(nh_oid)
+        npu.remove(neighbor_obj)
 
 
 def test_ipv6_ecmp_host(npu, dataplane):
@@ -503,30 +492,18 @@ def test_ipv6_ecmp_host(npu, dataplane):
             assert port_count[2] >= 1
 
     finally:
-        if route_prefix is not None and vrf_oid is not None:
-            npu.remove_route(route_prefix, vrf_oid)
-        if member_oid2 is not None:
-            npu.remove(member_oid2)
-        if member_oid1 is not None:
-            npu.remove(member_oid1)
-        if ecmp_oid is not None:
-            npu.remove(ecmp_oid)
-        if nh_oid2 is not None:
-            npu.remove(nh_oid2)
-        if nh_oid1 is not None:
-            npu.remove(nh_oid1)
-        if neighbor_obj2 is not None:
-            npu.remove(neighbor_obj2)
-        if neighbor_obj1 is not None:
-            npu.remove(neighbor_obj1)
-        if rif_oid_eg2 is not None:
-            npu.remove(rif_oid_eg2)
-        if rif_oid_eg1 is not None:
-            npu.remove(rif_oid_eg1)
-        if rif_oid_in is not None:
-            npu.remove(rif_oid_in)
-        if vrf_oid is not None:
-            npu.remove(vrf_oid)
+        npu.remove_route(route_prefix, vrf_oid)
+        npu.remove(member_oid2)
+        npu.remove(member_oid1)
+        npu.remove(ecmp_oid)
+        npu.remove(nh_oid2)
+        npu.remove(nh_oid1)
+        npu.remove(neighbor_obj2)
+        npu.remove(neighbor_obj1)
+        npu.remove(rif_oid_eg2)
+        npu.remove(rif_oid_eg1)
+        npu.remove(rif_oid_in)
+        npu.remove(vrf_oid)
 
         for idx in range(3):
             bp_oid = npu.create(SaiObjType.BRIDGE_PORT,
@@ -692,26 +669,18 @@ def test_ipv6_ecmp_lpm(npu, dataplane):
             assert port_count[3] >= min_per_path
 
     finally:
-        if route_prefix is not None and vrf_oid is not None:
-            npu.remove_route(route_prefix, vrf_oid)
+        npu.remove_route(route_prefix, vrf_oid)
         for i in range(3):
-            if member_oid[i] is not None:
-                npu.remove(member_oid[i])
-        if ecmp_oid is not None:
-            npu.remove(ecmp_oid)
+            npu.remove(member_oid[i])
+        npu.remove(ecmp_oid)
         for i in range(3):
-            if nh_oid[i] is not None:
-                npu.remove(nh_oid[i])
+            npu.remove(nh_oid[i])
         for i in range(3):
-            if neighbor_obj[i] is not None:
-                npu.remove(neighbor_obj[i])
+            npu.remove(neighbor_obj[i])
         for i in range(3):
-            if rif_oid_eg[i] is not None:
-                npu.remove(rif_oid_eg[i])
-        if rif_oid_in is not None:
-            npu.remove(rif_oid_in)
-        if vrf_oid is not None:
-            npu.remove(vrf_oid)
+            npu.remove(rif_oid_eg[i])
+        npu.remove(rif_oid_in)
+        npu.remove(vrf_oid)
 
         for idx in range(4):
             bp_oid = npu.create(SaiObjType.BRIDGE_PORT,
@@ -843,24 +812,15 @@ def test_ipv6_lag_route(npu, dataplane):
             verify_any_packet_any_port(dataplane, [exp_pkt], [1, 2])
 
     finally:
-        if route_prefix is not None and vrf_oid is not None:
-            npu.remove_route(route_prefix, vrf_oid)
-        if nh_oid is not None:
-            npu.remove(nh_oid)
-        if neighbor_obj is not None:
-            npu.remove(neighbor_obj)
-        if rif_oid_lag is not None:
-            npu.remove(rif_oid_lag)
-        if lag_member2 is not None:
-            npu.remove(lag_member2)
-        if lag_member1 is not None:
-            npu.remove(lag_member1)
-        if lag_oid is not None:
-            npu.remove(lag_oid)
-        if rif_oid_in is not None:
-            npu.remove(rif_oid_in)
-        if vrf_oid is not None:
-            npu.remove(vrf_oid)
+        npu.remove_route(route_prefix, vrf_oid)
+        npu.remove(nh_oid)
+        npu.remove(neighbor_obj)
+        npu.remove(rif_oid_lag)
+        npu.remove(lag_member2)
+        npu.remove(lag_member1)
+        npu.remove(lag_oid)
+        npu.remove(rif_oid_in)
+        npu.remove(vrf_oid)
 
         for idx in range(3):
             bp_oid = npu.create(SaiObjType.BRIDGE_PORT,
@@ -1052,28 +1012,17 @@ def test_ipv6_neighbor_mac_update(npu, dataplane):
             verify_packets(dataplane, exp_pkt2, [1])
 
     finally:
-        if fdb_entry2 is not None:
-            npu.remove(fdb_entry2)
-        if fdb_entry1 is not None:
-            npu.remove(fdb_entry1)
-        if route_prefix is not None and vrf_oid is not None:
-            npu.remove_route(route_prefix, vrf_oid)
-        if nh_oid is not None:
-            npu.remove(nh_oid)
-        if neighbor_obj is not None:
-            npu.remove(neighbor_obj)
-        if rif_oid_vlan is not None:
-            npu.remove(rif_oid_vlan)
-        if vlan_member is not None:
-            npu.remove(vlan_member)
-        if bp_eg is not None:
-            npu.remove(bp_eg)
-        if vlan_oid is not None:
-            npu.remove(vlan_oid)
-        if rif_oid_in is not None:
-            npu.remove(rif_oid_in)
-        if vrf_oid is not None:
-            npu.remove(vrf_oid)
+        npu.remove(fdb_entry2)
+        npu.remove(fdb_entry1)
+        npu.remove_route(route_prefix, vrf_oid)
+        npu.remove(nh_oid)
+        npu.remove(neighbor_obj)
+        npu.remove(rif_oid_vlan)
+        npu.remove(vlan_member)
+        npu.remove(bp_eg)
+        npu.remove(vlan_oid)
+        npu.remove(rif_oid_in)
+        npu.remove(vrf_oid)
 
         for idx in range(2):
             bp_oid = npu.create(SaiObjType.BRIDGE_PORT,
@@ -1252,26 +1201,16 @@ def test_ipv6_neighbor_fdb_ageout(npu, dataplane):
     finally:
         npu.set(npu.switch_oid, ["SAI_SWITCH_ATTR_FDB_UNICAST_MISS_PACKET_ACTION", "SAI_PACKET_ACTION_FORWARD"])
         npu.set(npu.switch_oid, ["SAI_SWITCH_ATTR_FDB_AGING_TIME", "0"])
-        if fdb_entry is not None:
-            npu.remove(fdb_entry)
-        if route_prefix is not None and vrf_oid is not None:
-            npu.remove_route(route_prefix, vrf_oid)
-        if nh_oid is not None:
-            npu.remove(nh_oid)
-        if neighbor_obj is not None:
-            npu.remove(neighbor_obj)
-        if rif_oid_vlan is not None:
-            npu.remove(rif_oid_vlan)
-        if vlan_member is not None:
-            npu.remove(vlan_member)
-        if bp_eg is not None:
-            npu.remove(bp_eg)
-        if vlan_oid is not None:
-            npu.remove(vlan_oid)
-        if rif_oid_in is not None:
-            npu.remove(rif_oid_in)
-        if vrf_oid is not None:
-            npu.remove(vrf_oid)
+        npu.remove(fdb_entry)
+        npu.remove_route(route_prefix, vrf_oid)
+        npu.remove(nh_oid)
+        npu.remove(neighbor_obj)
+        npu.remove(rif_oid_vlan)
+        npu.remove(vlan_member)
+        npu.remove(bp_eg)
+        npu.remove(vlan_oid)
+        npu.remove(rif_oid_in)
+        npu.remove(vrf_oid)
 
         for idx in range(2):
             bp_oid = npu.create(SaiObjType.BRIDGE_PORT,
@@ -1483,26 +1422,18 @@ def test_ipv6_ecmp_group_member_update(npu, dataplane):
                 f"Port 2 got {port_count[2]} packets, expected >= {min_per_path_2way}"
 
     finally:
-        if route_prefix is not None and vrf_oid is not None:
-            npu.remove_route(route_prefix, vrf_oid)
+        npu.remove_route(route_prefix, vrf_oid)
         for i in range(3):
-            if member_oid[i] is not None:
-                npu.remove(member_oid[i])
-        if ecmp_oid is not None:
-            npu.remove(ecmp_oid)
+            npu.remove(member_oid[i])
+        npu.remove(ecmp_oid)
         for i in range(3):
-            if nh_oid[i] is not None:
-                npu.remove(nh_oid[i])
+            npu.remove(nh_oid[i])
         for i in range(3):
-            if neighbor_obj[i] is not None:
-                npu.remove(neighbor_obj[i])
+            npu.remove(neighbor_obj[i])
         for i in range(3):
-            if rif_oid_eg[i] is not None:
-                npu.remove(rif_oid_eg[i])
-        if rif_oid_in is not None:
-            npu.remove(rif_oid_in)
-        if vrf_oid is not None:
-            npu.remove(vrf_oid)
+            npu.remove(rif_oid_eg[i])
+        npu.remove(rif_oid_in)
+        npu.remove(vrf_oid)
 
         for idx in range(4):
             bp_oid = npu.create(SaiObjType.BRIDGE_PORT,

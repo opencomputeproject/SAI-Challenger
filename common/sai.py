@@ -286,6 +286,8 @@ class Sai():
         return self.sai_client.create(obj, attrs, do_assert)
 
     def remove(self, obj, do_assert=True):
+        if obj is None:
+            return
         return self.sai_client.remove(obj, do_assert)
 
     def set(self, obj, attr, do_assert=True):

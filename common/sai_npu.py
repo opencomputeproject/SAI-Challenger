@@ -168,6 +168,8 @@ class SaiNpu(Sai):
                    ), attrs)
 
     def remove_route(self, dest, vrf_oid):
+        if dest is None or vrf_oid is None:
+            return
         self.remove('SAI_OBJECT_TYPE_ROUTE_ENTRY:' + json.dumps(
                        {
                            "dest":      dest,
