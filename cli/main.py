@@ -429,7 +429,6 @@ def clear(oid, cntrs):
     click.echo(status + '\n')
 
 
-# do we need seperate cli tool for this?
 @cli.group(invoke_without_command=True)
 @click.pass_context
 def counter(ctx):
@@ -448,23 +447,59 @@ def group():
     pass
 
 
+def _parse_flex_counter_group_attrs(attrs):
+    """
+    Map CLI key/value pairs onto Sai.set_counter_group keyword args.
+    Keys: POLL_INTERVAL, STATS_MODE, FLEX_COUNTER_STATUS.
+    """
+    kwargs = {}
+    if len(attrs) % 2 != 0:
+        raise ValueError(
+            "Flex counter group attributes must be <key> <value> pairs; got: {}".format(
+                " ".join(attrs))
+        )
+    it = iter(attrs)
+    for key in it:
+        val = next(it)
+        if key == "POLL_INTERVAL":
+            kwargs["poll_interval"] = int(val)
+        elif key == "STATS_MODE":
+            kwargs["stats_mode"] = val
+        elif key == "FLEX_COUNTER_STATUS":
+            kwargs["status"] = val
+        else:
+            raise ValueError(
+                "Unknown flex counter group key {!r}; use POLL_INTERVAL, STATS_MODE, "
+                "or FLEX_COUNTER_STATUS".format(key)
+            )
+    return kwargs
+
+
 # 'counter group set' command
 @group.command()
 @click.argument('group_name', metavar='<counter group name>', required=True, type=str)
 @click.argument('attrs', metavar='<attr> <value>', required=True, type=str, nargs=-1)
 def set(group_name, attrs):
-    """Set Redis flex counters group attributes"""
+    """Set Redis flex counters group attributes (POLL_INTERVAL, STATS_MODE, FLEX_COUNTER_STATUS)."""
     click.echo()
     group_name = group_name.upper()
 
-    if len(attrs) % 2 != 0:
-        click.echo("Invalid flex counters group's attributes {} provided\n".format(attrs))
+    try:
+        extra = _parse_flex_counter_group_attrs(attrs)
+    except ValueError as e:
+        click.echo(str(e) + "\n")
         return False
 
     sai = get_sai_entity()
-    status = sai.sai_client.set_counter_group(group_name, attrs, False)
+
+    try:
+        status = sai.set_counter_group(group_name=group_name, do_assert=False, **extra)
+    except ValueError as e:
+        click.echo(str(e) + "\n")
+        return False
+
     if status == "SAI_STATUS_SUCCESS":
-        click.echo("Created group name {}\n".format(group_name))
+        click.echo("Created/Updated flex counter group {}\n".format(group_name))
     else:
         click.echo(status + '\n')
 
@@ -478,7 +513,7 @@ def delete(group_name):
     group_name = group_name.upper()
 
     sai = get_sai_entity()
-    status = sai.sai_client.del_counter_group(group_name, [], False)
+    status = sai.del_counter_group(group_name, False)
     if status == "SAI_STATUS_SUCCESS":
         click.echo("Deleted group name {}\n".format(group_name))
     else:
@@ -505,12 +540,23 @@ def start(group_name, oid, attrs):
         click.echo("SAI object ID must start with 'oid:' prefix\n")
         return False
 
-    if len(attrs) % 2 != 0:
+    if len(attrs) != 2:
         click.echo("Invalid flex counters group's attributes {} provided\n".format(attrs))
         return False
 
     sai = get_sai_entity()
-    status = sai.sai_client.start_counter_poll(group_name + ':' + oid, attrs, False)
+    try:
+        status = sai.start_counter_poll(
+            group_name=group_name,
+            oid=oid,
+            id_list=attrs[0],
+            counters=attrs[1].split(","),
+            do_assert=False,
+        )
+    except ValueError as e:
+        click.echo(str(e) + "\n")
+        return False
+
     if status == "SAI_STATUS_SUCCESS":
         click.echo("Started polling counters for {}:{}\n".format(group_name, oid))
     else:
@@ -531,9 +577,14 @@ def stop(group_name, oid):
         return False
 
     sai = get_sai_entity()
-    status = sai.sai_client.stop_counter_poll(group_name + ':' + oid, [], False)
+    try:
+        status = sai.stop_counter_poll(group_name=group_name, oid=oid, do_assert=False)
+    except ValueError as e:
+        click.echo(str(e) + "\n")
+        return False
+
     if status == "SAI_STATUS_SUCCESS":
-        click.echo("Deleted group name {}\n".format(group_name))
+        click.echo("Stopped polling for {}:{}\n".format(group_name, oid))
     else:
         click.echo(status + '\n')
 
@@ -550,7 +601,7 @@ def get(oid, cntrs):
         return False
 
     sai = get_sai_entity()
-    exists, data = sai.sai_client.get_counter(oid, cntrs)
+    exists, data = sai.get_counter(oid, cntrs)
     if not exists:
         click.echo("Counter {} doesn't exist".format(oid))
         return False
@@ -573,7 +624,7 @@ def delete(oid):
         return False
     
     sai = get_sai_entity()
-    exists = sai.sai_client.del_counter(oid)
+    exists = sai.del_counter(oid)
 
     if not exists:
         click.echo("Counter:{} doesn't exist".format(oid))

@@ -6,6 +6,82 @@ import os
 from saichallenger.common.sai_client.sai_client import SaiClient
 from saichallenger.common.sai_data import SaiObjType, SaiData
 
+SUPPORTED_GROUP_NAMES = {"PORT_STAT_COUNTER","PORT_RATE_COUNTER", "PORT_BUFFER_DROP_STAT", "PORT_PHY_ATTR", "PORT_PHY_SERDES_ATTR",
+                         "QUEUE_STAT_COUNTER", "QUEUE_WATERMARK_STAT_COUNTER",
+                         "PG_WATERMARK_STAT_COUNTER", "PG_DROP_STAT_COUNTER",
+                         "WRED_ECN_QUEUE_STAT_COUNTER", "WRED_ECN_PORT_STAT_COUNTER",
+                         "DEBUG_COUNTER", "DEBUG_MONITOR_COUNTER",
+                         "PFC_WD",
+                         "BUFFER_POOL_WATERMARK_STAT_COUNTER",
+                         "RIF_STAT_COUNTER", "RIF_RATE_COUNTER",
+                         "ACL_STAT_COUNTER",
+                         "TUNNEL_STAT_COUNTER",
+                         "HOSTIF_TRAP_FLOW_COUNTER",
+                         "ROUTE_FLOW_COUNTER",
+                         "COUNTERS_MACSEC_SA_ATTR", "COUNTERS_MACSEC_SA", "COUNTERS_MACSEC_FLOW",
+                         "ENI_STAT_COUNTER",
+                         "METER_STAT_COUNTER",
+                         "SWITCH_STAT_COUNTER",
+                         "HA_SET_STAT_COUNTER"
+                         }
+
+SUPPORTED_STATS_MODES = {"STATS_MODE_READ", "STATS_MODE_READ_AND_CLEAR"}
+
+FLEX_COUNTER_STATUS_VALUES = {"enable", "disable"}
+
+OBJECT_COUNTER_ID_LISTS = {
+    "SAI_OBJECT_TYPE_PORT": {
+        "PORT_COUNTER_ID_LIST",
+        "PORT_PHY_ATTR_ID_LIST",
+        "PORT_DEBUG_COUNTER_ID_LIST",
+    },
+    "SAI_OBJECT_TYPE_PORT_SERDES": {
+        "PORT_PHY_SERDES_ATTR_ID_LIST",
+    },
+    "SAI_OBJECT_TYPE_QUEUE": {
+        "QUEUE_COUNTER_ID_LIST",
+        "QUEUE_ATTR_ID_LIST",
+    },
+    "SAI_OBJECT_TYPE_INGRESS_PRIORITY_GROUP": {
+        "PG_COUNTER_ID_LIST",
+        "PG_ATTR_ID_LIST",
+    },
+    "SAI_OBJECT_TYPE_ROUTER_INTERFACE": {
+        "RIF_COUNTER_ID_LIST",
+    },
+    "SAI_OBJECT_TYPE_SWITCH": {
+        "SWITCH_DEBUG_COUNTER_ID_LIST",
+        "SWITCH_COUNTER_ID_LIST",
+    },
+    "SAI_OBJECT_TYPE_MACSEC_FLOW": {
+        "MACSEC_FLOW_COUNTER_ID_LIST",
+    },
+    "SAI_OBJECT_TYPE_MACSEC_SA": {
+        "MACSEC_SA_COUNTER_ID_LIST",
+        "MACSEC_SA_ATTR_ID_LIST",
+    },
+    "SAI_OBJECT_TYPE_ACL_COUNTER": {
+        "ACL_COUNTER_ATTR_ID_LIST",
+    },
+    "SAI_OBJECT_TYPE_COUNTER": {
+        "FLOW_COUNTER_ID_LIST",
+        "SRV6_COUNTER_ID_LIST",
+    },
+    "SAI_OBJECT_TYPE_POLICER": {
+        "POLICER_COUNTER_ID_LIST",
+    },
+    "SAI_OBJECT_TYPE_TUNNEL": {
+        "TUNNEL_COUNTER_ID_LIST",
+    },
+    "SAI_OBJECT_TYPE_ENI": {
+        "ENI_COUNTER_ID_LIST",
+        "DASH_METER_COUNTER_ID_LIST",
+    },
+    "SAI_OBJECT_TYPE_HA_SET": {
+        "HA_SET_COUNTER_ID_LIST",
+    },
+}
+
 
 class SaiRedisClient(SaiClient):
     """Redis SAI client implementation to wrap low level SAI calls"""
@@ -445,12 +521,28 @@ class SaiRedisClient(SaiClient):
             assert status[2] == 'SAI_STATUS_SUCCESS'
         return status[2]
     
-    def set_counter_group(self, group_name, attrs, do_assert=True):
-        if type(attrs) != str:
-            for i, attr in enumerate(attrs):
-                if type(attr) != str:
-                    attrs[i] = json.dumps(attr)
-            attrs = json.dumps(attrs)
+    def set_counter_group(self, *, group_name, status=None,
+                          poll_interval=None, stats_mode=None, do_assert=True):
+        attrs = []
+        if group_name not in SUPPORTED_GROUP_NAMES:
+            raise ValueError(f"Invalid group name: {group_name}")
+        if status is not None:
+            if status not in FLEX_COUNTER_STATUS_VALUES:
+                raise ValueError(f"Invalid enable value: {status}")
+            attrs.extend(["FLEX_COUNTER_STATUS", status])
+        if poll_interval is not None:
+            if not isinstance(poll_interval, int):
+                raise ValueError(f"Invalid poll_intervall value: {poll_interval}")
+            attrs.extend(["POLL_INTERVAL", poll_interval])
+        if stats_mode is not None:
+            if stats_mode not in SUPPORTED_STATS_MODES:
+                raise ValueError(f"Invalid stats_mode value: {stats_mode}")
+            attrs.extend(["STATS_MODE", stats_mode])
+
+        for i, attr in enumerate(attrs):
+            if type(attr) != str:
+                attrs[i] = json.dumps(attr)
+        attrs = json.dumps(attrs)
 
         status = self.operate(group_name, attrs, "Sset_counter_group")
         status[2] = status[2].decode("utf-8")
@@ -459,26 +551,23 @@ class SaiRedisClient(SaiClient):
             assert status[2] == 'SAI_STATUS_SUCCESS'
         return status[2]
 
-    def del_counter_group(self, group_name, attrs, do_assert=True):
-        if type(attrs) != str:
-            for i, attr in enumerate(attrs):
-                if type(attr) != str:
-                    attrs[i] = json.dumps(attr)
-            attrs = json.dumps(attrs)
-
-        status = self.operate(group_name, attrs, "Ddel_counter_group")
+    def del_counter_group(self, group_name, do_assert=True):
+        status = self.operate(group_name, "[]", "Ddel_counter_group")
         status[2] = status[2].decode("utf-8")
 
         if do_assert:
             assert status[2] == 'SAI_STATUS_SUCCESS'
         return status[2]
 
-    def start_counter_poll(self, obj, attrs, do_assert=True):
-        if type(attrs) != str:
-            for i, attr in enumerate(attrs):
-                if type(attr) != str:
-                    attrs[i] = json.dumps(attr)
-            attrs = json.dumps(attrs)
+    def start_counter_poll(self, *, group_name, oid, id_list, counters, do_assert=True):
+        if group_name not in SUPPORTED_GROUP_NAMES:
+            raise ValueError(f"Invalid group name: {group_name}")
+        if id_list not in OBJECT_COUNTER_ID_LISTS[self.vid_to_type(oid)]:
+            raise ValueError(f"Invalid id_list: {id_list}")
+            
+        attrs = [id_list, ",".join(counters)]
+        attrs = json.dumps(attrs)
+        obj = group_name + ':' + oid
 
         status = self.operate(obj, attrs, "Sstart_poll")
         status[2] = status[2].decode("utf-8")
@@ -487,32 +576,29 @@ class SaiRedisClient(SaiClient):
             assert status[2] == 'SAI_STATUS_SUCCESS'
         return status[2]
 
-    def stop_counter_poll(self, obj, attrs, do_assert=True):
-        if type(attrs) != str:
-            for i, attr in enumerate(attrs):
-                if type(attr) != str:
-                    attrs[i] = json.dumps(attr)
-            attrs = json.dumps(attrs)
-        
-        status = self.operate(obj, attrs, "Dstop_poll")
+    def stop_counter_poll(self, group_name, oid, do_assert=True):
+        if group_name not in SUPPORTED_GROUP_NAMES:
+            raise ValueError(f"Invalid group name: {group_name}")
+        obj = group_name + ':' + oid
+        status = self.operate(obj, "[]", "Dstop_poll")
         status[2] = status[2].decode("utf-8")
 
         if do_assert:
             assert status[2] == 'SAI_STATUS_SUCCESS'
         return status[2]
     
-    def get_counter(self, obj, attrs):
-        counter = "COUNTERS:" + obj
+    def get_counter(self, oid, counters):
+        counter = "COUNTERS:" + oid
         exists = self.counters_db.exists(counter)
-        if attrs:
-            data = self.counters_db.hmget(counter, attrs)
-            return exists, dict(zip(attrs, data))
+        if counters:
+            data = self.counters_db.hmget(counter, counters)
+            return exists, dict(zip(counters, data))
         else:
             data = self.counters_db.hgetall(counter)
             return exists, data
 
-    def del_counter(self, obj):
-        counter = "COUNTERS:" + obj
+    def del_counter(self, oid):
+        counter = "COUNTERS:" + oid
         return self.counters_db.delete(counter)
 
     def flush_fdb_entries(self, obj, attrs=None):

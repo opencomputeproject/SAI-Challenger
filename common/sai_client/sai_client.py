@@ -51,6 +51,26 @@ class SaiClient:
 
     def clear_stats(self, obj, attrs, do_assert=True):
         raise NotImplementedError
+    
+    # Manage flex counters
+    def set_counter_group(self, *, group_name, status=None,
+                          poll_interval=None, stats_mode=None, do_assert=True):
+        raise NotImplementedError
+
+    def del_counter_group(self, group_name, do_assert=True):
+        raise NotImplementedError
+
+    def start_counter_poll(self, *, group_name, oid, id_list, counters, do_assert=True):
+        raise NotImplementedError
+
+    def stop_counter_poll(self, group_name, oid, do_assert=True):
+        raise NotImplementedError
+
+    # Manage counters from COUTNERS_DB
+    def get_counter(self, oid, counters):
+        raise NotImplementedError
+    def del_counter(self, oid):
+        raise NotImplementedError
 
     # Flush FDB
     def flush_fdb_entries(self, obj, attrs=None):
