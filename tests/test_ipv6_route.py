@@ -23,31 +23,22 @@ def on_prev_test_failure(prev_test_failed, npu):
 
 @pytest.fixture(scope="module", autouse=True)
 def ipv6_route_switch_init(npu):
-    original_src_mac = npu.get(
-        npu.switch_oid, ["SAI_SWITCH_ATTR_SRC_MAC_ADDRESS"]
-    ).value()
+    original_src_mac = npu.get(npu.switch_oid, ["SAI_SWITCH_ATTR_SRC_MAC_ADDRESS"]).value()
     original_admin_state = {}
 
     for port_oid in npu.port_oids:
-        original_admin_state[port_oid] = npu.get(
-            port_oid, ["SAI_PORT_ATTR_ADMIN_STATE"]
-        ).value()
+        original_admin_state[port_oid] = npu.get(port_oid, ["SAI_PORT_ATTR_ADMIN_STATE"]).value()
         npu.set(port_oid, ["SAI_PORT_ATTR_ADMIN_STATE", "true"])
 
     if npu.run_traffic:
-        cpu_port_oid = npu.get(
-            npu.switch_oid, ["SAI_SWITCH_ATTR_CPU_PORT"]
-        ).oid()
+        cpu_port_oid = npu.get(npu.switch_oid, ["SAI_SWITCH_ATTR_CPU_PORT"]).oid()
         for port_oid in npu.port_oids:
             if port_oid != cpu_port_oid:
                 npu.assert_port_oper_up(port_oid, tout=200)
 
     yield
 
-    npu.set(
-        npu.switch_oid,
-        ["SAI_SWITCH_ATTR_SRC_MAC_ADDRESS", original_src_mac],
-    )
+    npu.set(npu.switch_oid, ["SAI_SWITCH_ATTR_SRC_MAC_ADDRESS", original_src_mac])
     for port_oid, admin_state in original_admin_state.items():
         npu.set(port_oid, ["SAI_PORT_ATTR_ADMIN_STATE", admin_state])
 
@@ -74,32 +65,21 @@ def port_rif_topology(npu):
         npu.remove(npu.dot1q_bp_oids[idx])
 
     try:
-        vrf_oid = npu.create(
-            SaiObjType.VIRTUAL_ROUTER,
-            ["SAI_VIRTUAL_ROUTER_ATTR_ADMIN_V6_STATE", "true"],
-        )
+        vrf_oid = npu.create(SaiObjType.VIRTUAL_ROUTER, ["SAI_VIRTUAL_ROUTER_ATTR_ADMIN_V6_STATE", "true"])
 
-        rif_oid_in = npu.create(
-            SaiObjType.ROUTER_INTERFACE,
+        rif_oid_in = npu.create(SaiObjType.ROUTER_INTERFACE,
             [
-                "SAI_ROUTER_INTERFACE_ATTR_TYPE",
-                "SAI_ROUTER_INTERFACE_TYPE_PORT",
-                "SAI_ROUTER_INTERFACE_ATTR_PORT_ID",
-                npu.port_oids[0],
-                "SAI_ROUTER_INTERFACE_ATTR_VIRTUAL_ROUTER_ID",
-                vrf_oid,
+                "SAI_ROUTER_INTERFACE_ATTR_TYPE", "SAI_ROUTER_INTERFACE_TYPE_PORT",
+                "SAI_ROUTER_INTERFACE_ATTR_PORT_ID", npu.port_oids[0],
+                "SAI_ROUTER_INTERFACE_ATTR_VIRTUAL_ROUTER_ID", vrf_oid,
             ],
         )
 
-        rif_oid_eg = npu.create(
-            SaiObjType.ROUTER_INTERFACE,
+        rif_oid_eg = npu.create(SaiObjType.ROUTER_INTERFACE,
             [
-                "SAI_ROUTER_INTERFACE_ATTR_TYPE",
-                "SAI_ROUTER_INTERFACE_TYPE_PORT",
-                "SAI_ROUTER_INTERFACE_ATTR_PORT_ID",
-                npu.port_oids[1],
-                "SAI_ROUTER_INTERFACE_ATTR_VIRTUAL_ROUTER_ID",
-                vrf_oid,
+                "SAI_ROUTER_INTERFACE_ATTR_TYPE", "SAI_ROUTER_INTERFACE_TYPE_PORT",
+                "SAI_ROUTER_INTERFACE_ATTR_PORT_ID", npu.port_oids[1],
+                "SAI_ROUTER_INTERFACE_ATTR_VIRTUAL_ROUTER_ID", vrf_oid,
             ],
         )
 
@@ -113,15 +93,11 @@ def port_rif_topology(npu):
             npu.remove(vrf_oid)
 
         for idx in range(2):
-            bp_oid = npu.create(
-                SaiObjType.BRIDGE_PORT,
+            bp_oid = npu.create(SaiObjType.BRIDGE_PORT,
                 [
-                    "SAI_BRIDGE_PORT_ATTR_TYPE",
-                    "SAI_BRIDGE_PORT_TYPE_PORT",
-                    "SAI_BRIDGE_PORT_ATTR_PORT_ID",
-                    npu.port_oids[idx],
-                    "SAI_BRIDGE_PORT_ATTR_ADMIN_STATE",
-                    "true",
+                    "SAI_BRIDGE_PORT_ATTR_TYPE", "SAI_BRIDGE_PORT_TYPE_PORT",
+                    "SAI_BRIDGE_PORT_ATTR_PORT_ID", npu.port_oids[idx],
+                    "SAI_BRIDGE_PORT_ATTR_ADMIN_STATE", "true",
                 ],
             )
             npu.dot1q_bp_oids[idx] = bp_oid
@@ -168,20 +144,13 @@ def test_ipv6_host_route(npu, dataplane, port_rif_topology):
         neighbor_obj = "SAI_OBJECT_TYPE_NEIGHBOR_ENTRY:" + json.dumps(
             neighbor_key, separators=(",", ":")
         )
-        npu.create(
-            neighbor_obj,
-            ["SAI_NEIGHBOR_ENTRY_ATTR_DST_MAC_ADDRESS", neighbor_mac],
-        )
+        npu.create(neighbor_obj, ["SAI_NEIGHBOR_ENTRY_ATTR_DST_MAC_ADDRESS", neighbor_mac])
 
-        nh_oid = npu.create(
-            SaiObjType.NEXT_HOP,
+        nh_oid = npu.create(SaiObjType.NEXT_HOP,
             [
-                "SAI_NEXT_HOP_ATTR_TYPE",
-                "SAI_NEXT_HOP_TYPE_IP",
-                "SAI_NEXT_HOP_ATTR_IP",
-                str(ipv6_host),
-                "SAI_NEXT_HOP_ATTR_ROUTER_INTERFACE_ID",
-                rif_oid_eg,
+                "SAI_NEXT_HOP_ATTR_TYPE", "SAI_NEXT_HOP_TYPE_IP",
+                "SAI_NEXT_HOP_ATTR_IP", str(ipv6_host),
+                "SAI_NEXT_HOP_ATTR_ROUTER_INTERFACE_ID", rif_oid_eg,
             ],
         )
 
@@ -189,9 +158,7 @@ def test_ipv6_host_route(npu, dataplane, port_rif_topology):
         npu.create_route(route_prefix, vrf_oid, nh_oid)
 
         if npu.run_traffic:
-            router_mac = npu.get(
-                npu.switch_oid, ["SAI_SWITCH_ATTR_SRC_MAC_ADDRESS"]
-            ).value()
+            router_mac = npu.get(npu.switch_oid, ["SAI_SWITCH_ATTR_SRC_MAC_ADDRESS"]).value()
 
             pkt = simple_tcpv6_packet(
                 eth_dst=router_mac,
@@ -254,20 +221,13 @@ def test_ipv6_lpm_route(npu, dataplane, port_rif_topology):
         neighbor_obj = "SAI_OBJECT_TYPE_NEIGHBOR_ENTRY:" + json.dumps(
             neighbor_key, separators=(",", ":")
         )
-        npu.create(
-            neighbor_obj,
-            ["SAI_NEIGHBOR_ENTRY_ATTR_DST_MAC_ADDRESS", neighbor_mac],
-        )
+        npu.create(neighbor_obj, ["SAI_NEIGHBOR_ENTRY_ATTR_DST_MAC_ADDRESS", neighbor_mac])
 
-        nh_oid = npu.create(
-            SaiObjType.NEXT_HOP,
+        nh_oid = npu.create(SaiObjType.NEXT_HOP,
             [
-                "SAI_NEXT_HOP_ATTR_TYPE",
-                "SAI_NEXT_HOP_TYPE_IP",
-                "SAI_NEXT_HOP_ATTR_IP",
-                str(ipv6_host),
-                "SAI_NEXT_HOP_ATTR_ROUTER_INTERFACE_ID",
-                rif_oid_eg,
+                "SAI_NEXT_HOP_ATTR_TYPE", "SAI_NEXT_HOP_TYPE_IP",
+                "SAI_NEXT_HOP_ATTR_IP", str(ipv6_host),
+                "SAI_NEXT_HOP_ATTR_ROUTER_INTERFACE_ID", rif_oid_eg,
             ],
         )
 
@@ -275,9 +235,7 @@ def test_ipv6_lpm_route(npu, dataplane, port_rif_topology):
         npu.create_route(route_prefix, vrf_oid, nh_oid)
 
         if npu.run_traffic:
-            router_mac = npu.get(
-                npu.switch_oid, ["SAI_SWITCH_ATTR_SRC_MAC_ADDRESS"]
-            ).value()
+            router_mac = npu.get(npu.switch_oid, ["SAI_SWITCH_ATTR_SRC_MAC_ADDRESS"]).value()
 
             pkt = simple_tcpv6_packet(
                 eth_dst=router_mac,
@@ -339,20 +297,13 @@ def test_ipv6_prefix_lengths(npu, dataplane, port_rif_topology):
         neighbor_obj = "SAI_OBJECT_TYPE_NEIGHBOR_ENTRY:" + json.dumps(
             neighbor_key, separators=(",", ":")
         )
-        npu.create(
-            neighbor_obj,
-            ["SAI_NEIGHBOR_ENTRY_ATTR_DST_MAC_ADDRESS", neighbor_mac],
-        )
+        npu.create(neighbor_obj, ["SAI_NEIGHBOR_ENTRY_ATTR_DST_MAC_ADDRESS", neighbor_mac])
 
-        nh_oid = npu.create(
-            SaiObjType.NEXT_HOP,
+        nh_oid = npu.create(SaiObjType.NEXT_HOP,
             [
-                "SAI_NEXT_HOP_ATTR_TYPE",
-                "SAI_NEXT_HOP_TYPE_IP",
-                "SAI_NEXT_HOP_ATTR_IP",
-                str(ipv6_host),
-                "SAI_NEXT_HOP_ATTR_ROUTER_INTERFACE_ID",
-                rif_oid_eg,
+                "SAI_NEXT_HOP_ATTR_TYPE", "SAI_NEXT_HOP_TYPE_IP",
+                "SAI_NEXT_HOP_ATTR_IP", str(ipv6_host),
+                "SAI_NEXT_HOP_ATTR_ROUTER_INTERFACE_ID", rif_oid_eg,
             ],
         )
 
@@ -360,9 +311,7 @@ def test_ipv6_prefix_lengths(npu, dataplane, port_rif_topology):
         pkt = None
         exp_pkt = None
         if npu.run_traffic:
-            router_mac = npu.get(
-                npu.switch_oid, ["SAI_SWITCH_ATTR_SRC_MAC_ADDRESS"]
-            ).value()
+            router_mac = npu.get(npu.switch_oid, ["SAI_SWITCH_ATTR_SRC_MAC_ADDRESS"]).value()
             pkt = simple_tcpv6_packet(
                 eth_dst=router_mac,
                 eth_src="00:22:22:22:22:22",
@@ -441,45 +390,27 @@ def test_ipv6_ecmp_host(npu, dataplane):
             npu.remove_vlan_member(npu.default_vlan_oid, npu.dot1q_bp_oids[idx])
             npu.remove(npu.dot1q_bp_oids[idx])
 
-        vrf_oid = npu.create(
-            SaiObjType.VIRTUAL_ROUTER,
-            [
-                "SAI_VIRTUAL_ROUTER_ATTR_ADMIN_V6_STATE",
-                "true",
-            ],
-        )
+        vrf_oid = npu.create(SaiObjType.VIRTUAL_ROUTER, ["SAI_VIRTUAL_ROUTER_ATTR_ADMIN_V6_STATE", "true"])
 
-        rif_oid_in = npu.create(
-            SaiObjType.ROUTER_INTERFACE,
+        rif_oid_in = npu.create(SaiObjType.ROUTER_INTERFACE,
             [
-                "SAI_ROUTER_INTERFACE_ATTR_TYPE",
-                "SAI_ROUTER_INTERFACE_TYPE_PORT",
-                "SAI_ROUTER_INTERFACE_ATTR_PORT_ID",
-                npu.port_oids[0],
-                "SAI_ROUTER_INTERFACE_ATTR_VIRTUAL_ROUTER_ID",
-                vrf_oid,
+                "SAI_ROUTER_INTERFACE_ATTR_TYPE", "SAI_ROUTER_INTERFACE_TYPE_PORT",
+                "SAI_ROUTER_INTERFACE_ATTR_PORT_ID", npu.port_oids[0],
+                "SAI_ROUTER_INTERFACE_ATTR_VIRTUAL_ROUTER_ID", vrf_oid,
             ],
         )
-        rif_oid_eg1 = npu.create(
-            SaiObjType.ROUTER_INTERFACE,
+        rif_oid_eg1 = npu.create(SaiObjType.ROUTER_INTERFACE,
             [
-                "SAI_ROUTER_INTERFACE_ATTR_TYPE",
-                "SAI_ROUTER_INTERFACE_TYPE_PORT",
-                "SAI_ROUTER_INTERFACE_ATTR_PORT_ID",
-                npu.port_oids[1],
-                "SAI_ROUTER_INTERFACE_ATTR_VIRTUAL_ROUTER_ID",
-                vrf_oid,
+                "SAI_ROUTER_INTERFACE_ATTR_TYPE", "SAI_ROUTER_INTERFACE_TYPE_PORT",
+                "SAI_ROUTER_INTERFACE_ATTR_PORT_ID", npu.port_oids[1],
+                "SAI_ROUTER_INTERFACE_ATTR_VIRTUAL_ROUTER_ID", vrf_oid,
             ],
         )
-        rif_oid_eg2 = npu.create(
-            SaiObjType.ROUTER_INTERFACE,
+        rif_oid_eg2 = npu.create(SaiObjType.ROUTER_INTERFACE,
             [
-                "SAI_ROUTER_INTERFACE_ATTR_TYPE",
-                "SAI_ROUTER_INTERFACE_TYPE_PORT",
-                "SAI_ROUTER_INTERFACE_ATTR_PORT_ID",
-                npu.port_oids[2],
-                "SAI_ROUTER_INTERFACE_ATTR_VIRTUAL_ROUTER_ID",
-                vrf_oid,
+                "SAI_ROUTER_INTERFACE_ATTR_TYPE", "SAI_ROUTER_INTERFACE_TYPE_PORT",
+                "SAI_ROUTER_INTERFACE_ATTR_PORT_ID", npu.port_oids[2],
+                "SAI_ROUTER_INTERFACE_ATTR_VIRTUAL_ROUTER_ID", vrf_oid,
             ],
         )
 
@@ -491,13 +422,7 @@ def test_ipv6_ecmp_host(npu, dataplane):
         neighbor_obj1 = "SAI_OBJECT_TYPE_NEIGHBOR_ENTRY:" + json.dumps(
             neighbor_key1, separators=(",", ":")
         )
-        npu.create(
-            neighbor_obj1,
-            [
-                "SAI_NEIGHBOR_ENTRY_ATTR_DST_MAC_ADDRESS",
-                neighbor_mac1,
-            ],
-        )
+        npu.create(neighbor_obj1, ["SAI_NEIGHBOR_ENTRY_ATTR_DST_MAC_ADDRESS", neighbor_mac1])
 
         neighbor_key2 = {
             "switch_id": npu.switch_oid,
@@ -507,62 +432,36 @@ def test_ipv6_ecmp_host(npu, dataplane):
         neighbor_obj2 = "SAI_OBJECT_TYPE_NEIGHBOR_ENTRY:" + json.dumps(
             neighbor_key2, separators=(",", ":")
         )
-        npu.create(
-            neighbor_obj2,
+        npu.create(neighbor_obj2, ["SAI_NEIGHBOR_ENTRY_ATTR_DST_MAC_ADDRESS", neighbor_mac2])
+
+        nh_oid1 = npu.create(SaiObjType.NEXT_HOP,
             [
-                "SAI_NEIGHBOR_ENTRY_ATTR_DST_MAC_ADDRESS",
-                neighbor_mac2,
+                "SAI_NEXT_HOP_ATTR_TYPE", "SAI_NEXT_HOP_TYPE_IP",
+                "SAI_NEXT_HOP_ATTR_IP", str(ipv6_host),
+                "SAI_NEXT_HOP_ATTR_ROUTER_INTERFACE_ID", rif_oid_eg1,
             ],
         )
 
-        nh_oid1 = npu.create(
-            SaiObjType.NEXT_HOP,
+        nh_oid2 = npu.create(SaiObjType.NEXT_HOP,
             [
-                "SAI_NEXT_HOP_ATTR_TYPE",
-                "SAI_NEXT_HOP_TYPE_IP",
-                "SAI_NEXT_HOP_ATTR_IP",
-                str(ipv6_host),
-                "SAI_NEXT_HOP_ATTR_ROUTER_INTERFACE_ID",
-                rif_oid_eg1,
+                "SAI_NEXT_HOP_ATTR_TYPE", "SAI_NEXT_HOP_TYPE_IP",
+                "SAI_NEXT_HOP_ATTR_IP", str(ipv6_host),
+                "SAI_NEXT_HOP_ATTR_ROUTER_INTERFACE_ID", rif_oid_eg2,
             ],
         )
 
-        nh_oid2 = npu.create(
-            SaiObjType.NEXT_HOP,
-            [
-                "SAI_NEXT_HOP_ATTR_TYPE",
-                "SAI_NEXT_HOP_TYPE_IP",
-                "SAI_NEXT_HOP_ATTR_IP",
-                str(ipv6_host),
-                "SAI_NEXT_HOP_ATTR_ROUTER_INTERFACE_ID",
-                rif_oid_eg2,
-            ],
-        )
+        ecmp_oid = npu.create(SaiObjType.NEXT_HOP_GROUP, ["SAI_NEXT_HOP_GROUP_ATTR_TYPE", "SAI_NEXT_HOP_GROUP_TYPE_ECMP"])
 
-        ecmp_oid = npu.create(
-            SaiObjType.NEXT_HOP_GROUP,
+        member_oid1 = npu.create(SaiObjType.NEXT_HOP_GROUP_MEMBER,
             [
-                "SAI_NEXT_HOP_GROUP_ATTR_TYPE",
-                "SAI_NEXT_HOP_GROUP_TYPE_ECMP",
+                "SAI_NEXT_HOP_GROUP_MEMBER_ATTR_NEXT_HOP_GROUP_ID", ecmp_oid,
+                "SAI_NEXT_HOP_GROUP_MEMBER_ATTR_NEXT_HOP_ID", nh_oid1,
             ],
         )
-
-        member_oid1 = npu.create(
-            SaiObjType.NEXT_HOP_GROUP_MEMBER,
+        member_oid2 = npu.create(SaiObjType.NEXT_HOP_GROUP_MEMBER,
             [
-                "SAI_NEXT_HOP_GROUP_MEMBER_ATTR_NEXT_HOP_GROUP_ID",
-                ecmp_oid,
-                "SAI_NEXT_HOP_GROUP_MEMBER_ATTR_NEXT_HOP_ID",
-                nh_oid1,
-            ],
-        )
-        member_oid2 = npu.create(
-            SaiObjType.NEXT_HOP_GROUP_MEMBER,
-            [
-                "SAI_NEXT_HOP_GROUP_MEMBER_ATTR_NEXT_HOP_GROUP_ID",
-                ecmp_oid,
-                "SAI_NEXT_HOP_GROUP_MEMBER_ATTR_NEXT_HOP_ID",
-                nh_oid2,
+                "SAI_NEXT_HOP_GROUP_MEMBER_ATTR_NEXT_HOP_GROUP_ID", ecmp_oid,
+                "SAI_NEXT_HOP_GROUP_MEMBER_ATTR_NEXT_HOP_ID", nh_oid2,
             ],
         )
 
@@ -570,9 +469,7 @@ def test_ipv6_ecmp_host(npu, dataplane):
         npu.create_route(route_prefix, vrf_oid, ecmp_oid)
 
         if npu.run_traffic:
-            router_mac = npu.get(
-                npu.switch_oid, ["SAI_SWITCH_ATTR_SRC_MAC_ADDRESS"]
-            ).value()
+            router_mac = npu.get(npu.switch_oid, ["SAI_SWITCH_ATTR_SRC_MAC_ADDRESS"]).value()
 
             egress_ports = [1, 2]
             port_count = {1: 0, 2: 0}
@@ -637,15 +534,11 @@ def test_ipv6_ecmp_host(npu, dataplane):
             npu.remove(vrf_oid)
 
         for idx in range(3):
-            bp_oid = npu.create(
-                SaiObjType.BRIDGE_PORT,
+            bp_oid = npu.create(SaiObjType.BRIDGE_PORT,
                 [
-                    "SAI_BRIDGE_PORT_ATTR_TYPE",
-                    "SAI_BRIDGE_PORT_TYPE_PORT",
-                    "SAI_BRIDGE_PORT_ATTR_PORT_ID",
-                    npu.port_oids[idx],
-                    "SAI_BRIDGE_PORT_ATTR_ADMIN_STATE",
-                    "true",
+                    "SAI_BRIDGE_PORT_ATTR_TYPE", "SAI_BRIDGE_PORT_TYPE_PORT",
+                    "SAI_BRIDGE_PORT_ATTR_PORT_ID", npu.port_oids[idx],
+                    "SAI_BRIDGE_PORT_ATTR_ADMIN_STATE", "true",
                 ],
             )
             npu.dot1q_bp_oids[idx] = bp_oid
@@ -695,36 +588,22 @@ def test_ipv6_ecmp_lpm(npu, dataplane):
             npu.remove_vlan_member(npu.default_vlan_oid, npu.dot1q_bp_oids[idx])
             npu.remove(npu.dot1q_bp_oids[idx])
 
-        vrf_oid = npu.create(
-            SaiObjType.VIRTUAL_ROUTER,
-            [
-                "SAI_VIRTUAL_ROUTER_ATTR_ADMIN_V6_STATE",
-                "true",
-            ],
-        )
+        vrf_oid = npu.create(SaiObjType.VIRTUAL_ROUTER, ["SAI_VIRTUAL_ROUTER_ATTR_ADMIN_V6_STATE", "true"])
 
-        rif_oid_in = npu.create(
-            SaiObjType.ROUTER_INTERFACE,
+        rif_oid_in = npu.create(SaiObjType.ROUTER_INTERFACE,
             [
-                "SAI_ROUTER_INTERFACE_ATTR_TYPE",
-                "SAI_ROUTER_INTERFACE_TYPE_PORT",
-                "SAI_ROUTER_INTERFACE_ATTR_PORT_ID",
-                npu.port_oids[0],
-                "SAI_ROUTER_INTERFACE_ATTR_VIRTUAL_ROUTER_ID",
-                vrf_oid,
+                "SAI_ROUTER_INTERFACE_ATTR_TYPE", "SAI_ROUTER_INTERFACE_TYPE_PORT",
+                "SAI_ROUTER_INTERFACE_ATTR_PORT_ID", npu.port_oids[0],
+                "SAI_ROUTER_INTERFACE_ATTR_VIRTUAL_ROUTER_ID", vrf_oid,
             ],
         )
 
         for i in range(3):
-            rif_oid_eg[i] = npu.create(
-                SaiObjType.ROUTER_INTERFACE,
+            rif_oid_eg[i] = npu.create(SaiObjType.ROUTER_INTERFACE,
                 [
-                    "SAI_ROUTER_INTERFACE_ATTR_TYPE",
-                    "SAI_ROUTER_INTERFACE_TYPE_PORT",
-                    "SAI_ROUTER_INTERFACE_ATTR_PORT_ID",
-                    npu.port_oids[i + 1],
-                    "SAI_ROUTER_INTERFACE_ATTR_VIRTUAL_ROUTER_ID",
-                    vrf_oid,
+                    "SAI_ROUTER_INTERFACE_ATTR_TYPE", "SAI_ROUTER_INTERFACE_TYPE_PORT",
+                    "SAI_ROUTER_INTERFACE_ATTR_PORT_ID", npu.port_oids[i + 1],
+                    "SAI_ROUTER_INTERFACE_ATTR_VIRTUAL_ROUTER_ID", vrf_oid,
                 ],
             )
 
@@ -737,42 +616,23 @@ def test_ipv6_ecmp_lpm(npu, dataplane):
             neighbor_obj[i] = "SAI_OBJECT_TYPE_NEIGHBOR_ENTRY:" + json.dumps(
                 neighbor_key, separators=(",", ":")
             )
-            npu.create(
-                neighbor_obj[i],
+            npu.create(neighbor_obj[i], ["SAI_NEIGHBOR_ENTRY_ATTR_DST_MAC_ADDRESS", neighbor_macs[i]])
+
+            nh_oid[i] = npu.create(SaiObjType.NEXT_HOP,
                 [
-                    "SAI_NEIGHBOR_ENTRY_ATTR_DST_MAC_ADDRESS",
-                    neighbor_macs[i],
+                    "SAI_NEXT_HOP_ATTR_TYPE", "SAI_NEXT_HOP_TYPE_IP",
+                    "SAI_NEXT_HOP_ATTR_IP", str(ipv6_dst),
+                    "SAI_NEXT_HOP_ATTR_ROUTER_INTERFACE_ID", rif_oid_eg[i],
                 ],
             )
 
-            nh_oid[i] = npu.create(
-                SaiObjType.NEXT_HOP,
-                [
-                    "SAI_NEXT_HOP_ATTR_TYPE",
-                    "SAI_NEXT_HOP_TYPE_IP",
-                    "SAI_NEXT_HOP_ATTR_IP",
-                    str(ipv6_dst),
-                    "SAI_NEXT_HOP_ATTR_ROUTER_INTERFACE_ID",
-                    rif_oid_eg[i],
-                ],
-            )
-
-        ecmp_oid = npu.create(
-            SaiObjType.NEXT_HOP_GROUP,
-            [
-                "SAI_NEXT_HOP_GROUP_ATTR_TYPE",
-                "SAI_NEXT_HOP_GROUP_TYPE_ECMP",
-            ],
-        )
+        ecmp_oid = npu.create(SaiObjType.NEXT_HOP_GROUP, ["SAI_NEXT_HOP_GROUP_ATTR_TYPE", "SAI_NEXT_HOP_GROUP_TYPE_ECMP"])
 
         for i in range(3):
-            member_oid[i] = npu.create(
-                SaiObjType.NEXT_HOP_GROUP_MEMBER,
+            member_oid[i] = npu.create(SaiObjType.NEXT_HOP_GROUP_MEMBER,
                 [
-                    "SAI_NEXT_HOP_GROUP_MEMBER_ATTR_NEXT_HOP_GROUP_ID",
-                    ecmp_oid,
-                    "SAI_NEXT_HOP_GROUP_MEMBER_ATTR_NEXT_HOP_ID",
-                    nh_oid[i],
+                    "SAI_NEXT_HOP_GROUP_MEMBER_ATTR_NEXT_HOP_GROUP_ID", ecmp_oid,
+                    "SAI_NEXT_HOP_GROUP_MEMBER_ATTR_NEXT_HOP_ID", nh_oid[i],
                 ],
             )
 
@@ -780,9 +640,7 @@ def test_ipv6_ecmp_lpm(npu, dataplane):
         npu.create_route(route_prefix, vrf_oid, ecmp_oid)
 
         if npu.run_traffic:
-            router_mac = npu.get(
-                npu.switch_oid, ["SAI_SWITCH_ATTR_SRC_MAC_ADDRESS"]
-            ).value()
+            router_mac = npu.get(npu.switch_oid, ["SAI_SWITCH_ATTR_SRC_MAC_ADDRESS"]).value()
 
             max_itrs = 200
             egress_ports = [1, 2, 3]
@@ -862,15 +720,11 @@ def test_ipv6_ecmp_lpm(npu, dataplane):
             npu.remove(vrf_oid)
 
         for idx in range(4):
-            bp_oid = npu.create(
-                SaiObjType.BRIDGE_PORT,
+            bp_oid = npu.create(SaiObjType.BRIDGE_PORT,
                 [
-                    "SAI_BRIDGE_PORT_ATTR_TYPE",
-                    "SAI_BRIDGE_PORT_TYPE_PORT",
-                    "SAI_BRIDGE_PORT_ATTR_PORT_ID",
-                    npu.port_oids[idx],
-                    "SAI_BRIDGE_PORT_ATTR_ADMIN_STATE",
-                    "true",
+                    "SAI_BRIDGE_PORT_ATTR_TYPE", "SAI_BRIDGE_PORT_TYPE_PORT",
+                    "SAI_BRIDGE_PORT_ATTR_PORT_ID", npu.port_oids[idx],
+                    "SAI_BRIDGE_PORT_ATTR_ADMIN_STATE", "true",
                 ],
             )
             npu.dot1q_bp_oids[idx] = bp_oid
@@ -920,53 +774,36 @@ def test_ipv6_lag_route(npu, dataplane):
             npu.remove_vlan_member(npu.default_vlan_oid, npu.dot1q_bp_oids[idx])
             npu.remove(npu.dot1q_bp_oids[idx])
 
-        vrf_oid = npu.create(
-            SaiObjType.VIRTUAL_ROUTER,
-            ["SAI_VIRTUAL_ROUTER_ATTR_ADMIN_V6_STATE", "true"],
-        )
+        vrf_oid = npu.create(SaiObjType.VIRTUAL_ROUTER, ["SAI_VIRTUAL_ROUTER_ATTR_ADMIN_V6_STATE", "true"])
 
-        rif_oid_in = npu.create(
-            SaiObjType.ROUTER_INTERFACE,
+        rif_oid_in = npu.create(SaiObjType.ROUTER_INTERFACE,
             [
-                "SAI_ROUTER_INTERFACE_ATTR_TYPE",
-                "SAI_ROUTER_INTERFACE_TYPE_PORT",
-                "SAI_ROUTER_INTERFACE_ATTR_PORT_ID",
-                npu.port_oids[0],
-                "SAI_ROUTER_INTERFACE_ATTR_VIRTUAL_ROUTER_ID",
-                vrf_oid,
+                "SAI_ROUTER_INTERFACE_ATTR_TYPE", "SAI_ROUTER_INTERFACE_TYPE_PORT",
+                "SAI_ROUTER_INTERFACE_ATTR_PORT_ID", npu.port_oids[0],
+                "SAI_ROUTER_INTERFACE_ATTR_VIRTUAL_ROUTER_ID", vrf_oid,
             ],
         )
 
         lag_oid = npu.create(SaiObjType.LAG, [])
 
-        lag_member1 = npu.create(
-            SaiObjType.LAG_MEMBER,
+        lag_member1 = npu.create(SaiObjType.LAG_MEMBER,
             [
-                "SAI_LAG_MEMBER_ATTR_LAG_ID",
-                lag_oid,
-                "SAI_LAG_MEMBER_ATTR_PORT_ID",
-                npu.port_oids[1],
+                "SAI_LAG_MEMBER_ATTR_LAG_ID", lag_oid,
+                "SAI_LAG_MEMBER_ATTR_PORT_ID", npu.port_oids[1],
             ],
         )
-        lag_member2 = npu.create(
-            SaiObjType.LAG_MEMBER,
+        lag_member2 = npu.create(SaiObjType.LAG_MEMBER,
             [
-                "SAI_LAG_MEMBER_ATTR_LAG_ID",
-                lag_oid,
-                "SAI_LAG_MEMBER_ATTR_PORT_ID",
-                npu.port_oids[2],
+                "SAI_LAG_MEMBER_ATTR_LAG_ID", lag_oid,
+                "SAI_LAG_MEMBER_ATTR_PORT_ID", npu.port_oids[2],
             ],
         )
 
-        rif_oid_lag = npu.create(
-            SaiObjType.ROUTER_INTERFACE,
+        rif_oid_lag = npu.create(SaiObjType.ROUTER_INTERFACE,
             [
-                "SAI_ROUTER_INTERFACE_ATTR_TYPE",
-                "SAI_ROUTER_INTERFACE_TYPE_PORT",
-                "SAI_ROUTER_INTERFACE_ATTR_PORT_ID",
-                lag_oid,
-                "SAI_ROUTER_INTERFACE_ATTR_VIRTUAL_ROUTER_ID",
-                vrf_oid,
+                "SAI_ROUTER_INTERFACE_ATTR_TYPE", "SAI_ROUTER_INTERFACE_TYPE_PORT",
+                "SAI_ROUTER_INTERFACE_ATTR_PORT_ID", lag_oid,
+                "SAI_ROUTER_INTERFACE_ATTR_VIRTUAL_ROUTER_ID", vrf_oid,
             ],
         )
 
@@ -978,20 +815,13 @@ def test_ipv6_lag_route(npu, dataplane):
         neighbor_obj = "SAI_OBJECT_TYPE_NEIGHBOR_ENTRY:" + json.dumps(
             neighbor_key, separators=(",", ":")
         )
-        npu.create(
-            neighbor_obj,
-            ["SAI_NEIGHBOR_ENTRY_ATTR_DST_MAC_ADDRESS", neighbor_mac],
-        )
+        npu.create(neighbor_obj, ["SAI_NEIGHBOR_ENTRY_ATTR_DST_MAC_ADDRESS", neighbor_mac])
 
-        nh_oid = npu.create(
-            SaiObjType.NEXT_HOP,
+        nh_oid = npu.create(SaiObjType.NEXT_HOP,
             [
-                "SAI_NEXT_HOP_ATTR_TYPE",
-                "SAI_NEXT_HOP_TYPE_IP",
-                "SAI_NEXT_HOP_ATTR_IP",
-                str(ipv6_dst),
-                "SAI_NEXT_HOP_ATTR_ROUTER_INTERFACE_ID",
-                rif_oid_lag,
+                "SAI_NEXT_HOP_ATTR_TYPE", "SAI_NEXT_HOP_TYPE_IP",
+                "SAI_NEXT_HOP_ATTR_IP", str(ipv6_dst),
+                "SAI_NEXT_HOP_ATTR_ROUTER_INTERFACE_ID", rif_oid_lag,
             ],
         )
 
@@ -999,9 +829,7 @@ def test_ipv6_lag_route(npu, dataplane):
         npu.create_route(route_prefix, vrf_oid, nh_oid)
 
         if npu.run_traffic:
-            router_mac = npu.get(
-                npu.switch_oid, ["SAI_SWITCH_ATTR_SRC_MAC_ADDRESS"]
-            ).value()
+            router_mac = npu.get(npu.switch_oid, ["SAI_SWITCH_ATTR_SRC_MAC_ADDRESS"]).value()
 
             pkt = simple_tcpv6_packet(
                 eth_dst=router_mac,
@@ -1042,15 +870,11 @@ def test_ipv6_lag_route(npu, dataplane):
             npu.remove(vrf_oid)
 
         for idx in range(3):
-            bp_oid = npu.create(
-                SaiObjType.BRIDGE_PORT,
+            bp_oid = npu.create(SaiObjType.BRIDGE_PORT,
                 [
-                    "SAI_BRIDGE_PORT_ATTR_TYPE",
-                    "SAI_BRIDGE_PORT_TYPE_PORT",
-                    "SAI_BRIDGE_PORT_ATTR_PORT_ID",
-                    npu.port_oids[idx],
-                    "SAI_BRIDGE_PORT_ATTR_ADMIN_STATE",
-                    "true",
+                    "SAI_BRIDGE_PORT_ATTR_TYPE", "SAI_BRIDGE_PORT_TYPE_PORT",
+                    "SAI_BRIDGE_PORT_ATTR_PORT_ID", npu.port_oids[idx],
+                    "SAI_BRIDGE_PORT_ATTR_ADMIN_STATE", "true",
                 ],
             )
             npu.dot1q_bp_oids[idx] = bp_oid
@@ -1109,37 +933,23 @@ def test_ipv6_neighbor_mac_update(npu, dataplane):
             npu.remove_vlan_member(npu.default_vlan_oid, npu.dot1q_bp_oids[idx])
             npu.remove(npu.dot1q_bp_oids[idx])
 
-        vrf_oid = npu.create(
-            SaiObjType.VIRTUAL_ROUTER,
-            ["SAI_VIRTUAL_ROUTER_ATTR_ADMIN_V6_STATE", "true"],
-        )
+        vrf_oid = npu.create(SaiObjType.VIRTUAL_ROUTER, ["SAI_VIRTUAL_ROUTER_ATTR_ADMIN_V6_STATE", "true"])
 
-        rif_oid_in = npu.create(
-            SaiObjType.ROUTER_INTERFACE,
+        rif_oid_in = npu.create(SaiObjType.ROUTER_INTERFACE,
             [
-                "SAI_ROUTER_INTERFACE_ATTR_TYPE",
-                "SAI_ROUTER_INTERFACE_TYPE_PORT",
-                "SAI_ROUTER_INTERFACE_ATTR_PORT_ID",
-                npu.port_oids[0],
-                "SAI_ROUTER_INTERFACE_ATTR_VIRTUAL_ROUTER_ID",
-                vrf_oid,
+                "SAI_ROUTER_INTERFACE_ATTR_TYPE", "SAI_ROUTER_INTERFACE_TYPE_PORT",
+                "SAI_ROUTER_INTERFACE_ATTR_PORT_ID", npu.port_oids[0],
+                "SAI_ROUTER_INTERFACE_ATTR_VIRTUAL_ROUTER_ID", vrf_oid,
             ],
         )
 
-        vlan_oid = npu.create(
-            SaiObjType.VLAN,
-            ["SAI_VLAN_ATTR_VLAN_ID", str(vlan_id)],
-        )
+        vlan_oid = npu.create(SaiObjType.VLAN, ["SAI_VLAN_ATTR_VLAN_ID", str(vlan_id)])
 
-        bp_eg = npu.create(
-            SaiObjType.BRIDGE_PORT,
+        bp_eg = npu.create(SaiObjType.BRIDGE_PORT,
             [
-                "SAI_BRIDGE_PORT_ATTR_TYPE",
-                "SAI_BRIDGE_PORT_TYPE_PORT",
-                "SAI_BRIDGE_PORT_ATTR_PORT_ID",
-                npu.port_oids[1],
-                "SAI_BRIDGE_PORT_ATTR_ADMIN_STATE",
-                "true",
+                "SAI_BRIDGE_PORT_ATTR_TYPE", "SAI_BRIDGE_PORT_TYPE_PORT",
+                "SAI_BRIDGE_PORT_ATTR_PORT_ID", npu.port_oids[1],
+                "SAI_BRIDGE_PORT_ATTR_ADMIN_STATE", "true",
             ],
         )
         npu.dot1q_bp_oids[1] = bp_eg
@@ -1149,15 +959,11 @@ def test_ipv6_neighbor_mac_update(npu, dataplane):
             "SAI_VLAN_TAGGING_MODE_TAGGED",
         )
 
-        rif_oid_vlan = npu.create(
-            SaiObjType.ROUTER_INTERFACE,
+        rif_oid_vlan = npu.create(SaiObjType.ROUTER_INTERFACE,
             [
-                "SAI_ROUTER_INTERFACE_ATTR_TYPE",
-                "SAI_ROUTER_INTERFACE_TYPE_VLAN",
-                "SAI_ROUTER_INTERFACE_ATTR_VLAN_ID",
-                vlan_oid,
-                "SAI_ROUTER_INTERFACE_ATTR_VIRTUAL_ROUTER_ID",
-                vrf_oid,
+                "SAI_ROUTER_INTERFACE_ATTR_TYPE", "SAI_ROUTER_INTERFACE_TYPE_VLAN",
+                "SAI_ROUTER_INTERFACE_ATTR_VLAN_ID", vlan_oid,
+                "SAI_ROUTER_INTERFACE_ATTR_VIRTUAL_ROUTER_ID", vrf_oid,
             ],
         )
 
@@ -1169,20 +975,13 @@ def test_ipv6_neighbor_mac_update(npu, dataplane):
         neighbor_obj = "SAI_OBJECT_TYPE_NEIGHBOR_ENTRY:" + json.dumps(
             neighbor_key, separators=(",", ":")
         )
-        npu.create(
-            neighbor_obj,
-            ["SAI_NEIGHBOR_ENTRY_ATTR_DST_MAC_ADDRESS", neighbor_mac1],
-        )
+        npu.create(neighbor_obj, ["SAI_NEIGHBOR_ENTRY_ATTR_DST_MAC_ADDRESS", neighbor_mac1])
 
-        nh_oid = npu.create(
-            SaiObjType.NEXT_HOP,
+        nh_oid = npu.create(SaiObjType.NEXT_HOP,
             [
-                "SAI_NEXT_HOP_ATTR_TYPE",
-                "SAI_NEXT_HOP_TYPE_IP",
-                "SAI_NEXT_HOP_ATTR_IP",
-                str(ipv6_host),
-                "SAI_NEXT_HOP_ATTR_ROUTER_INTERFACE_ID",
-                rif_oid_vlan,
+                "SAI_NEXT_HOP_ATTR_TYPE", "SAI_NEXT_HOP_TYPE_IP",
+                "SAI_NEXT_HOP_ATTR_IP", str(ipv6_host),
+                "SAI_NEXT_HOP_ATTR_ROUTER_INTERFACE_ID", rif_oid_vlan,
             ],
         )
 
@@ -1190,9 +989,7 @@ def test_ipv6_neighbor_mac_update(npu, dataplane):
         npu.create_route(route_prefix, vrf_oid, nh_oid)
 
         if npu.run_traffic:
-            router_mac = npu.get(
-                npu.switch_oid, ["SAI_SWITCH_ATTR_SRC_MAC_ADDRESS"]
-            ).value()
+            router_mac = npu.get(npu.switch_oid, ["SAI_SWITCH_ATTR_SRC_MAC_ADDRESS"]).value()
 
             pkt = simple_tcpv6_packet(
                 eth_dst=router_mac,
@@ -1210,8 +1007,7 @@ def test_ipv6_neighbor_mac_update(npu, dataplane):
             fdb_entry1 = "SAI_OBJECT_TYPE_FDB_ENTRY:" + json.dumps(
                 fdb_key1, separators=(",", ":")
             )
-            npu.create(
-                fdb_entry1,
+            npu.create(fdb_entry1,
                 [
                     "SAI_FDB_ENTRY_ATTR_TYPE", "SAI_FDB_ENTRY_TYPE_STATIC",
                     "SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID", bp_eg,
@@ -1228,10 +1024,7 @@ def test_ipv6_neighbor_mac_update(npu, dataplane):
             send_packet(dataplane, 0, pkt)
             verify_packets(dataplane, exp_pkt1, [1])
 
-            npu.set(
-                neighbor_obj,
-                ["SAI_NEIGHBOR_ENTRY_ATTR_DST_MAC_ADDRESS", neighbor_mac2],
-            )
+            npu.set(neighbor_obj, ["SAI_NEIGHBOR_ENTRY_ATTR_DST_MAC_ADDRESS", neighbor_mac2])
 
             exp_pkt_old = simple_tcpv6_packet(
                 eth_dst=neighbor_mac1,
@@ -1251,8 +1044,7 @@ def test_ipv6_neighbor_mac_update(npu, dataplane):
             fdb_entry2 = "SAI_OBJECT_TYPE_FDB_ENTRY:" + json.dumps(
                 fdb_key2, separators=(",", ":")
             )
-            npu.create(
-                fdb_entry2,
+            npu.create(fdb_entry2,
                 [
                     "SAI_FDB_ENTRY_ATTR_TYPE", "SAI_FDB_ENTRY_TYPE_STATIC",
                     "SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID", bp_eg,
@@ -1294,15 +1086,11 @@ def test_ipv6_neighbor_mac_update(npu, dataplane):
             npu.remove(vrf_oid)
 
         for idx in range(2):
-            bp_oid = npu.create(
-                SaiObjType.BRIDGE_PORT,
+            bp_oid = npu.create(SaiObjType.BRIDGE_PORT,
                 [
-                    "SAI_BRIDGE_PORT_ATTR_TYPE",
-                    "SAI_BRIDGE_PORT_TYPE_PORT",
-                    "SAI_BRIDGE_PORT_ATTR_PORT_ID",
-                    npu.port_oids[idx],
-                    "SAI_BRIDGE_PORT_ATTR_ADMIN_STATE",
-                    "true",
+                    "SAI_BRIDGE_PORT_ATTR_TYPE", "SAI_BRIDGE_PORT_TYPE_PORT",
+                    "SAI_BRIDGE_PORT_ATTR_PORT_ID", npu.port_oids[idx],
+                    "SAI_BRIDGE_PORT_ATTR_ADMIN_STATE", "true",
                 ],
             )
             npu.dot1q_bp_oids[idx] = bp_oid
@@ -1356,37 +1144,23 @@ def test_ipv6_neighbor_fdb_ageout(npu, dataplane):
             npu.remove_vlan_member(npu.default_vlan_oid, npu.dot1q_bp_oids[idx])
             npu.remove(npu.dot1q_bp_oids[idx])
 
-        vrf_oid = npu.create(
-            SaiObjType.VIRTUAL_ROUTER,
-            ["SAI_VIRTUAL_ROUTER_ATTR_ADMIN_V6_STATE", "true"],
-        )
+        vrf_oid = npu.create(SaiObjType.VIRTUAL_ROUTER, ["SAI_VIRTUAL_ROUTER_ATTR_ADMIN_V6_STATE", "true"])
 
-        rif_oid_in = npu.create(
-            SaiObjType.ROUTER_INTERFACE,
+        rif_oid_in = npu.create(SaiObjType.ROUTER_INTERFACE,
             [
-                "SAI_ROUTER_INTERFACE_ATTR_TYPE",
-                "SAI_ROUTER_INTERFACE_TYPE_PORT",
-                "SAI_ROUTER_INTERFACE_ATTR_PORT_ID",
-                npu.port_oids[0],
-                "SAI_ROUTER_INTERFACE_ATTR_VIRTUAL_ROUTER_ID",
-                vrf_oid,
+                "SAI_ROUTER_INTERFACE_ATTR_TYPE", "SAI_ROUTER_INTERFACE_TYPE_PORT",
+                "SAI_ROUTER_INTERFACE_ATTR_PORT_ID", npu.port_oids[0],
+                "SAI_ROUTER_INTERFACE_ATTR_VIRTUAL_ROUTER_ID", vrf_oid,
             ],
         )
 
-        vlan_oid = npu.create(
-            SaiObjType.VLAN,
-            ["SAI_VLAN_ATTR_VLAN_ID", str(vlan_id)],
-        )
+        vlan_oid = npu.create(SaiObjType.VLAN, ["SAI_VLAN_ATTR_VLAN_ID", str(vlan_id)])
 
-        bp_eg = npu.create(
-            SaiObjType.BRIDGE_PORT,
+        bp_eg = npu.create(SaiObjType.BRIDGE_PORT,
             [
-                "SAI_BRIDGE_PORT_ATTR_TYPE",
-                "SAI_BRIDGE_PORT_TYPE_PORT",
-                "SAI_BRIDGE_PORT_ATTR_PORT_ID",
-                npu.port_oids[1],
-                "SAI_BRIDGE_PORT_ATTR_ADMIN_STATE",
-                "true",
+                "SAI_BRIDGE_PORT_ATTR_TYPE", "SAI_BRIDGE_PORT_TYPE_PORT",
+                "SAI_BRIDGE_PORT_ATTR_PORT_ID", npu.port_oids[1],
+                "SAI_BRIDGE_PORT_ATTR_ADMIN_STATE", "true",
             ],
         )
         npu.dot1q_bp_oids[1] = bp_eg
@@ -1396,15 +1170,11 @@ def test_ipv6_neighbor_fdb_ageout(npu, dataplane):
             "SAI_VLAN_TAGGING_MODE_TAGGED",
         )
 
-        rif_oid_vlan = npu.create(
-            SaiObjType.ROUTER_INTERFACE,
+        rif_oid_vlan = npu.create(SaiObjType.ROUTER_INTERFACE,
             [
-                "SAI_ROUTER_INTERFACE_ATTR_TYPE",
-                "SAI_ROUTER_INTERFACE_TYPE_VLAN",
-                "SAI_ROUTER_INTERFACE_ATTR_VLAN_ID",
-                vlan_oid,
-                "SAI_ROUTER_INTERFACE_ATTR_VIRTUAL_ROUTER_ID",
-                vrf_oid,
+                "SAI_ROUTER_INTERFACE_ATTR_TYPE", "SAI_ROUTER_INTERFACE_TYPE_VLAN",
+                "SAI_ROUTER_INTERFACE_ATTR_VLAN_ID", vlan_oid,
+                "SAI_ROUTER_INTERFACE_ATTR_VIRTUAL_ROUTER_ID", vrf_oid,
             ],
         )
 
@@ -1416,20 +1186,13 @@ def test_ipv6_neighbor_fdb_ageout(npu, dataplane):
         neighbor_obj = "SAI_OBJECT_TYPE_NEIGHBOR_ENTRY:" + json.dumps(
             neighbor_key, separators=(",", ":")
         )
-        npu.create(
-            neighbor_obj,
-            ["SAI_NEIGHBOR_ENTRY_ATTR_DST_MAC_ADDRESS", neighbor_mac],
-        )
+        npu.create(neighbor_obj, ["SAI_NEIGHBOR_ENTRY_ATTR_DST_MAC_ADDRESS", neighbor_mac])
 
-        nh_oid = npu.create(
-            SaiObjType.NEXT_HOP,
+        nh_oid = npu.create(SaiObjType.NEXT_HOP,
             [
-                "SAI_NEXT_HOP_ATTR_TYPE",
-                "SAI_NEXT_HOP_TYPE_IP",
-                "SAI_NEXT_HOP_ATTR_IP",
-                str(ipv6_host),
-                "SAI_NEXT_HOP_ATTR_ROUTER_INTERFACE_ID",
-                rif_oid_vlan,
+                "SAI_NEXT_HOP_ATTR_TYPE", "SAI_NEXT_HOP_TYPE_IP",
+                "SAI_NEXT_HOP_ATTR_IP", str(ipv6_host),
+                "SAI_NEXT_HOP_ATTR_ROUTER_INTERFACE_ID", rif_oid_vlan,
             ],
         )
 
@@ -1437,9 +1200,7 @@ def test_ipv6_neighbor_fdb_ageout(npu, dataplane):
         npu.create_route(route_prefix, vrf_oid, nh_oid)
 
         if npu.run_traffic:
-            router_mac = npu.get(
-                npu.switch_oid, ["SAI_SWITCH_ATTR_SRC_MAC_ADDRESS"]
-            ).value()
+            router_mac = npu.get(npu.switch_oid, ["SAI_SWITCH_ATTR_SRC_MAC_ADDRESS"]).value()
 
             pkt = simple_tcpv6_packet(
                 eth_dst=router_mac,
@@ -1464,25 +1225,16 @@ def test_ipv6_neighbor_fdb_ageout(npu, dataplane):
             fdb_entry = "SAI_OBJECT_TYPE_FDB_ENTRY:" + json.dumps(
                 fdb_key, separators=(",", ":")
             )
-            npu.create(
-                fdb_entry,
+            npu.create(fdb_entry,
                 [
-                    "SAI_FDB_ENTRY_ATTR_TYPE",
-                    "SAI_FDB_ENTRY_TYPE_STATIC",
-                    "SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID",
-                    bp_eg,
+                    "SAI_FDB_ENTRY_ATTR_TYPE", "SAI_FDB_ENTRY_TYPE_STATIC",
+                    "SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID", bp_eg,
                 ],
             )
             send_packet(dataplane, 0, pkt)
             verify_packets(dataplane, exp_pkt, [1])
 
-            npu.set(
-                npu.switch_oid,
-                [
-                    "SAI_SWITCH_ATTR_FDB_UNICAST_MISS_PACKET_ACTION",
-                    "SAI_PACKET_ACTION_DROP",
-                ],
-            )
+            npu.set(npu.switch_oid, ["SAI_SWITCH_ATTR_FDB_UNICAST_MISS_PACKET_ACTION", "SAI_PACKET_ACTION_DROP"])
             npu.remove(fdb_entry)
             fdb_entry = None
             send_packet(dataplane, 0, pkt)
@@ -1491,38 +1243,23 @@ def test_ipv6_neighbor_fdb_ageout(npu, dataplane):
             fdb_entry = "SAI_OBJECT_TYPE_FDB_ENTRY:" + json.dumps(
                 fdb_key, separators=(",", ":")
             )
-            npu.create(
-                fdb_entry,
+            npu.create(fdb_entry,
                 [
-                    "SAI_FDB_ENTRY_ATTR_TYPE",
-                    "SAI_FDB_ENTRY_TYPE_STATIC",
-                    "SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID",
-                    bp_eg,
+                    "SAI_FDB_ENTRY_ATTR_TYPE", "SAI_FDB_ENTRY_TYPE_STATIC",
+                    "SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID", bp_eg,
                 ],
             )
             send_packet(dataplane, 0, pkt)
             verify_packets(dataplane, exp_pkt, [1])
 
-            npu.set(
-                npu.switch_oid,
-                ["SAI_SWITCH_ATTR_FDB_AGING_TIME", "1"],
-            )
+            npu.set(npu.switch_oid, ["SAI_SWITCH_ATTR_FDB_AGING_TIME", "1"])
             time.sleep(2)
             send_packet(dataplane, 0, pkt)
             verify_no_packet(dataplane, exp_pkt, 1)
 
     finally:
-        npu.set(
-            npu.switch_oid,
-            [
-                "SAI_SWITCH_ATTR_FDB_UNICAST_MISS_PACKET_ACTION",
-                "SAI_PACKET_ACTION_FORWARD",
-            ],
-        )
-        npu.set(
-            npu.switch_oid,
-            ["SAI_SWITCH_ATTR_FDB_AGING_TIME", "0"],
-        )
+        npu.set(npu.switch_oid, ["SAI_SWITCH_ATTR_FDB_UNICAST_MISS_PACKET_ACTION", "SAI_PACKET_ACTION_FORWARD"])
+        npu.set(npu.switch_oid, ["SAI_SWITCH_ATTR_FDB_AGING_TIME", "0"])
         if fdb_entry is not None:
             npu.remove(fdb_entry)
         if route_prefix is not None and vrf_oid is not None:
@@ -1545,15 +1282,11 @@ def test_ipv6_neighbor_fdb_ageout(npu, dataplane):
             npu.remove(vrf_oid)
 
         for idx in range(2):
-            bp_oid = npu.create(
-                SaiObjType.BRIDGE_PORT,
+            bp_oid = npu.create(SaiObjType.BRIDGE_PORT,
                 [
-                    "SAI_BRIDGE_PORT_ATTR_TYPE",
-                    "SAI_BRIDGE_PORT_TYPE_PORT",
-                    "SAI_BRIDGE_PORT_ATTR_PORT_ID",
-                    npu.port_oids[idx],
-                    "SAI_BRIDGE_PORT_ATTR_ADMIN_STATE",
-                    "true",
+                    "SAI_BRIDGE_PORT_ATTR_TYPE", "SAI_BRIDGE_PORT_TYPE_PORT",
+                    "SAI_BRIDGE_PORT_ATTR_PORT_ID", npu.port_oids[idx],
+                    "SAI_BRIDGE_PORT_ATTR_ADMIN_STATE", "true",
                 ],
             )
             npu.dot1q_bp_oids[idx] = bp_oid
@@ -1631,33 +1364,22 @@ def test_ipv6_ecmp_group_member_update(npu, dataplane):
             npu.remove_vlan_member(npu.default_vlan_oid, npu.dot1q_bp_oids[idx])
             npu.remove(npu.dot1q_bp_oids[idx])
 
-        vrf_oid = npu.create(
-            SaiObjType.VIRTUAL_ROUTER,
-            ["SAI_VIRTUAL_ROUTER_ATTR_ADMIN_V6_STATE", "true"],
-        )
+        vrf_oid = npu.create(SaiObjType.VIRTUAL_ROUTER, ["SAI_VIRTUAL_ROUTER_ATTR_ADMIN_V6_STATE", "true"])
 
-        rif_oid_in = npu.create(
-            SaiObjType.ROUTER_INTERFACE,
+        rif_oid_in = npu.create(SaiObjType.ROUTER_INTERFACE,
             [
-                "SAI_ROUTER_INTERFACE_ATTR_TYPE",
-                "SAI_ROUTER_INTERFACE_TYPE_PORT",
-                "SAI_ROUTER_INTERFACE_ATTR_PORT_ID",
-                npu.port_oids[0],
-                "SAI_ROUTER_INTERFACE_ATTR_VIRTUAL_ROUTER_ID",
-                vrf_oid,
+                "SAI_ROUTER_INTERFACE_ATTR_TYPE", "SAI_ROUTER_INTERFACE_TYPE_PORT",
+                "SAI_ROUTER_INTERFACE_ATTR_PORT_ID", npu.port_oids[0],
+                "SAI_ROUTER_INTERFACE_ATTR_VIRTUAL_ROUTER_ID", vrf_oid,
             ],
         )
 
         for i in range(2):
-            rif_oid_eg[i] = npu.create(
-                SaiObjType.ROUTER_INTERFACE,
+            rif_oid_eg[i] = npu.create(SaiObjType.ROUTER_INTERFACE,
                 [
-                    "SAI_ROUTER_INTERFACE_ATTR_TYPE",
-                    "SAI_ROUTER_INTERFACE_TYPE_PORT",
-                    "SAI_ROUTER_INTERFACE_ATTR_PORT_ID",
-                    npu.port_oids[i + 1],
-                    "SAI_ROUTER_INTERFACE_ATTR_VIRTUAL_ROUTER_ID",
-                    vrf_oid,
+                    "SAI_ROUTER_INTERFACE_ATTR_TYPE", "SAI_ROUTER_INTERFACE_TYPE_PORT",
+                    "SAI_ROUTER_INTERFACE_ATTR_PORT_ID", npu.port_oids[i + 1],
+                    "SAI_ROUTER_INTERFACE_ATTR_VIRTUAL_ROUTER_ID", vrf_oid,
                 ],
             )
 
@@ -1670,37 +1392,21 @@ def test_ipv6_ecmp_group_member_update(npu, dataplane):
             neighbor_obj[i] = "SAI_OBJECT_TYPE_NEIGHBOR_ENTRY:" + json.dumps(
                 neighbor_key, separators=(",", ":")
             )
-            npu.create(
-                neighbor_obj[i],
-                ["SAI_NEIGHBOR_ENTRY_ATTR_DST_MAC_ADDRESS", neighbor_macs[i]],
-            )
-            nh_oid[i] = npu.create(
-                SaiObjType.NEXT_HOP,
+            npu.create(neighbor_obj[i], ["SAI_NEIGHBOR_ENTRY_ATTR_DST_MAC_ADDRESS", neighbor_macs[i]])
+            nh_oid[i] = npu.create(SaiObjType.NEXT_HOP,
                 [
-                    "SAI_NEXT_HOP_ATTR_TYPE",
-                    "SAI_NEXT_HOP_TYPE_IP",
-                    "SAI_NEXT_HOP_ATTR_IP",
-                    str(ipv6_host),
-                    "SAI_NEXT_HOP_ATTR_ROUTER_INTERFACE_ID",
-                    rif_oid_eg[i],
+                    "SAI_NEXT_HOP_ATTR_TYPE", "SAI_NEXT_HOP_TYPE_IP",
+                    "SAI_NEXT_HOP_ATTR_IP", str(ipv6_host),
+                    "SAI_NEXT_HOP_ATTR_ROUTER_INTERFACE_ID", rif_oid_eg[i],
                 ],
             )
 
-        ecmp_oid = npu.create(
-            SaiObjType.NEXT_HOP_GROUP,
-            [
-                "SAI_NEXT_HOP_GROUP_ATTR_TYPE",
-                "SAI_NEXT_HOP_GROUP_TYPE_ECMP",
-            ],
-        )
+        ecmp_oid = npu.create(SaiObjType.NEXT_HOP_GROUP, ["SAI_NEXT_HOP_GROUP_ATTR_TYPE", "SAI_NEXT_HOP_GROUP_TYPE_ECMP"])
         for i in range(2):
-            member_oid[i] = npu.create(
-                SaiObjType.NEXT_HOP_GROUP_MEMBER,
+            member_oid[i] = npu.create(SaiObjType.NEXT_HOP_GROUP_MEMBER,
                 [
-                    "SAI_NEXT_HOP_GROUP_MEMBER_ATTR_NEXT_HOP_GROUP_ID",
-                    ecmp_oid,
-                    "SAI_NEXT_HOP_GROUP_MEMBER_ATTR_NEXT_HOP_ID",
-                    nh_oid[i],
+                    "SAI_NEXT_HOP_GROUP_MEMBER_ATTR_NEXT_HOP_GROUP_ID", ecmp_oid,
+                    "SAI_NEXT_HOP_GROUP_MEMBER_ATTR_NEXT_HOP_ID", nh_oid[i],
                 ],
             )
 
@@ -1708,9 +1414,7 @@ def test_ipv6_ecmp_group_member_update(npu, dataplane):
         npu.create_route(route_prefix, vrf_oid, ecmp_oid)
 
         if npu.run_traffic:
-            router_mac = npu.get(
-                npu.switch_oid, ["SAI_SWITCH_ATTR_SRC_MAC_ADDRESS"]
-            ).value()
+            router_mac = npu.get(npu.switch_oid, ["SAI_SWITCH_ATTR_SRC_MAC_ADDRESS"]).value()
 
             port_count = {1: 0, 2: 0}
             for i in range(max_itrs):
@@ -1726,15 +1430,11 @@ def test_ipv6_ecmp_group_member_update(npu, dataplane):
             assert port_count[2] >= min_per_path_2way, \
                 f"Port 2 got {port_count[2]} packets, expected >= {min_per_path_2way}"
 
-        rif_oid_eg[2] = npu.create(
-            SaiObjType.ROUTER_INTERFACE,
+        rif_oid_eg[2] = npu.create(SaiObjType.ROUTER_INTERFACE,
             [
-                "SAI_ROUTER_INTERFACE_ATTR_TYPE",
-                "SAI_ROUTER_INTERFACE_TYPE_PORT",
-                "SAI_ROUTER_INTERFACE_ATTR_PORT_ID",
-                npu.port_oids[3],
-                "SAI_ROUTER_INTERFACE_ATTR_VIRTUAL_ROUTER_ID",
-                vrf_oid,
+                "SAI_ROUTER_INTERFACE_ATTR_TYPE", "SAI_ROUTER_INTERFACE_TYPE_PORT",
+                "SAI_ROUTER_INTERFACE_ATTR_PORT_ID", npu.port_oids[3],
+                "SAI_ROUTER_INTERFACE_ATTR_VIRTUAL_ROUTER_ID", vrf_oid,
             ],
         )
         neighbor_key3 = {
@@ -1745,28 +1445,18 @@ def test_ipv6_ecmp_group_member_update(npu, dataplane):
         neighbor_obj[2] = "SAI_OBJECT_TYPE_NEIGHBOR_ENTRY:" + json.dumps(
             neighbor_key3, separators=(",", ":")
         )
-        npu.create(
-            neighbor_obj[2],
-            ["SAI_NEIGHBOR_ENTRY_ATTR_DST_MAC_ADDRESS", neighbor_macs[2]],
-        )
-        nh_oid[2] = npu.create(
-            SaiObjType.NEXT_HOP,
+        npu.create(neighbor_obj[2], ["SAI_NEIGHBOR_ENTRY_ATTR_DST_MAC_ADDRESS", neighbor_macs[2]])
+        nh_oid[2] = npu.create(SaiObjType.NEXT_HOP,
             [
-                "SAI_NEXT_HOP_ATTR_TYPE",
-                "SAI_NEXT_HOP_TYPE_IP",
-                "SAI_NEXT_HOP_ATTR_IP",
-                str(ipv6_host),
-                "SAI_NEXT_HOP_ATTR_ROUTER_INTERFACE_ID",
-                rif_oid_eg[2],
+                "SAI_NEXT_HOP_ATTR_TYPE", "SAI_NEXT_HOP_TYPE_IP",
+                "SAI_NEXT_HOP_ATTR_IP", str(ipv6_host),
+                "SAI_NEXT_HOP_ATTR_ROUTER_INTERFACE_ID", rif_oid_eg[2],
             ],
         )
-        member_oid[2] = npu.create(
-            SaiObjType.NEXT_HOP_GROUP_MEMBER,
+        member_oid[2] = npu.create(SaiObjType.NEXT_HOP_GROUP_MEMBER,
             [
-                "SAI_NEXT_HOP_GROUP_MEMBER_ATTR_NEXT_HOP_GROUP_ID",
-                ecmp_oid,
-                "SAI_NEXT_HOP_GROUP_MEMBER_ATTR_NEXT_HOP_ID",
-                nh_oid[2],
+                "SAI_NEXT_HOP_GROUP_MEMBER_ATTR_NEXT_HOP_GROUP_ID", ecmp_oid,
+                "SAI_NEXT_HOP_GROUP_MEMBER_ATTR_NEXT_HOP_ID", nh_oid[2],
             ],
         )
 
@@ -1825,15 +1515,11 @@ def test_ipv6_ecmp_group_member_update(npu, dataplane):
             npu.remove(vrf_oid)
 
         for idx in range(4):
-            bp_oid = npu.create(
-                SaiObjType.BRIDGE_PORT,
+            bp_oid = npu.create(SaiObjType.BRIDGE_PORT,
                 [
-                    "SAI_BRIDGE_PORT_ATTR_TYPE",
-                    "SAI_BRIDGE_PORT_TYPE_PORT",
-                    "SAI_BRIDGE_PORT_ATTR_PORT_ID",
-                    npu.port_oids[idx],
-                    "SAI_BRIDGE_PORT_ATTR_ADMIN_STATE",
-                    "true",
+                    "SAI_BRIDGE_PORT_ATTR_TYPE", "SAI_BRIDGE_PORT_TYPE_PORT",
+                    "SAI_BRIDGE_PORT_ATTR_PORT_ID", npu.port_oids[idx],
+                    "SAI_BRIDGE_PORT_ATTR_ADMIN_STATE", "true",
                 ],
             )
             npu.dot1q_bp_oids[idx] = bp_oid
