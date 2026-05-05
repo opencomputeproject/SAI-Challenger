@@ -64,60 +64,6 @@ FLEX_COUNTER_ID_LIST_BY_OBJECT_TYPE_AND_COUNTER_TYPE = {
     ("SAI_OBJECT_TYPE_BUFFER_POOL", "Buffer Pool Counter"): "BUFFER_POOL_COUNTER_ID_LIST",
 }
 
-OBJECT_COUNTER_ID_LISTS = {
-    "SAI_OBJECT_TYPE_PORT": {
-        "PORT_COUNTER_ID_LIST",
-        "PORT_PHY_ATTR_ID_LIST",
-        "PORT_DEBUG_COUNTER_ID_LIST",
-    },
-    "SAI_OBJECT_TYPE_PORT_SERDES": {
-        "PORT_PHY_SERDES_ATTR_ID_LIST",
-    },
-    "SAI_OBJECT_TYPE_QUEUE": {
-        "QUEUE_COUNTER_ID_LIST",
-        "QUEUE_ATTR_ID_LIST",
-    },
-    "SAI_OBJECT_TYPE_INGRESS_PRIORITY_GROUP": {
-        "PG_COUNTER_ID_LIST",
-        "PG_ATTR_ID_LIST",
-    },
-    "SAI_OBJECT_TYPE_ROUTER_INTERFACE": {
-        "RIF_COUNTER_ID_LIST",
-    },
-    "SAI_OBJECT_TYPE_SWITCH": {
-        "SWITCH_DEBUG_COUNTER_ID_LIST",
-        "SWITCH_COUNTER_ID_LIST",
-    },
-    "SAI_OBJECT_TYPE_MACSEC_FLOW": {
-        "MACSEC_FLOW_COUNTER_ID_LIST",
-    },
-    "SAI_OBJECT_TYPE_MACSEC_SA": {
-        "MACSEC_SA_COUNTER_ID_LIST",
-        "MACSEC_SA_ATTR_ID_LIST",
-    },
-    "SAI_OBJECT_TYPE_ACL_COUNTER": {
-        "ACL_COUNTER_ATTR_ID_LIST",
-    },
-    "SAI_OBJECT_TYPE_COUNTER": {
-        "FLOW_COUNTER_ID_LIST",
-        "SRV6_COUNTER_ID_LIST",
-    },
-    "SAI_OBJECT_TYPE_POLICER": {
-        "POLICER_COUNTER_ID_LIST",
-    },
-    "SAI_OBJECT_TYPE_TUNNEL": {
-        "TUNNEL_COUNTER_ID_LIST",
-    },
-    "SAI_OBJECT_TYPE_ENI": {
-        "ENI_COUNTER_ID_LIST",
-        "DASH_METER_COUNTER_ID_LIST",
-    },
-    "SAI_OBJECT_TYPE_HA_SET": {
-        "HA_SET_COUNTER_ID_LIST",
-    },
-}
-
-
 class SaiRedisClient(SaiClient):
     """Redis SAI client implementation to wrap low level SAI calls"""
     attempts = 100

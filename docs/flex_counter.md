@@ -4,7 +4,8 @@ This document describes what are flex counters and what was added for this featu
 
 ### How flex counters are managed in SONiC
 
-Flex counters are SONiC's mechanism for controlling periodic polling of SAI counters and, in some cases, SAI attributes for different classes of switch objects. Data related to flex counters is stored in `FLEX_COUNTER_DB`. Multiple flex counters are grouped in flex counter group. For each group `syncd` creates a separate thread in which it polls stats from SAI and stores them in `COUNTERS_DB`. SONiC CLI tools read counters from `COUNTERS_DB`
+Flex counters are SONiC's mechanism for controlling periodic polling of SAI counters and, in some cases, SAI attributes for different classes of switch objects. Data related to flex counters is stored in `FLEX_COUNTER_DB`. There are two kinds of flex counters: those that poll SAI object statistics and those that poll SAI object attributes
+Multiple flex counters are grouped in flex counter group. For each group `syncd` creates a separate thread in which it polls stats from SAI and stores them in `COUNTERS_DB`. SONiC CLI tools read counters from `COUNTERS_DB`
 
 Each group has its own configuration entry and can typically be:
 
