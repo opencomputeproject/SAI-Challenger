@@ -1,10 +1,6 @@
-import ipaddress
 import pytest
 import time
-from saichallenger.common.sai_data import SaiObjType
-from ptf.testutils import simple_tcp_packet, send_packet, verify_packets, verify_packet, verify_no_packet_any, verify_no_packet, verify_any_packet_any_port
 from sai_client.sai_redis_client.sai_redis_client import SaiRedisClient
-
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -19,17 +15,17 @@ def test_port_counters(npu):
     Check if we can set counter polling and verify counters
     """
     if isinstance(npu.sai_client, SaiRedisClient):
-        group_name = "PORT_STAT_COUNTER"
+        group_name = "PORT_COUNTER_GROUP"
         counters = ["SAI_PORT_STAT_IF_IN_UCAST_PKTS","SAI_PORT_STAT_IF_OUT_UCAST_PKTS"]
         poll_interval_ms = 100
 
         npu.set_counter_group(group_name=group_name,
-                              status='enable',
+                              enable=True,
                               poll_interval=poll_interval_ms,
-                              stats_mode = "STATS_MODE_READ")
+                              clear_on_read=False)
         npu.start_counter_poll(group_name=group_name,
                                oid=npu.port_oids[0],
-                               id_list="PORT_COUNTER_ID_LIST",
+                               counter_type="Port Counter",
                                counters=counters)
         
         # do some work, e. g. send traffic

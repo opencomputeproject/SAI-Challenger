@@ -28,6 +28,8 @@ To see more run the command below or check this [implementation file](https://gi
 redis-cli -n 5 --scan | cut -d ':' -f1,2 | sort -u
 ```
 
+`Syncd` doesn't care about specific group name, only `orchagent` follows these conventional names
+
 Running configs for flex counter groups are stored in `CONFIG_DB`, based on this data `orchagent` tells `syncd` how to configure flex counter group and which counters it should poll. `Syncd` stores this configuration in `FLEX_COUNTER_DB` e. g.:
 
 `FLEX_COUNTER_GROUP_TABLE:PORT_STAT_COUNTER` - stores configuration for group
@@ -66,7 +68,7 @@ redis-cli -n 1 PUBLISH ASIC_STATE_CHANNEL@1 G
 
 ### How flex counters are managed in SAI-Challenger
 
-Due to the need of `syncd` process, flex counter support will work only for `SaiRedisClient`. The 2nd way of communication (using `ASIC_STATE_KEY_VALUE_OP_QUEUE`) with `syncd` was chosen, as we already do this for SAI object management. For implementation details look at [sai_redis_client.py](../common/sai_client/sai_redis_client/sai_redis_client.py)
+Due to the need of `syncd` process, flex counter support will work only for `SaiRedisClient`. The 2nd way of communication (using `ASIC_STATE_KEY_VALUE_OP_QUEUE`) with `syncd` was chosen, as we already do this for SAI object management. For implementation details look at [sai_redis_client.py](../common/sai_client/sai_redis_client/sai_redis_client.py). Check `FLEX_COUNTER_TYPES` in [sai_redis_client.py](../common/sai_client/sai_redis_client/sai_redis_client.py) for list of supported flex counters
 
 ### New sai CLI commands
 
@@ -93,10 +95,10 @@ sai counter del oid:0x1000000000002
 
 ### Example of using flex counters in tests
 
-[Simple test with counters](../tests/test_simple_counters.py)
+[Simple test with counters](../tests/test_flex_counters.py)
 
 ### Possible improvements
 
 * add support for flex counter support for PHY devices (they uses `GB_COUNTERS_DB` and `GB_FLEX_COUNTER_DB`)
-* add support for adding plugins (lua scripts) for counter group. Each group could have lua scripts that are run after collection of counters. Examples of plugins: [port_rates.lua](https://github.com/sonic-net/sonic-swss/blob/master/orchagent/port_rates.lua), [port_flr.lua](https://github.com/sonic-net/sonic-swss/blob/master/orchagent/port_flr.lua)
+* add support for adding plugins (lua scripts) for counter group. Each group could have lua scripts that are run after collection of counters. Examples of plugins: [port_rates.lua](https://github.com/sonic-net/sonic-swss/blob/master/orchagent/port_rates.lua), [port_flr.lua](https://github.com/sonic-net/sonic-swss/blob/master/orchagent/port_flr.lua). Adding support for different plugins can be tricky because they may require additional configuration of `COUNTERS_DB` or sometimes even `APPL_DB`
 * add support for bulk counter polling for flex counter groups (it would require addition of BULK_CHUNK_SIZE and BULK_CHUNK_SIZE_PER_PREFIX fields for flex counter group with examples)

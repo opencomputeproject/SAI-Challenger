@@ -323,16 +323,16 @@ class Sai():
         return self.sai_client.clear_stats(obj, attrs, do_assert)
     
     # Manage flex counters
-    def set_counter_group(self, *, group_name, status=None,
-                          poll_interval=None, stats_mode=None, do_assert=True):
-        return self.sai_client.set_counter_group(group_name=group_name, status=status, poll_interval=poll_interval, 
-                                                 stats_mode=stats_mode, do_assert=do_assert)
+    def set_counter_group(self, *, group_name, enable=None,
+                          poll_interval=None, clear_on_read=None, do_assert=True):
+        return self.sai_client.set_counter_group(group_name=group_name, enable=enable, poll_interval=poll_interval, 
+                                                 clear_on_read=clear_on_read, do_assert=do_assert)
 
     def del_counter_group(self, group_name, do_assert=True):
         return self.sai_client.del_counter_group(group_name, do_assert)
 
-    def start_counter_poll(self, *, group_name, oid, id_list, counters, do_assert=True):
-        return self.sai_client.start_counter_poll(group_name=group_name, oid=oid, id_list=id_list, counters=counters,
+    def start_counter_poll(self, *, group_name, oid, counter_type, counters, do_assert=True):
+        return self.sai_client.start_counter_poll(group_name=group_name, oid=oid, counter_type=counter_type, counters=counters,
                                                   do_assert=do_assert)
 
     def stop_counter_poll(self, group_name, oid, do_assert=True):
@@ -341,6 +341,7 @@ class Sai():
     # Manage counters from COUNTERS_DB
     def get_counter(self, oid, counters):
         return self.sai_client.get_counter(oid, counters)
+
     def del_counter(self, oid):
         return self.sai_client.del_counter(oid)
 

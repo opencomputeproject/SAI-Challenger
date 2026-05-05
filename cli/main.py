@@ -11,7 +11,10 @@ from saichallenger.common.sai_npu import SaiNpu
 from saichallenger.common.sai_testbed import SaiTestbedMeta
 from saichallenger.common.sai_testbed import SaiTestbed
 
-from sai_client.sai_redis_client.sai_redis_client import SaiRedisClient
+from sai_client.sai_redis_client.sai_redis_client import (
+    SaiRedisClient,
+    FLEX_COUNTER_ID_LIST_BY_OBJECT_TYPE_AND_COUNTER_TYPE,
+)
 
 VERSION = '0.1'
 
@@ -432,7 +435,7 @@ def clear(oid, cntrs):
 @cli.group(invoke_without_command=True)
 @click.pass_context
 def counter(ctx):
-    """Manage Redis flex counters polls, groups and retrive counters from COUNTERS_DB"""
+    """Manage Redis flex counters polls, groups and retrieve counters from COUNTERS_DB"""
     sai = get_sai_entity()
     if not isinstance(sai.sai_client, SaiRedisClient):
         raise click.UsageError("Only Redis client supports counters")
@@ -445,6 +448,24 @@ def counter(ctx):
 def group():
     """Manage Redis flex counters groups"""
     pass
+
+
+def _parse_clear_on_read(val):
+    v = val.strip()
+    if v == "STATS_MODE_READ":
+        return False
+    if v == "STATS_MODE_READ_AND_CLEAR":
+        return True
+    raise ValueError(f"Invalid STATS_MODE value: {val}")
+
+
+def _parse_flex_counter_enable(val):
+    v = val.strip().lower()
+    if v == "enable":
+        return True
+    if v == "disable":
+        return False
+    raise ValueError(f"Invalid FLEX_COUNTER_STATUS value: {val}")
 
 
 def _parse_flex_counter_group_attrs(attrs):
@@ -461,16 +482,17 @@ def _parse_flex_counter_group_attrs(attrs):
     it = iter(attrs)
     for key in it:
         val = next(it)
-        if key == "POLL_INTERVAL":
+        key_upper = key.upper()
+        if key_upper == "POLL_INTERVAL":
             kwargs["poll_interval"] = int(val)
-        elif key == "STATS_MODE":
-            kwargs["stats_mode"] = val
-        elif key == "FLEX_COUNTER_STATUS":
-            kwargs["status"] = val
+        elif key_upper == "STATS_MODE":
+            kwargs["clear_on_read"] = _parse_clear_on_read(val)
+        elif key_upper == "FLEX_COUNTER_STATUS":
+            kwargs["enable"] = _parse_flex_counter_enable(val)
         else:
             raise ValueError(
-                "Unknown flex counter group key {!r}; use POLL_INTERVAL, STATS_MODE, "
-                "or FLEX_COUNTER_STATUS".format(key)
+                "Unknown flex counter group key {!r}; use POLL_INTERVAL, "
+                "STATS_MODE or FLEX_COUNTER_STATUS".format(key)
             )
     return kwargs
 
@@ -526,11 +548,20 @@ def poll():
     pass
 
 
+def _counter_type_for_id_list(sai, oid, id_list):
+    obj_type = sai.vid_to_type(oid)
+    for (ot, counter_type), il in FLEX_COUNTER_ID_LIST_BY_OBJECT_TYPE_AND_COUNTER_TYPE.items():
+        if ot == obj_type and il == id_list:
+            return counter_type
+    raise ValueError(
+        "Unknown id_list {!r} for object type {} (oid {})".format(id_list, obj_type, oid))
+
+
 # 'counter poll start' command
 @poll.command()
 @click.argument('group_name', metavar='<counter group name>', required=True, type=str)
 @click.argument('oid', metavar='<oid>', required=True, type=str)
-@click.argument('attrs', metavar='<attr> <value>', required=True, type=str, nargs=-1)
+@click.argument('attrs', metavar='<counter_type> <counters_csv>', required=True, type=str, nargs=-1)
 def start(group_name, oid, attrs):
     """Start polling of the counter"""
     click.echo()
@@ -544,13 +575,20 @@ def start(group_name, oid, attrs):
         click.echo("Invalid flex counters group's attributes {} provided\n".format(attrs))
         return False
 
+    id_list = attrs[0]
+    counters = [c.strip() for c in attrs[1].split(",") if c.strip()]
+    if not counters:
+        click.echo("No counter names in {!r}\n".format(attrs[1]))
+        return False
+
     sai = get_sai_entity()
     try:
+        counter_type = _counter_type_for_id_list(sai, oid, id_list)
         status = sai.start_counter_poll(
             group_name=group_name,
             oid=oid,
-            id_list=attrs[0],
-            counters=attrs[1].split(","),
+            counter_type=counter_type,
+            counters=counters,
             do_assert=False,
         )
     except ValueError as e:

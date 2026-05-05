@@ -6,28 +6,63 @@ import os
 from saichallenger.common.sai_client.sai_client import SaiClient
 from saichallenger.common.sai_data import SaiObjType, SaiData
 
-SUPPORTED_GROUP_NAMES = {"PORT_STAT_COUNTER","PORT_RATE_COUNTER", "PORT_BUFFER_DROP_STAT", "PORT_PHY_ATTR", "PORT_PHY_SERDES_ATTR",
-                         "QUEUE_STAT_COUNTER", "QUEUE_WATERMARK_STAT_COUNTER",
-                         "PG_WATERMARK_STAT_COUNTER", "PG_DROP_STAT_COUNTER",
-                         "WRED_ECN_QUEUE_STAT_COUNTER", "WRED_ECN_PORT_STAT_COUNTER",
-                         "DEBUG_COUNTER", "DEBUG_MONITOR_COUNTER",
-                         "PFC_WD",
-                         "BUFFER_POOL_WATERMARK_STAT_COUNTER",
-                         "RIF_STAT_COUNTER", "RIF_RATE_COUNTER",
-                         "ACL_STAT_COUNTER",
-                         "TUNNEL_STAT_COUNTER",
-                         "HOSTIF_TRAP_FLOW_COUNTER",
-                         "ROUTE_FLOW_COUNTER",
-                         "COUNTERS_MACSEC_SA_ATTR", "COUNTERS_MACSEC_SA", "COUNTERS_MACSEC_FLOW",
-                         "ENI_STAT_COUNTER",
-                         "METER_STAT_COUNTER",
-                         "SWITCH_STAT_COUNTER",
-                         "HA_SET_STAT_COUNTER"
-                         }
+_STATS_CLEAR_ON_READ_MAPPING = {False: "STATS_MODE_READ", True: "STATS_MODE_READ_AND_CLEAR"}
 
-SUPPORTED_STATS_MODES = {"STATS_MODE_READ", "STATS_MODE_READ_AND_CLEAR"}
+_FLEX_COUNTER_ENABLE_MAPPING = {False: "disable", True: "enable"}
 
-FLEX_COUNTER_STATUS_VALUES = {"enable", "disable"}
+FLEX_COUNTER_TYPES = {
+    "Port Counter",
+    "Port Phy Attributes",
+    "Port Phy Serdes Attributes",
+    "Port Debug Counter",
+    "Queue Counter",
+    "Priority Group Counter",
+    "Rif Counter",
+    "Switch Debug Counter",
+    "MACSEC Flow Counter",
+    "MACSEC SA Counter",
+    "Flow Counter",
+    "Tunnel Counter",
+    "Buffer Pool Counter", # TODO full support requires ability to set per object stats mode
+    "DASH ENI Counter",
+    "DASH HA Set Counter",
+    "DASH Meter Bucket Counter",
+    "Policer Counter",
+    "SRv6 Counter",
+    "Switch Counter",
+    "Queue Attribute",
+    "Priority Group Attribute",
+    "MACSEC SA Attribute",
+    "ACL Counter Attribute",
+    # "WRED Queue Counter", # TODO requires plugin support
+    # "WRED Port Counter", # TODO requires plugin support
+}
+
+FLEX_COUNTER_ID_LIST_BY_OBJECT_TYPE_AND_COUNTER_TYPE = {
+    ("SAI_OBJECT_TYPE_PORT", "Port Counter"): "PORT_COUNTER_ID_LIST",
+    ("SAI_OBJECT_TYPE_PORT", "Port Phy Attributes"): "PORT_PHY_ATTR_ID_LIST",
+    ("SAI_OBJECT_TYPE_PORT_SERDES", "Port Phy Serdes Attributes"): "PORT_PHY_SERDES_ATTR_ID_LIST",
+    ("SAI_OBJECT_TYPE_PORT", "Port Debug Counter"): "PORT_DEBUG_COUNTER_ID_LIST",
+    ("SAI_OBJECT_TYPE_QUEUE", "Queue Counter"): "QUEUE_COUNTER_ID_LIST",
+    ("SAI_OBJECT_TYPE_QUEUE", "Queue Attribute"): "QUEUE_ATTR_ID_LIST",
+    ("SAI_OBJECT_TYPE_INGRESS_PRIORITY_GROUP", "Priority Group Counter"): "PG_COUNTER_ID_LIST",
+    ("SAI_OBJECT_TYPE_INGRESS_PRIORITY_GROUP", "Priority Group Attribute"): "PG_ATTR_ID_LIST",
+    ("SAI_OBJECT_TYPE_ROUTER_INTERFACE", "Rif Counter"): "RIF_COUNTER_ID_LIST",
+    ("SAI_OBJECT_TYPE_SWITCH", "Switch Debug Counter"): "SWITCH_DEBUG_COUNTER_ID_LIST",
+    ("SAI_OBJECT_TYPE_MACSEC_FLOW", "MACSEC Flow Counter"): "MACSEC_FLOW_COUNTER_ID_LIST",
+    ("SAI_OBJECT_TYPE_MACSEC_SA", "MACSEC SA Counter"): "MACSEC_SA_COUNTER_ID_LIST",
+    ("SAI_OBJECT_TYPE_MACSEC_SA", "MACSEC SA Attribute"): "MACSEC_SA_ATTR_ID_LIST",
+    ("SAI_OBJECT_TYPE_ACL_COUNTER", "ACL Counter Attribute"): "ACL_COUNTER_ATTR_ID_LIST",
+    ("SAI_OBJECT_TYPE_COUNTER", "Flow Counter"): "FLOW_COUNTER_ID_LIST",
+    ("SAI_OBJECT_TYPE_POLICER", "Policer Counter"): "POLICER_COUNTER_ID_LIST",
+    ("SAI_OBJECT_TYPE_TUNNEL", "Tunnel Counter"): "TUNNEL_COUNTER_ID_LIST",
+    ("SAI_OBJECT_TYPE_ENI", "DASH ENI Counter"): "ENI_COUNTER_ID_LIST",
+    ("SAI_OBJECT_TYPE_HA_SET", "DASH HA Set Counter"): "HA_SET_COUNTER_ID_LIST",
+    ("SAI_OBJECT_TYPE_ENI", "DASH Meter Bucket Counter"): "DASH_METER_COUNTER_ID_LIST",
+    ("SAI_OBJECT_TYPE_COUNTER", "SRv6 Counter"): "SRV6_COUNTER_ID_LIST",
+    ("SAI_OBJECT_TYPE_SWITCH", "Switch Counter"): "SWITCH_COUNTER_ID_LIST",
+    ("SAI_OBJECT_TYPE_BUFFER_POOL", "Buffer Pool Counter"): "BUFFER_POOL_COUNTER_ID_LIST",
+}
 
 OBJECT_COUNTER_ID_LISTS = {
     "SAI_OBJECT_TYPE_PORT": {
@@ -521,23 +556,21 @@ class SaiRedisClient(SaiClient):
             assert status[2] == 'SAI_STATUS_SUCCESS'
         return status[2]
     
-    def set_counter_group(self, *, group_name, status=None,
-                          poll_interval=None, stats_mode=None, do_assert=True):
+    def set_counter_group(self, *, group_name, enable=None,
+                          poll_interval=None, clear_on_read=None, do_assert=True):
         attrs = []
-        if group_name not in SUPPORTED_GROUP_NAMES:
-            raise ValueError(f"Invalid group name: {group_name}")
-        if status is not None:
-            if status not in FLEX_COUNTER_STATUS_VALUES:
-                raise ValueError(f"Invalid enable value: {status}")
-            attrs.extend(["FLEX_COUNTER_STATUS", status])
+        if enable is not None:
+            if not isinstance(enable, bool):
+                raise ValueError(f"Invalid enable value: {enable}")
+            attrs.extend(["FLEX_COUNTER_STATUS", _FLEX_COUNTER_ENABLE_MAPPING[enable]])
         if poll_interval is not None:
             if not isinstance(poll_interval, int):
-                raise ValueError(f"Invalid poll_intervall value: {poll_interval}")
+                raise ValueError(f"Invalid poll_interval value: {poll_interval}")
             attrs.extend(["POLL_INTERVAL", poll_interval])
-        if stats_mode is not None:
-            if stats_mode not in SUPPORTED_STATS_MODES:
-                raise ValueError(f"Invalid stats_mode value: {stats_mode}")
-            attrs.extend(["STATS_MODE", stats_mode])
+        if clear_on_read is not None:
+            if not isinstance(clear_on_read, bool):
+                raise ValueError(f"Invalid clear_on_read value: {clear_on_read}")
+            attrs.extend(["STATS_MODE", _STATS_CLEAR_ON_READ_MAPPING[clear_on_read]])
 
         for i, attr in enumerate(attrs):
             if type(attr) != str:
@@ -559,11 +592,10 @@ class SaiRedisClient(SaiClient):
             assert status[2] == 'SAI_STATUS_SUCCESS'
         return status[2]
 
-    def start_counter_poll(self, *, group_name, oid, id_list, counters, do_assert=True):
-        if group_name not in SUPPORTED_GROUP_NAMES:
-            raise ValueError(f"Invalid group name: {group_name}")
-        if id_list not in OBJECT_COUNTER_ID_LISTS[self.vid_to_type(oid)]:
-            raise ValueError(f"Invalid id_list: {id_list}")
+    def start_counter_poll(self, *, group_name, oid, counter_type, counters, do_assert=True):
+        id_list = FLEX_COUNTER_ID_LIST_BY_OBJECT_TYPE_AND_COUNTER_TYPE.get((self.vid_to_type(oid), counter_type), None)
+        if id_list is None:
+            raise ValueError(f"Invalid counter type: {counter_type} for object type: {self.vid_to_type(oid)}")
             
         attrs = [id_list, ",".join(counters)]
         attrs = json.dumps(attrs)
@@ -577,8 +609,6 @@ class SaiRedisClient(SaiClient):
         return status[2]
 
     def stop_counter_poll(self, group_name, oid, do_assert=True):
-        if group_name not in SUPPORTED_GROUP_NAMES:
-            raise ValueError(f"Invalid group name: {group_name}")
         obj = group_name + ':' + oid
         status = self.operate(obj, "[]", "Dstop_poll")
         status[2] = status[2].decode("utf-8")

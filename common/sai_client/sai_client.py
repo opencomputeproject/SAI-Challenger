@@ -53,20 +53,20 @@ class SaiClient:
         raise NotImplementedError
     
     # Manage flex counters
-    def set_counter_group(self, *, group_name, status=None,
-                          poll_interval=None, stats_mode=None, do_assert=True):
+    def set_counter_group(self, *, group_name, enable=None,
+                          poll_interval=None, clear_on_read=None, do_assert=True):
         raise NotImplementedError
 
     def del_counter_group(self, group_name, do_assert=True):
         raise NotImplementedError
 
-    def start_counter_poll(self, *, group_name, oid, id_list, counters, do_assert=True):
+    def start_counter_poll(self, *, group_name, oid, counter_type, counters, do_assert=True):
         raise NotImplementedError
 
     def stop_counter_poll(self, group_name, oid, do_assert=True):
         raise NotImplementedError
 
-    # Manage counters from COUTNERS_DB
+    # Manage counters from COUNTERS_DB
     def get_counter(self, oid, counters):
         raise NotImplementedError
     def del_counter(self, oid):
