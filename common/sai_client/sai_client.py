@@ -2,8 +2,6 @@ import sys
 import time
 import os
 
-from saichallenger.common.sai_constants import DEFAULT_POLL_INTERVAL_MS, DEFAULT_COUNTERS_TABLE
-
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 class SaiClient:
@@ -56,7 +54,7 @@ class SaiClient:
     
     # Manage flex counters
     def set_counter_group(self, group_name, *, enable=True,
-                          poll_interval=DEFAULT_POLL_INTERVAL_MS, clear_on_read=False, do_assert=True):
+                          poll_interval=0, clear_on_read=False, do_assert=True):
         raise NotImplementedError
 
     def del_counter_group(self, group_name, do_assert=True):
@@ -69,10 +67,10 @@ class SaiClient:
         raise NotImplementedError
 
     # Manage counters from COUNTERS_DB
-    def get_counter(self, oid, counters, counter_table=DEFAULT_COUNTERS_TABLE):
+    def get_counter(self, oid, counters, counter_table="COUNTERS"):
         raise NotImplementedError
 
-    def del_counter(self, oid, counter_table=DEFAULT_COUNTERS_TABLE):
+    def del_counter(self, oid, counter_table="COUNTERS"):
         raise NotImplementedError
 
     # Flush FDB

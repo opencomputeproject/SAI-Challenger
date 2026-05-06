@@ -11,10 +11,8 @@ from saichallenger.common.sai_npu import SaiNpu
 from saichallenger.common.sai_testbed import SaiTestbedMeta
 from saichallenger.common.sai_testbed import SaiTestbed
 
-from sai_client.sai_redis_client.sai_redis_client import (
-    SaiRedisClient,
-    FLEX_COUNTER_ID_LIST_BY_OBJECT_TYPE_AND_COUNTER_TYPE,
-)
+from sai_client.sai_redis_client.sai_redis_client import SaiRedisClient
+
 
 VERSION = '0.1'
 
@@ -561,8 +559,8 @@ def _counter_type_for_id_list(sai, oid, id_list):
 @poll.command()
 @click.argument('group_name', metavar='<counter group name>', required=True, type=str)
 @click.argument('oid', metavar='<oid>', required=True, type=str)
-@click.argument('attrs', metavar='<counter_type> <counters_csv>', required=True, type=str, nargs=-1)
-def start(group_name, oid, attrs):
+@click.argument('cntrs', metavar='<counters_csv>', required=True, type=str)
+def start(group_name, oid, cntrs):
     """Start polling of the counter"""
     click.echo()
     group_name = group_name.upper()
@@ -571,23 +569,16 @@ def start(group_name, oid, attrs):
         click.echo("SAI object ID must start with 'oid:' prefix\n")
         return False
 
-    if len(attrs) != 2:
-        click.echo("Invalid flex counters group's attributes {} provided\n".format(attrs))
-        return False
-
-    id_list = attrs[0]
-    counters = [c.strip() for c in attrs[1].split(",") if c.strip()]
+    counters = [c.strip() for c in cntrs.split(",") if c.strip()]
     if not counters:
-        click.echo("No counter names in {!r}\n".format(attrs[1]))
+        click.echo("No counter names in {!r}\n".format(cntrs))
         return False
 
     sai = get_sai_entity()
     try:
-        counter_type = _counter_type_for_id_list(sai, oid, id_list)
         status = sai.start_counter_poll(
             group_name=group_name,
             oid=oid,
-            counter_type=counter_type,
             counters=counters,
             do_assert=False,
         )

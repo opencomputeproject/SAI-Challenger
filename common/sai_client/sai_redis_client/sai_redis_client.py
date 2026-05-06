@@ -5,65 +5,6 @@ import os
 
 from saichallenger.common.sai_client.sai_client import SaiClient
 from saichallenger.common.sai_data import SaiObjType, SaiData
-from saichallenger.common.sai_constants import DEFAULT_POLL_INTERVAL_MS, DEFAULT_COUNTERS_TABLE
-
-_STATS_CLEAR_ON_READ_MAPPING = {False: "STATS_MODE_READ", True: "STATS_MODE_READ_AND_CLEAR"}
-
-_FLEX_COUNTER_ENABLE_MAPPING = {False: "disable", True: "enable"}
-
-FLEX_COUNTER_TYPES = {
-    "Port Counter",
-    "Port Phy Attributes", # attributes are stored in PORT_PHY_ATTR in COUNTERS_DB
-    # "Port Phy Serdes Attributes", # TODO requires newer sonic-sairedis # attributes are stored in PORT_PHY_ATTR in COUNTERS_DB
-    "Port Debug Counter",
-    "Queue Counter",
-    "Priority Group Counter",
-    "Rif Counter",
-    "Switch Debug Counter",
-    "MACSEC Flow Counter",
-    "MACSEC SA Counter",
-    "Flow Counter",
-    "Tunnel Counter",
-    "Buffer Pool Counter", # TODO full support requires ability to set per object stats mode
-    "DASH ENI Counter",
-    "DASH HA Set Counter",
-    "DASH Meter Bucket Counter",
-    "Policer Counter",
-    "SRv6 Counter",
-    "Switch Counter",
-    "Queue Attribute",
-    "Priority Group Attribute",
-    "MACSEC SA Attribute",
-    "ACL Counter Attribute",
-    # "WRED Queue Counter", # TODO requires plugin support
-    # "WRED Port Counter", # TODO requires plugin support
-}
-
-FLEX_COUNTER_ID_LIST_BY_OBJECT_TYPE_AND_COUNTER_TYPE = {
-    ("SAI_OBJECT_TYPE_PORT", "Port Counter"): "PORT_COUNTER_ID_LIST",
-    ("SAI_OBJECT_TYPE_PORT", "Port Phy Attributes"): "PORT_PHY_ATTR_ID_LIST",
-    # ("SAI_OBJECT_TYPE_PORT_SERDES", "Port Phy Serdes Attributes"): "PORT_PHY_SERDES_ATTR_ID_LIST", # TODO requires newer sonic-sairedis
-    ("SAI_OBJECT_TYPE_PORT", "Port Debug Counter"): "PORT_DEBUG_COUNTER_ID_LIST",
-    ("SAI_OBJECT_TYPE_QUEUE", "Queue Counter"): "QUEUE_COUNTER_ID_LIST",
-    ("SAI_OBJECT_TYPE_QUEUE", "Queue Attribute"): "QUEUE_ATTR_ID_LIST",
-    ("SAI_OBJECT_TYPE_INGRESS_PRIORITY_GROUP", "Priority Group Counter"): "PG_COUNTER_ID_LIST",
-    ("SAI_OBJECT_TYPE_INGRESS_PRIORITY_GROUP", "Priority Group Attribute"): "PG_ATTR_ID_LIST",
-    ("SAI_OBJECT_TYPE_ROUTER_INTERFACE", "Rif Counter"): "RIF_COUNTER_ID_LIST",
-    ("SAI_OBJECT_TYPE_SWITCH", "Switch Debug Counter"): "SWITCH_DEBUG_COUNTER_ID_LIST",
-    ("SAI_OBJECT_TYPE_MACSEC_FLOW", "MACSEC Flow Counter"): "MACSEC_FLOW_COUNTER_ID_LIST",
-    ("SAI_OBJECT_TYPE_MACSEC_SA", "MACSEC SA Counter"): "MACSEC_SA_COUNTER_ID_LIST",
-    ("SAI_OBJECT_TYPE_MACSEC_SA", "MACSEC SA Attribute"): "MACSEC_SA_ATTR_ID_LIST",
-    ("SAI_OBJECT_TYPE_ACL_COUNTER", "ACL Counter Attribute"): "ACL_COUNTER_ATTR_ID_LIST",
-    ("SAI_OBJECT_TYPE_COUNTER", "Flow Counter"): "FLOW_COUNTER_ID_LIST",
-    ("SAI_OBJECT_TYPE_POLICER", "Policer Counter"): "POLICER_COUNTER_ID_LIST",
-    ("SAI_OBJECT_TYPE_TUNNEL", "Tunnel Counter"): "TUNNEL_COUNTER_ID_LIST",
-    ("SAI_OBJECT_TYPE_ENI", "DASH ENI Counter"): "ENI_COUNTER_ID_LIST",
-    ("SAI_OBJECT_TYPE_HA_SET", "DASH HA Set Counter"): "HA_SET_COUNTER_ID_LIST",
-    ("SAI_OBJECT_TYPE_ENI", "DASH Meter Bucket Counter"): "DASH_METER_COUNTER_ID_LIST",
-    ("SAI_OBJECT_TYPE_COUNTER", "SRv6 Counter"): "SRV6_COUNTER_ID_LIST",
-    ("SAI_OBJECT_TYPE_SWITCH", "Switch Counter"): "SWITCH_COUNTER_ID_LIST",
-    ("SAI_OBJECT_TYPE_BUFFER_POOL", "Buffer Pool Counter"): "BUFFER_POOL_COUNTER_ID_LIST",
-}
 
 SAI_COUNTER_TYPE_TO_ID_LIST = {
     "SAI_PORT_STAT": "PORT_COUNTER_ID_LIST",
@@ -527,20 +468,11 @@ class SaiRedisClient(SaiClient):
         return status[2]
     
     def set_counter_group(self, group_name, *, enable=True,
-                          poll_interval=DEFAULT_POLL_INTERVAL_MS, clear_on_read=False, do_assert=True):
+                          poll_interval=0, clear_on_read=False, do_assert=True):
         attrs = []
-        if enable is not None:
-            if not isinstance(enable, bool):
-                raise ValueError(f"Invalid enable value: {enable}")
-            attrs.extend(["FLEX_COUNTER_STATUS", _FLEX_COUNTER_ENABLE_MAPPING[enable]])
-        if poll_interval is not None:
-            if not isinstance(poll_interval, int):
-                raise ValueError(f"Invalid poll_interval value: {poll_interval}")
-            attrs.extend(["POLL_INTERVAL", poll_interval])
-        if clear_on_read is not None:
-            if not isinstance(clear_on_read, bool):
-                raise ValueError(f"Invalid clear_on_read value: {clear_on_read}")
-            attrs.extend(["STATS_MODE", _STATS_CLEAR_ON_READ_MAPPING[clear_on_read]])
+        attrs.extend(["FLEX_COUNTER_STATUS", "enable" if enable else "disable"])
+        attrs.extend(["STATS_MODE", "STATS_MODE_READ" if not clear_on_read else "STATS_MODE_READ_AND_CLEAR"])
+        attrs.extend(["POLL_INTERVAL", poll_interval])
 
         for i, attr in enumerate(attrs):
             if type(attr) != str:
@@ -571,23 +503,19 @@ class SaiRedisClient(SaiClient):
             return counter[:idx_attr + 5]
         return None
 
-    def start_counter_poll(self, group_name, oid, counters, counter_type=None, do_assert=True):
+    def start_counter_poll(self, group_name, oid, counters, do_assert=True):
         if not counters:
             raise ValueError("counters must be a non-empty list")
-        # if counter_type is not provided, try to derive it from the first counter
-        if counter_type is None:
-            sai_counter_type = self._get_sai_type_from_counter(counters[0])
-            if sai_counter_type is None:
-                raise ValueError(f"Cannot derive counter type from counter name {counters[0]}")
-            if not all(self._get_sai_type_from_counter(c) == sai_counter_type for c in counters):
-                raise ValueError(f"All counters must share the same SAI counter prefix {sai_counter_type}")
-            id_list = SAI_COUNTER_TYPE_TO_ID_LIST.get(sai_counter_type)
-            if id_list is None:
-                raise ValueError(f"Unsupported SAI counter prefix {sai_counter_type}")
-        else:
-            id_list = FLEX_COUNTER_ID_LIST_BY_OBJECT_TYPE_AND_COUNTER_TYPE.get((self.vid_to_type(oid), counter_type))
-            if id_list is None:
-                raise ValueError(f"Invalid counter type: {counter_type} for object type: {self.vid_to_type(oid)}")
+
+        # derive id_list from the first counter
+        sai_counter_type = self._get_sai_type_from_counter(counters[0])
+        if sai_counter_type is None:
+            raise ValueError(f"Cannot derive counter type from counter name {counters[0]}")
+        if not all(self._get_sai_type_from_counter(c) == sai_counter_type for c in counters):
+            raise ValueError(f"All counters must share the same SAI counter prefix {sai_counter_type}")
+        id_list = SAI_COUNTER_TYPE_TO_ID_LIST.get(sai_counter_type)
+        if id_list is None:
+            raise ValueError(f"Unsupported SAI counter prefix {sai_counter_type}")
             
         attrs = [id_list, ",".join(counters)]
         attrs = json.dumps(attrs)
@@ -609,7 +537,7 @@ class SaiRedisClient(SaiClient):
             assert status[2] == 'SAI_STATUS_SUCCESS'
         return status[2]
     
-    def get_counter(self, oid, counters, counter_table=DEFAULT_COUNTERS_TABLE):
+    def get_counter(self, oid, counters, counter_table="COUNTERS"):
         counter = counter_table + ":" + oid
         exists = self.counters_db.exists(counter)
         if counters:
@@ -619,7 +547,7 @@ class SaiRedisClient(SaiClient):
             data = self.counters_db.hgetall(counter)
             return exists, data
 
-    def del_counter(self, oid, counter_table=DEFAULT_COUNTERS_TABLE):
+    def del_counter(self, oid, counter_table="COUNTERS"):
         counter = counter_table + ":" + oid
         return self.counters_db.delete(counter)
 

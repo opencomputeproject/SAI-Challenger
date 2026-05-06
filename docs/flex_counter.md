@@ -69,7 +69,7 @@ redis-cli -n 1 PUBLISH ASIC_STATE_CHANNEL@1 G
 
 ### How flex counters are managed in SAI-Challenger
 
-Due to the need of `syncd` process, flex counter support will work only for `SaiRedisClient`. The 2nd way of communication (using `ASIC_STATE_KEY_VALUE_OP_QUEUE`) with `syncd` was chosen, as we already do this for SAI object management. For implementation details look at [sai_redis_client.py](../common/sai_client/sai_redis_client/sai_redis_client.py). Most flex counters type can be deduced from the name of the statistic or attribute, but some counters require setting explicit counter type. Check `FLEX_COUNTER_TYPES` in [sai_redis_client.py](../common/sai_client/sai_redis_client/sai_redis_client.py) for list of supported flex counters
+Due to the need of `syncd` process, flex counter support will work only for `SaiRedisClient`. The 2nd way of communication (using `ASIC_STATE_KEY_VALUE_OP_QUEUE`) with `syncd` was chosen, as we already do this for SAI object management. For implementation details look at [sai_redis_client.py](../common/sai_client/sai_redis_client/sai_redis_client.py). Most flex counters type can be deduced from the name of the statistic or attribute, but some counters require setting explicit counter type, currently we don't suppose those counters
 
 ### New sai CLI commands
 
@@ -77,7 +77,7 @@ New commands for configuring flex counter group and counter are added:
 ```sh
 sai counter group set <group-name> <attr1> <val1> ...
 sai counter group del <group-name> 
-sai counter poll start <group-name> <oid> <attr1> <val1> ...
+sai counter poll start <group-name> <oid> <counters_csv>
 sai counter poll stop <group-name> <oid>
 sai counter get <oid> ? <counter-ids1> ...
 sai counter del <oid> 
@@ -87,7 +87,7 @@ With some examples:
 ```sh
 sai counter group set PORT_STAT_COUNTER POLL_INTERVAL 2000 STATS_MODE STATS_MODE_READ FLEX_COUNTER_STATUS enable
 sai counter group del PORT_STAT_COUNTER
-sai counter poll start PORT_STAT_COUNTER oid:0x1000000000002 PORT_COUNTER_ID_LIST "SAI_PORT_STAT_IF_IN_UCAST_PKTS,SAI_PORT_STAT_IF_OUT_UCAST_PKTS"
+sai counter poll start PORT_STAT_COUNTER oid:0x1000000000002 "SAI_PORT_STAT_IF_IN_UCAST_PKTS,SAI_PORT_STAT_IF_OUT_UCAST_PKTS"
 sai counter poll stop PORT_STAT_COUNTER oid:0x1000000000002
 sai counter get oid:0x1000000000002 SAI_PORT_STAT_IF_IN_UCAST_PKTS SAI_PORT_STAT_IF_OUT_UCAST_PKTS SAI_FAKE_STATS_COUNTER
 sai counter get oid:0x1000000000002
