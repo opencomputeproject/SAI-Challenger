@@ -49,18 +49,16 @@ def fdb_static_mac_topology(npu, sai_ptf_topology):
         )
 
 
-def test_fdb_static_mac(npu, dataplane, fdb_static_mac_topology):
+def test_fdb_static_mac_forward(npu, dataplane, fdb_static_mac_topology):
     """
     Description:
-    Check static FDB forwarding and self-forwarding drop
+    Check static FDB forwarding between ports and LAG
 
     Test scenario:
     1. Retrieve custom VLAN, ports, and LAG from the topology fixture
     2. Create static FDB entries pointing to port 0, port 1, and LAG 1
     3. Send UDP traffic between the ports and verify forwarding to expected destinations
-    4. Send a UDP packet from port 0 with a destination MAC pointing to port 0
-    5. Verify the self-forwarding packet is dropped
-    6. Clean up configuration
+    4. Clean up configuration
     """
     vlan_oid = fdb_static_mac_topology["vlan_oid"]
     vlan_id_int = fdb_static_mac_topology["vlan_id_int"]
@@ -102,6 +100,42 @@ def test_fdb_static_mac(npu, dataplane, fdb_static_mac_topology):
                     
                     send_packet(dataplane, src_port, send_pkt)
                     verify_packet_any_port(dataplane, rcv_pkt, dst_ports)
+
+    finally:
+        npu.flush_fdb_entries(
+            npu.switch_oid,
+            [
+                "SAI_FDB_FLUSH_ATTR_BV_ID", vlan_oid,
+                "SAI_FDB_FLUSH_ATTR_ENTRY_TYPE", "SAI_FDB_FLUSH_ENTRY_TYPE_ALL",
+            ],
+        )
+
+
+def test_fdb_self_forwarding_drop(npu, dataplane, fdb_static_mac_topology):
+    """
+    Description:
+    Check that self-forwarding to port 0 is dropped when a static FDB entry maps the
+    destination MAC to the same ingress port
+
+    Test scenario:
+    1. Retrieve VLAN and port 0 from the topology fixture
+    2. Create a static FDB entry for port 0
+    3. Send a UDP packet from port 0 with a destination MAC pointing to port 0
+    4. Verify the self-forwarding packet is dropped
+    5. Clean up configuration
+    """
+    vlan_oid = fdb_static_mac_topology["vlan_oid"]
+    dev_port0 = fdb_static_mac_topology["dev_port0"]
+
+    macs = []
+    for i in range(1, 4):
+        macs.append("00:%02d:%02d:%02d:%02d:%02d" % (i, i, i, i, i))
+
+    try:
+        npu.create_fdb(vlan_oid, macs[0], fdb_static_mac_topology["port0_bp"])
+
+        if npu.run_traffic:
+            assert dataplane is not None, "dataplane is required when running with --traffic"
 
             test_mac = macs[0]
             pkt = simple_udp_packet(eth_dst=test_mac)
