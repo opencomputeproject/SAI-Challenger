@@ -5,7 +5,7 @@ This document describes what are flex counters and what was added for this featu
 ### How flex counters are managed in SONiC
 
 Flex counters are SONiC's mechanism for controlling periodic polling of SAI counters and, in some cases, SAI attributes for different classes of switch objects. Data related to flex counters is stored in `FLEX_COUNTER_DB`. There are two kinds of flex counters: those that poll SAI object statistics and those that poll SAI object attributes
-Multiple flex counters are grouped in flex counter group. For each group `syncd` creates a separate thread in which it polls stats from SAI and stores them in `COUNTERS_DB`. SONiC CLI tools read counters from `COUNTERS_DB`
+Multiple flex counters are grouped in flex counter group. For each group `syncd` creates a separate thread in which it polls statistics or attributes from SAI and stores them in `COUNTERS_DB`, most of flex counters are stored in `COUNTERS`, but some may be stored in other tables. SONiC CLI tools read counters from `COUNTERS_DB`
 
 Each group has its own configuration entry and can typically be:
 
@@ -69,7 +69,7 @@ redis-cli -n 1 PUBLISH ASIC_STATE_CHANNEL@1 G
 
 ### How flex counters are managed in SAI-Challenger
 
-Due to the need of `syncd` process, flex counter support will work only for `SaiRedisClient`. The 2nd way of communication (using `ASIC_STATE_KEY_VALUE_OP_QUEUE`) with `syncd` was chosen, as we already do this for SAI object management. For implementation details look at [sai_redis_client.py](../common/sai_client/sai_redis_client/sai_redis_client.py). Check `FLEX_COUNTER_TYPES` in [sai_redis_client.py](../common/sai_client/sai_redis_client/sai_redis_client.py) for list of supported flex counters
+Due to the need of `syncd` process, flex counter support will work only for `SaiRedisClient`. The 2nd way of communication (using `ASIC_STATE_KEY_VALUE_OP_QUEUE`) with `syncd` was chosen, as we already do this for SAI object management. For implementation details look at [sai_redis_client.py](../common/sai_client/sai_redis_client/sai_redis_client.py). Most flex counters type can be deduced from the name of the statistic or attribute, but some counters require setting explicit counter type. Check `FLEX_COUNTER_TYPES` in [sai_redis_client.py](../common/sai_client/sai_redis_client/sai_redis_client.py) for list of supported flex counters
 
 ### New sai CLI commands
 
