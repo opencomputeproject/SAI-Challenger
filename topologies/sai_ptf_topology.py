@@ -4,12 +4,12 @@ SAI Challenger topology compatibility layer.
 Reproduces the standard L2/L3 layout so migrated pytest cases can use
 familiar attribute names while calling the Challenger ``SaiNpu`` API.
 
-Quick reference — attribute mapping:
+Quick reference - attribute mapping:
 
 +---------------------------+--------------------------------------------------+
 | Old pattern               | Challenger                                       |
 +===========================+==================================================+
-| ``self.client``           | ``npu`` (``SaiNpu`` — passed into setup)         |
+| ``self.client``           | ``npu`` (``SaiNpu`` - passed into setup)         |
 | ``self.switch_id``        | ``npu.switch_oid`` / alias ``topo.switch_id``    |
 | ``self.port_list`` / OID  | ``npu.port_oids[i]`` / alias ``topo.port{i}``    |
 | ``self.default_vrf``      | ``npu.default_vrf_oid`` / ``topo.default_vrf``   |
@@ -72,17 +72,21 @@ Ports configuration (U/T = untagged/tagged VLAN member):
 """
 
 from __future__ import annotations
+
+from contextlib import contextmanager
 from typing import Any, Dict, List
+
 import pytest
 
 from saichallenger.common.sai_data import SaiObjType
+
 
 class SaiPtfTopologyMixin:
     """
     Topology builder for SAI Challenger NPU.
 
     Sets up a standard L2/L3 switch layout and exposes named aliases
-    (port0, lag1, vlan10, port10_rif, …) so test code stays readable.
+    (port0, lag1, vlan10, port10_rif, ...) so test code stays readable.
     """
 
     npu: Any
@@ -210,8 +214,8 @@ class SaiPtfTopologyMixin:
         """
         Create a VLAN and attach bridge ports to it.
 
-        members: {bp_oid: 'untagged' | 'tagged'} 
-        Exposes vlan{id}, vlan{id}_member0, vlan{id}_member1, …
+        members: {bp_oid: 'untagged' | 'tagged'}
+        Exposes vlan{id}, vlan{id}_member0, vlan{id}_member1, ...
         """
         vlan_oid = self.npu.create(
             SaiObjType.VLAN, ["SAI_VLAN_ATTR_VLAN_ID", str(vlan_id)]
@@ -387,14 +391,16 @@ class SaiPtfTopologyMixin:
 
 
 class SaiPtfTopologyFixture(SaiPtfTopologyMixin):
-    """Thin subclass used by the pytest fixture below."""
+    """Thin subclass used by the topology context manager."""
 
     pass
 
 
-@pytest.fixture(scope="module")
-def sai_ptf_topology(npu):
+@contextmanager
+def config(npu):
     topo = SaiPtfTopologyFixture()
     topo.setup_ptf_topology(npu)
-    yield topo
-    topo.teardown_ptf_topology()
+    try:
+        yield topo
+    finally:
+        topo.teardown_ptf_topology()
