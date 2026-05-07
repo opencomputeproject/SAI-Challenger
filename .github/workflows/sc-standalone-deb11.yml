@@ -71,6 +71,8 @@ jobs:
 
     - name: Run tests
       run: ./exec.sh --no-tty pytest --testbed=saivs_standalone -v test_l2_basic.py -v test_vrf.py -v test_dc_t1.py
+    - name: Run flex counters test cases
+      run: ./exec.sh --no-tty pytest --testbed=saivs_standalone -v -k "test_flex_counters"
     - name: Run sairedis tests
       run: ./exec.sh --no-tty pytest --testbed=saivs_standalone -v -k "test_sairec"
     - name: Run unit tests
@@ -94,6 +96,8 @@ jobs:
 
     - name: Run thrift tests
       run: ./exec.sh --no-tty -s thrift pytest --testbed=saivs_thrift_standalone -v test_l2_basic.py -v test_vrf.py -v test_dc_t1.py
+    - name: Run thrift flex counters test cases
+      run: ./exec.sh --no-tty -s thrift pytest --testbed=saivs_thrift_standalone -v -k "test_flex_counters"
     - name: Run thift data-driven tests
       run: ./exec.sh --no-tty -s thrift pytest --testbed=saivs_thrift_standalone -v test_l2_basic_dd.py
     - name: Run thrift unit tests
