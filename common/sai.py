@@ -335,6 +335,9 @@ class Sai():
 
     def stop_counter_poll(self, group_name, oid, do_assert=True):
         return self.sai_client.stop_counter_poll(group_name=group_name, oid=oid, do_assert=do_assert)
+
+    def clear_flex_counters(self):
+        return self.sai_client.clear_flex_counters()
     
     # Manage counters from COUNTERS_DB
     def get_counter(self, oid, counters, counter_table="COUNTERS"):

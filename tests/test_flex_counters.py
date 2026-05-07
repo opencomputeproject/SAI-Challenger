@@ -36,6 +36,7 @@ def test_port_counters(npu):
         assert(data[counters[1]] == '0')
     finally:
         # stop counter polling and delete counters from FLEX_COUNTER_DB and COUNTERS_DB
+        # same as calling npu.clear_flex_counters()
         npu.stop_counter_poll(group_name, npu.port_oids[0])
         npu.del_counter_group(group_name)
         npu.del_counter(npu.port_oids[0])
@@ -95,13 +96,4 @@ def test_multiple_counter_types(npu):
         assert(data_queue_attr[queue_attr_counters[2]] == 'SAI_QUEUE_TYPE_UNICAST')
     finally:
         # stop counter polling and delete counters from FLEX_COUNTER_DB and COUNTERS_DB
-        npu.stop_counter_poll(port_group_name,npu.port_oids[0])
-        npu.stop_counter_poll(queue_group_name, queue_oids[0])
-        npu.stop_counter_poll(queue_attr_group_name, queue_oids[0])
-
-        npu.del_counter_group(port_group_name)
-        npu.del_counter_group(queue_group_name)
-        npu.del_counter_group(queue_attr_group_name)
-
-        npu.del_counter(npu.port_oids[0])
-        npu.del_counter(queue_oids[0])
+        npu.clear_flex_counters()

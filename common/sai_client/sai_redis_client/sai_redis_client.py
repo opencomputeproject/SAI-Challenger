@@ -47,6 +47,7 @@ class SaiRedisClient(SaiClient):
         self.r = redis.Redis(host=self.server_ip, port=self.port, db=self.asic_db)
         self.loglevel_db = redis.Redis(host=self.server_ip, port=self.port, db=3)
         self.counters_db = redis.Redis(host=self.server_ip, port=self.port, db=2, decode_responses=True)
+        self.flex_counter_db = redis.Redis(host=self.server_ip, port=self.port, db=5, decode_responses=True)
 
     def cleanup(self):
         '''
@@ -536,6 +537,21 @@ class SaiRedisClient(SaiClient):
         if do_assert:
             assert status[2] == 'SAI_STATUS_SUCCESS'
         return status[2]
+
+    def clear_flex_counters(self):
+        table_pfx = "FLEX_COUNTER_TABLE:"
+        group_pfx = "FLEX_COUNTER_GROUP_TABLE:"
+
+        for key in self.flex_counter_db.scan_iter(match=table_pfx + "*"):
+            rest = key.removeprefix(table_pfx)
+            group_name, _, oid = rest.partition(":")
+            self.stop_counter_poll(group_name, oid)
+
+        for key in self.flex_counter_db.scan_iter(match=group_pfx + "*"):
+            group_name = key.removeprefix(group_pfx)
+            self.del_counter_group(group_name)
+            
+        self.counters_db.flushdb()
     
     def get_counter(self, oid, counters, counter_table="COUNTERS"):
         counter = counter_table + ":" + oid

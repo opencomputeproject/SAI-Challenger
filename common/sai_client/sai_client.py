@@ -66,6 +66,9 @@ class SaiClient:
     def stop_counter_poll(self, group_name, oid, do_assert=True):
         raise NotImplementedError
 
+    def clear_flex_counters(self):
+        raise NotImplementedError
+
     # Manage counters from COUNTERS_DB
     def get_counter(self, oid, counters, counter_table="COUNTERS"):
         raise NotImplementedError
