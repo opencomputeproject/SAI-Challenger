@@ -21,15 +21,15 @@ def test_port_counters(npu):
     counters = ["SAI_PORT_STAT_IF_IN_UCAST_PKTS","SAI_PORT_STAT_IF_OUT_UCAST_PKTS"]
     poll_interval_ms = 100
 
-    npu.set_counter_group(group_name, poll_interval=poll_interval_ms)
-    npu.start_counter_poll(group_name, npu.port_oids[0], counters)
+    npu.set_flex_counter_group(group_name, poll_interval=poll_interval_ms)
+    npu.start_flex_counter_poll(group_name, npu.port_oids[0], counters)
     
     # do some work, e. g. send traffic
 
     # wait for poll_interval * 2 to be sure that polling has happened
     time.sleep(2 * poll_interval_ms / 1000)
 
-    exists, data = npu.get_counter(npu.port_oids[0], counters)
+    exists, data = npu.get_flex_counter(npu.port_oids[0], counters)
     try:
         assert(exists)
         assert(data[counters[0]] == '0')
@@ -37,9 +37,9 @@ def test_port_counters(npu):
     finally:
         # stop counter polling and delete counters from FLEX_COUNTER_DB and COUNTERS_DB
         # same as calling npu.clear_flex_counters()
-        npu.stop_counter_poll(group_name, npu.port_oids[0])
-        npu.del_counter_group(group_name)
-        npu.del_counter(npu.port_oids[0])
+        npu.stop_flex_counter_poll(group_name, npu.port_oids[0])
+        npu.del_flex_counter_group(group_name)
+        npu.del_flex_counter(npu.port_oids[0])
 
 
 def test_multiple_counter_types(npu):
@@ -62,24 +62,24 @@ def test_multiple_counter_types(npu):
     
     # we could have used single group for all counters as they have same configs, but
     # we create separate groups in order to generate more syncd threads
-    npu.set_counter_group(port_group_name, poll_interval=poll_interval_ms)
-    npu.set_counter_group(queue_group_name, poll_interval=poll_interval_ms)
-    npu.set_counter_group(queue_attr_group_name, poll_interval=poll_interval_ms)
+    npu.set_flex_counter_group(port_group_name, poll_interval=poll_interval_ms)
+    npu.set_flex_counter_group(queue_group_name, poll_interval=poll_interval_ms)
+    npu.set_flex_counter_group(queue_attr_group_name, poll_interval=poll_interval_ms)
 
 
-    npu.start_counter_poll(port_group_name, npu.port_oids[0], port_counters)
+    npu.start_flex_counter_poll(port_group_name, npu.port_oids[0], port_counters)
     queue_oids = npu.get_list(npu.port_oids[0], "SAI_PORT_ATTR_QOS_QUEUE_LIST", "oid:0x0")
     assert len(queue_oids) > 0
-    npu.start_counter_poll(queue_group_name, queue_oids[0], queue_counters)
-    npu.start_counter_poll(queue_attr_group_name, queue_oids[0], queue_attr_counters)
+    npu.start_flex_counter_poll(queue_group_name, queue_oids[0], queue_counters)
+    npu.start_flex_counter_poll(queue_attr_group_name, queue_oids[0], queue_attr_counters)
     
     # do some work, e. g. send traffic
 
     time.sleep(2 * poll_interval_ms / 1000)
 
-    exists_port, data_port = npu.get_counter(npu.port_oids[0], port_counters)
-    exists_queue, data_queue = npu.get_counter(queue_oids[0], queue_counters)
-    exists_queue_attr, data_queue_attr = npu.get_counter(queue_oids[0], queue_attr_counters)
+    exists_port, data_port = npu.get_flex_counter(npu.port_oids[0], port_counters)
+    exists_queue, data_queue = npu.get_flex_counter(queue_oids[0], queue_counters)
+    exists_queue_attr, data_queue_attr = npu.get_flex_counter(queue_oids[0], queue_attr_counters)
     try:
         assert(exists_port)
         assert(data_port[port_counters[0]] == '0')

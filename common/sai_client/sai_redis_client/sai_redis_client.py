@@ -468,11 +468,11 @@ class SaiRedisClient(SaiClient):
             assert status[2] == 'SAI_STATUS_SUCCESS'
         return status[2]
     
-    def set_counter_group(self, group_name, *, enable=True,
+    def set_flex_counter_group(self, group_name, *, enable=True,
                           poll_interval=0, clear_on_read=False, do_assert=True):
         attrs = []
         attrs.extend(["FLEX_COUNTER_STATUS", "enable" if enable else "disable"])
-        attrs.extend(["STATS_MODE", "STATS_MODE_READ" if not clear_on_read else "STATS_MODE_READ_AND_CLEAR"])
+        attrs.extend(["STATS_MODE", "STATS_MODE_READ_AND_CLEAR" if clear_on_read else "STATS_MODE_READ"])
         attrs.extend(["POLL_INTERVAL", poll_interval])
 
         for i, attr in enumerate(attrs):
@@ -487,7 +487,7 @@ class SaiRedisClient(SaiClient):
             assert status[2] == 'SAI_STATUS_SUCCESS'
         return status[2]
 
-    def del_counter_group(self, group_name, do_assert=True):
+    def del_flex_counter_group(self, group_name, do_assert=True):
         status = self.operate(group_name, "[]", "Ddel_counter_group")
         status[2] = status[2].decode("utf-8")
 
@@ -504,7 +504,7 @@ class SaiRedisClient(SaiClient):
             return counter[:idx_attr + 5]
         return None
 
-    def start_counter_poll(self, group_name, oid, counters, do_assert=True):
+    def start_flex_counter_poll(self, group_name, oid, counters, do_assert=True):
         if not counters:
             raise ValueError("counters must be a non-empty list")
 
@@ -529,7 +529,7 @@ class SaiRedisClient(SaiClient):
             assert status[2] == 'SAI_STATUS_SUCCESS'
         return status[2]
 
-    def stop_counter_poll(self, group_name, oid, do_assert=True):
+    def stop_flex_counter_poll(self, group_name, oid, do_assert=True):
         obj = group_name + ':' + oid
         status = self.operate(obj, "[]", "Dstop_poll")
         status[2] = status[2].decode("utf-8")
@@ -539,21 +539,23 @@ class SaiRedisClient(SaiClient):
         return status[2]
 
     def clear_flex_counters(self):
+        # clear flex counters from FLEX_COUNTER_DB, they must be cleared by syncd
         table_pfx = "FLEX_COUNTER_TABLE:"
         group_pfx = "FLEX_COUNTER_GROUP_TABLE:"
 
         for key in self.flex_counter_db.scan_iter(match=table_pfx + "*"):
             rest = key.removeprefix(table_pfx)
             group_name, _, oid = rest.partition(":")
-            self.stop_counter_poll(group_name, oid)
+            self.stop_flex_counter_poll(group_name, oid)
 
         for key in self.flex_counter_db.scan_iter(match=group_pfx + "*"):
             group_name = key.removeprefix(group_pfx)
-            self.del_counter_group(group_name)
-            
+            self.del_flex_counter_group(group_name)
+
+        # clear counters from COUNTERS_DB
         self.counters_db.flushdb()
     
-    def get_counter(self, oid, counters, counter_table="COUNTERS"):
+    def get_flex_counter(self, oid, counters, counter_table="COUNTERS"):
         counter = counter_table + ":" + oid
         exists = self.counters_db.exists(counter)
         if counters:
@@ -563,7 +565,7 @@ class SaiRedisClient(SaiClient):
             data = self.counters_db.hgetall(counter)
             return exists, data
 
-    def del_counter(self, oid, counter_table="COUNTERS"):
+    def del_flex_counter(self, oid, counter_table="COUNTERS"):
         counter = counter_table + ":" + oid
         return self.counters_db.delete(counter)
 

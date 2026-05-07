@@ -468,7 +468,7 @@ def _parse_flex_counter_enable(val):
 
 def _parse_flex_counter_group_attrs(attrs):
     """
-    Map CLI key/value pairs onto Sai.set_counter_group keyword args.
+    Map CLI key/value pairs onto Sai.set_flex_counter_group keyword args.
     Keys: POLL_INTERVAL, STATS_MODE, FLEX_COUNTER_STATUS.
     """
     kwargs = {}
@@ -513,7 +513,7 @@ def set(group_name, attrs):
     sai = get_sai_entity()
 
     try:
-        status = sai.set_counter_group(group_name=group_name, do_assert=False, **extra)
+        status = sai.set_flex_counter_group(group_name=group_name, do_assert=False, **extra)
     except ValueError as e:
         click.echo(str(e) + "\n")
         return False
@@ -533,7 +533,7 @@ def delete(group_name):
     group_name = group_name.upper()
 
     sai = get_sai_entity()
-    status = sai.del_counter_group(group_name, False)
+    status = sai.del_flex_counter_group(group_name, False)
     if status == "SAI_STATUS_SUCCESS":
         click.echo("Deleted group name {}\n".format(group_name))
     else:
@@ -544,15 +544,6 @@ def delete(group_name):
 def poll():
     """Manage Redis flex counters poll"""
     pass
-
-
-def _counter_type_for_id_list(sai, oid, id_list):
-    obj_type = sai.vid_to_type(oid)
-    for (ot, counter_type), il in FLEX_COUNTER_ID_LIST_BY_OBJECT_TYPE_AND_COUNTER_TYPE.items():
-        if ot == obj_type and il == id_list:
-            return counter_type
-    raise ValueError(
-        "Unknown id_list {!r} for object type {} (oid {})".format(id_list, obj_type, oid))
 
 
 # 'counter poll start' command
@@ -576,7 +567,7 @@ def start(group_name, oid, cntrs):
 
     sai = get_sai_entity()
     try:
-        status = sai.start_counter_poll(
+        status = sai.start_flex_counter_poll(
             group_name=group_name,
             oid=oid,
             counters=counters,
@@ -607,7 +598,7 @@ def stop(group_name, oid):
 
     sai = get_sai_entity()
     try:
-        status = sai.stop_counter_poll(group_name=group_name, oid=oid, do_assert=False)
+        status = sai.stop_flex_counter_poll(group_name=group_name, oid=oid, do_assert=False)
     except ValueError as e:
         click.echo(str(e) + "\n")
         return False
@@ -630,7 +621,7 @@ def get(oid, cntrs):
         return False
 
     sai = get_sai_entity()
-    exists, data = sai.get_counter(oid, cntrs)
+    exists, data = sai.get_flex_counter(oid, cntrs)
     if not exists:
         click.echo("Counter {} doesn't exist".format(oid))
         return False
@@ -653,7 +644,7 @@ def delete(oid):
         return False
     
     sai = get_sai_entity()
-    exists = sai.del_counter(oid)
+    exists = sai.del_flex_counter(oid)
 
     if not exists:
         click.echo("Counter:{} doesn't exist".format(oid))
