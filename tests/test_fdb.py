@@ -109,7 +109,7 @@ class TestFdbStaticMac:
         4. Clean up configuration
         """
         if not npu.run_traffic:
-            pytest.skip("Test requires traffic generation. Run with --traffic")
+            pytest.skip("Traffic generation disabled")
 
         assert dataplane is not None, "dataplane is required when running with --traffic"
         for dst_ports, dst_mac in zip(self.dst_port_groups, self.macs):
@@ -146,7 +146,7 @@ class TestFdbStaticMac:
         5. Clean up configuration
         """
         if not npu.run_traffic:
-            pytest.skip("Test requires traffic generation. Run with --traffic")
+            pytest.skip("Traffic generation disabled")
 
         assert dataplane is not None, "dataplane is required when running with --traffic"
         test_mac = self.macs[0]
@@ -265,7 +265,7 @@ class TestFdbNoLearn:
         2. Verify flooding behavior and then restore learning mode.
         """
         if not npu.run_traffic:
-            pytest.skip("Test requires traffic generation. Run with --traffic")
+            pytest.skip("Traffic generation disabled")
         assert dataplane is not None, "dataplane is required when running with --traffic"
 
         pkt, tag_pkt = self._flood_from_port0_pkt()
@@ -299,7 +299,7 @@ class TestFdbNoLearn:
         2. Verify flooding behavior for return traffic and restore learning mode.
         """
         if not npu.run_traffic:
-            pytest.skip("Test requires traffic generation. Run with --traffic")
+            pytest.skip("Traffic generation disabled")
         assert dataplane is not None, "dataplane is required when running with --traffic"
 
         pkt, tag_pkt = self._flood_from_port0_pkt()
@@ -333,7 +333,7 @@ class TestFdbNoLearn:
         2. Verify flooding behavior and restore bridge-port learning mode.
         """
         if not npu.run_traffic:
-            pytest.skip("Test requires traffic generation. Run with --traffic")
+            pytest.skip("Traffic generation disabled")
         assert dataplane is not None, "dataplane is required when running with --traffic"
 
         pkt, tag_pkt = self._flood_from_port0_pkt()
@@ -367,7 +367,7 @@ class TestFdbNoLearn:
         2. Verify flooding behavior and restore bridge-port learning mode.
         """
         if not npu.run_traffic:
-            pytest.skip("Test requires traffic generation. Run with --traffic")
+            pytest.skip("Traffic generation disabled")
         assert dataplane is not None, "dataplane is required when running with --traffic"
 
         pkt, tag_pkt = self._flood_from_port0_pkt()
@@ -401,7 +401,7 @@ class TestFdbNoLearn:
         2. Verify flooding behavior, then recreate bridge/VLAN membership state.
         """
         if not npu.run_traffic:
-            pytest.skip("Test requires traffic generation. Run with --traffic")
+            pytest.skip("Traffic generation disabled")
         assert dataplane is not None, "dataplane is required when running with --traffic"
 
         pkt, tag_pkt = self._flood_from_port0_pkt()
@@ -455,7 +455,7 @@ class TestFdbNoLearn:
         2. Verify flood reaches port0, port1, and LAG; verify return flood misses port24.
         """
         if not npu.run_traffic:
-            pytest.skip("Test requires traffic generation. Run with --traffic")
+            pytest.skip("Traffic generation disabled")
         assert dataplane is not None, "dataplane is required when running with --traffic"
         if len(npu.port_oids) <= 24:
             pytest.skip("noBpNoLearnTest requires physical port index 24 (at least 25 ports)")
@@ -543,7 +543,7 @@ class TestFdbLearn:
         3. Optionally add port24 to VLAN10 and port25 to LAG1 when hardware exposes enough ports.
         """
         if not npu.run_traffic:
-            pytest.skip("Test requires traffic generation. Run with --traffic")
+            pytest.skip("Traffic generation disabled")
         assert dataplane is not None, "dataplane is required when running with --traffic"
 
         dst_mac = "00:11:22:33:44:55"
@@ -712,7 +712,7 @@ class TestFdbLearn:
         1. Install static FDB for access and trunk ports; run six negative/flood cases; restore topology.
         """
         if not npu.run_traffic:
-            pytest.skip("Test requires traffic generation. Run with --traffic")
+            pytest.skip("Traffic generation disabled")
         assert dataplane is not None, "dataplane is required when running with --traffic"
 
         access_port = self.dev_port0
@@ -992,7 +992,7 @@ class TestFdbMacMove:
         2. Flush dynamic FDB entries (static chck_mac on port24 remains).
         """
         if not npu.run_traffic:
-            pytest.skip("Test requires traffic generation. Run with --traffic")
+            pytest.skip("Traffic generation disabled")
         assert dataplane is not None, "dataplane is required when running with --traffic"
 
         pkt = simple_udp_packet(eth_dst=self.chck_mac, eth_src=self.moving_mac)
@@ -1027,7 +1027,7 @@ class TestFdbMacMove:
         3. Remove the moving static FDB entry in teardown of the test body.
         """
         if not npu.run_traffic:
-            pytest.skip("Test requires traffic generation. Run with --traffic")
+            pytest.skip("Traffic generation disabled")
         assert dataplane is not None, "dataplane is required when running with --traffic"
 
         moving_key = _fdb_entry_key(npu, self.vlan_oid, self.moving_mac)
@@ -1069,7 +1069,7 @@ class TestFdbMacMove:
         3. Remove the moving static FDB entry when done.
         """
         if not npu.run_traffic:
-            pytest.skip("Test requires traffic generation. Run with --traffic")
+            pytest.skip("Traffic generation disabled")
         assert dataplane is not None, "dataplane is required when running with --traffic"
 
         fdb_key = _fdb_entry_key(npu, self.vlan_oid, self.moving_mac)
@@ -1392,7 +1392,7 @@ class TestFdbFlush:
         2. Flush static entries on VLAN 10; verify VLAN10 static MACs flood and other entries forward.
         """
         if not npu.run_traffic:
-            pytest.skip("Test requires traffic generation. Run with --traffic")
+            pytest.skip("Traffic generation disabled")
         assert dataplane is not None, "dataplane is required when running with --traffic"
         self._prepare_fdb(npu, dataplane)
         npu.flush_fdb_entries(
@@ -1442,7 +1442,7 @@ class TestFdbFlush:
         2. Flush dynamic entries on VLAN 10 and verify flooding plus surviving forwards.
         """
         if not npu.run_traffic:
-            pytest.skip("Test requires traffic generation. Run with --traffic")
+            pytest.skip("Traffic generation disabled")
         assert dataplane is not None, "dataplane is required when running with --traffic"
         self._prepare_fdb(npu, dataplane)
         npu.flush_fdb_entries(
@@ -1492,7 +1492,7 @@ class TestFdbFlush:
         2. Flush all VLAN10 entries; verify stat/dyn floods then VLAN20 forwarding.
         """
         if not npu.run_traffic:
-            pytest.skip("Test requires traffic generation. Run with --traffic")
+            pytest.skip("Traffic generation disabled")
         assert dataplane is not None, "dataplane is required when running with --traffic"
         self._prepare_fdb(npu, dataplane)
         npu.flush_fdb_entries(
@@ -1544,7 +1544,7 @@ class TestFdbFlush:
         2. Flush port0 static MAC and verify flood plus non-flushed forwarding matrix.
         """
         if not npu.run_traffic:
-            pytest.skip("Test requires traffic generation. Run with --traffic")
+            pytest.skip("Traffic generation disabled")
         assert dataplane is not None, "dataplane is required when running with --traffic"
         self._prepare_fdb(npu, dataplane)
         flushed_dev_port = self.vlan10_ports[0]
@@ -1606,7 +1606,7 @@ class TestFdbFlush:
         2. Flush port0 dynamic MAC and verify flood plus surviving forwards.
         """
         if not npu.run_traffic:
-            pytest.skip("Test requires traffic generation. Run with --traffic")
+            pytest.skip("Traffic generation disabled")
         assert dataplane is not None, "dataplane is required when running with --traffic"
         self._prepare_fdb(npu, dataplane)
         flushed_dev_port = self.vlan10_ports[0]
@@ -1668,7 +1668,7 @@ class TestFdbFlush:
         2. Flush all MACs on port0 and verify both stat/dyn floods and other entries forward.
         """
         if not npu.run_traffic:
-            pytest.skip("Test requires traffic generation. Run with --traffic")
+            pytest.skip("Traffic generation disabled")
         assert dataplane is not None, "dataplane is required when running with --traffic"
         self._prepare_fdb(npu, dataplane)
         flushed_dev_port = self.vlan10_ports[0]
@@ -1740,7 +1740,7 @@ class TestFdbFlush:
         2. Flush LAG1 static MACs and verify flooding plus surviving forwards.
         """
         if not npu.run_traffic:
-            pytest.skip("Test requires traffic generation. Run with --traffic")
+            pytest.skip("Traffic generation disabled")
         assert dataplane is not None, "dataplane is required when running with --traffic"
         self._prepare_fdb(npu, dataplane)
         flushed_dev_ports = self.vlan10_lag_ports
@@ -1802,7 +1802,7 @@ class TestFdbFlush:
         2. Flush LAG1 dynamic MACs and verify flooding plus surviving forwards.
         """
         if not npu.run_traffic:
-            pytest.skip("Test requires traffic generation. Run with --traffic")
+            pytest.skip("Traffic generation disabled")
         assert dataplane is not None, "dataplane is required when running with --traffic"
         self._prepare_fdb(npu, dataplane)
         flushed_dev_ports = self.vlan10_lag_ports
@@ -1864,7 +1864,7 @@ class TestFdbFlush:
         2. Flush dynamic MACs on LAG1; verify forwarding for entries not flushed.
         """
         if not npu.run_traffic:
-            pytest.skip("Test requires traffic generation. Run with --traffic")
+            pytest.skip("Traffic generation disabled")
         assert dataplane is not None, "dataplane is required when running with --traffic"
         self._prepare_fdb(npu, dataplane)
         flushed_dev_ports = self.vlan10_lag_ports
@@ -1920,7 +1920,7 @@ class TestFdbFlush:
         2. Verify flood toward trunk and forward checks including tagged trunk paths.
         """
         if not npu.run_traffic:
-            pytest.skip("Test requires traffic generation. Run with --traffic")
+            pytest.skip("Traffic generation disabled")
         assert dataplane is not None, "dataplane is required when running with --traffic"
         chck_vlan10_mac = self.vlan10_stat_macs[0]
         chck_vlan10_port = self.dev_port0
@@ -2007,7 +2007,7 @@ class TestFdbFlush:
         1. Trunk setup on port24, flush dynamic tp10 on trunk; verify flood and forwards.
         """
         if not npu.run_traffic:
-            pytest.skip("Test requires traffic generation. Run with --traffic")
+            pytest.skip("Traffic generation disabled")
         assert dataplane is not None, "dataplane is required when running with --traffic"
         chck_vlan10_mac = self.vlan10_stat_macs[0]
         chck_vlan10_port = self.dev_port0
@@ -2094,7 +2094,7 @@ class TestFdbFlush:
         1. Trunk on port24; flush all MACs for VLAN10 on trunk; verify stat/dyn floods and forwards.
         """
         if not npu.run_traffic:
-            pytest.skip("Test requires traffic generation. Run with --traffic")
+            pytest.skip("Traffic generation disabled")
         assert dataplane is not None, "dataplane is required when running with --traffic"
         chck_vlan10_mac = self.vlan10_stat_macs[0]
         chck_vlan10_port = self.dev_port0
@@ -2189,7 +2189,7 @@ class TestFdbFlush:
         1. Flush all static MACs in FDB; verify stat floods then remaining dynamic forwards.
         """
         if not npu.run_traffic:
-            pytest.skip("Test requires traffic generation. Run with --traffic")
+            pytest.skip("Traffic generation disabled")
         assert dataplane is not None, "dataplane is required when running with --traffic"
         self._prepare_fdb(npu, dataplane)
         npu.flush_fdb_entries(npu.switch_oid, ["SAI_FDB_FLUSH_ATTR_ENTRY_TYPE", "SAI_FDB_FLUSH_ENTRY_TYPE_STATIC"])
@@ -2235,7 +2235,7 @@ class TestFdbFlush:
         1. Flush all dynamic MACs; verify dynamic floods then static entry forwarding.
         """
         if not npu.run_traffic:
-            pytest.skip("Test requires traffic generation. Run with --traffic")
+            pytest.skip("Traffic generation disabled")
         assert dataplane is not None, "dataplane is required when running with --traffic"
         self._prepare_fdb(npu, dataplane)
         npu.flush_fdb_entries(npu.switch_oid, ["SAI_FDB_FLUSH_ATTR_ENTRY_TYPE", "SAI_FDB_FLUSH_ENTRY_TYPE_DYNAMIC"])
@@ -2281,7 +2281,7 @@ class TestFdbFlush:
         1. Flush entire FDB; verify unknown-destination flooding on VLAN10 and VLAN20.
         """
         if not npu.run_traffic:
-            pytest.skip("Test requires traffic generation. Run with --traffic")
+            pytest.skip("Traffic generation disabled")
         assert dataplane is not None, "dataplane is required when running with --traffic"
         self._prepare_fdb(npu, dataplane)
         chck_vlan10_mac1 = "00:10:aa:11:11:11"
@@ -2384,7 +2384,7 @@ class TestFdbAge:
         2. Verify tagged return to port1; wait age interval then verify VLAN flood.
         """
         if not npu.run_traffic:
-            pytest.skip("Test requires traffic generation. Run with --traffic")
+            pytest.skip("Traffic generation disabled")
         assert dataplane is not None, "dataplane is required when running with --traffic"
         lrn_mac = "00:01:01:01:01:01"
         lrn_port = 1
@@ -2426,7 +2426,7 @@ class TestFdbAge:
         2. After aging, verify flood pattern matches PTF.
         """
         if not npu.run_traffic:
-            pytest.skip("Test requires traffic generation. Run with --traffic")
+            pytest.skip("Traffic generation disabled")
         assert dataplane is not None, "dataplane is required when running with --traffic"
         lrn_mac = "00:01:01:01:01:01"
         lrn_port = 5
@@ -2466,7 +2466,7 @@ class TestFdbAge:
         2. Wait remainder of old window then verify forward; wait new window then flood.
         """
         if not npu.run_traffic:
-            pytest.skip("Test requires traffic generation. Run with --traffic")
+            pytest.skip("Traffic generation disabled")
         assert dataplane is not None, "dataplane is required when running with --traffic"
         age_time = 25
         old_age_out = age_time - 15
@@ -2533,7 +2533,7 @@ class TestFdbAge:
         2. Wait another age interval and verify flood when dynamic entry is gone.
         """
         if not npu.run_traffic:
-            pytest.skip("Test requires traffic generation. Run with --traffic")
+            pytest.skip("Traffic generation disabled")
         assert dataplane is not None, "dataplane is required when running with --traffic"
         lrn_mac = "00:01:01:01:01:01"
         lrn_port = 1
@@ -2728,7 +2728,7 @@ class TestFdbMiss:
         1. Verify default flood; set DROP; verify no packets; restore FORWARD.
         """
         if not npu.run_traffic:
-            pytest.skip("Test requires traffic generation. Run with --traffic")
+            pytest.skip("Traffic generation disabled")
         assert dataplane is not None, "dataplane is required when running with --traffic"
         try:
             send_packet(dataplane, self.send_port, self.ucast_pkt)
@@ -2751,7 +2751,7 @@ class TestFdbMiss:
         1. Baseline flood; set COPY; sleep; measure queue0 delta with flood verification.
         """
         if not npu.run_traffic:
-            pytest.skip("Test requires traffic generation. Run with --traffic")
+            pytest.skip("Traffic generation disabled")
         assert dataplane is not None, "dataplane is required when running with --traffic"
         try:
             send_packet(dataplane, self.send_port, self.ucast_pkt)
@@ -2781,7 +2781,7 @@ class TestFdbMiss:
         1. Baseline flood; set TRAP; verify queue0 increments without requiring dataplane flood copy.
         """
         if not npu.run_traffic:
-            pytest.skip("Test requires traffic generation. Run with --traffic")
+            pytest.skip("Traffic generation disabled")
         assert dataplane is not None, "dataplane is required when running with --traffic"
         try:
             send_packet(dataplane, self.send_port, self.ucast_pkt)
@@ -2810,7 +2810,7 @@ class TestFdbMiss:
         1. Flood baseline; DROP mcast miss; verify LLDP still increments queue 4.
         """
         if not npu.run_traffic:
-            pytest.skip("Test requires traffic generation. Run with --traffic")
+            pytest.skip("Traffic generation disabled")
         assert dataplane is not None, "dataplane is required when running with --traffic"
         try:
             send_packet(dataplane, self.send_port, self.mcast_pkt)
@@ -2841,7 +2841,7 @@ class TestFdbMiss:
         1. Baseline flood; COPY; verify mcast flood and CPU copy; then LLDP on queue4.
         """
         if not npu.run_traffic:
-            pytest.skip("Test requires traffic generation. Run with --traffic")
+            pytest.skip("Traffic generation disabled")
         assert dataplane is not None, "dataplane is required when running with --traffic"
         try:
             send_packet(dataplane, self.send_port, self.mcast_pkt)
@@ -2878,7 +2878,7 @@ class TestFdbMiss:
         1. Baseline flood; TRAP; verify both counters.
         """
         if not npu.run_traffic:
-            pytest.skip("Test requires traffic generation. Run with --traffic")
+            pytest.skip("Traffic generation disabled")
         assert dataplane is not None, "dataplane is required when running with --traffic"
         try:
             send_packet(dataplane, self.send_port, self.mcast_pkt)
@@ -2914,7 +2914,7 @@ class TestFdbMiss:
         1. Baseline bcast flood; DROP; verify ARP still reaches CPU queue 4.
         """
         if not npu.run_traffic:
-            pytest.skip("Test requires traffic generation. Run with --traffic")
+            pytest.skip("Traffic generation disabled")
         assert dataplane is not None, "dataplane is required when running with --traffic"
         try:
             send_packet(dataplane, self.send_port, self.bcast_pkt)
@@ -2945,7 +2945,7 @@ class TestFdbMiss:
         1. Baseline flood; COPY bcast miss; verify both stages.
         """
         if not npu.run_traffic:
-            pytest.skip("Test requires traffic generation. Run with --traffic")
+            pytest.skip("Traffic generation disabled")
         assert dataplane is not None, "dataplane is required when running with --traffic"
         try:
             send_packet(dataplane, self.send_port, self.bcast_pkt)
@@ -2982,7 +2982,7 @@ class TestFdbMiss:
         1. Baseline flood; TRAP; verify queue deltas.
         """
         if not npu.run_traffic:
-            pytest.skip("Test requires traffic generation. Run with --traffic")
+            pytest.skip("Traffic generation disabled")
         assert dataplane is not None, "dataplane is required when running with --traffic"
         try:
             send_packet(dataplane, self.send_port, self.bcast_pkt)
@@ -3039,7 +3039,7 @@ class TestFdbEvent:
         2. Verify multi-port flood then read bridge port, packet action, and entry type attributes.
         """
         if not npu.run_traffic:
-            pytest.skip("Test requires traffic generation. Run with --traffic")
+            pytest.skip("Traffic generation disabled")
         assert dataplane is not None, "dataplane is required when running with --traffic"
         pkt = simple_udp_packet(eth_dst=self.dst_mac, eth_src=self.src_mac)
         tag_pkt = simple_udp_packet(eth_dst=self.dst_mac, eth_src=self.src_mac, dl_vlan_enable=True, vlan_vid=self.vlan_id_int, pktlen=104)
@@ -3073,7 +3073,7 @@ class TestFdbEvent:
         2. Wait for expiry and verify FDB get returns item-not-found for the aged entry.
         """
         if not npu.run_traffic:
-            pytest.skip("Test requires traffic generation. Run with --traffic")
+            pytest.skip("Traffic generation disabled")
         assert dataplane is not None, "dataplane is required when running with --traffic"
         age_time = 10
         pkt = simple_udp_packet(eth_dst=self.dst_mac, eth_src=self.src_mac)
@@ -3114,7 +3114,7 @@ class TestFdbEvent:
         2. Verify intermediate move-stage flood and final bridge port on lag1_bp.
         """
         if not npu.run_traffic:
-            pytest.skip("Test requires traffic generation. Run with --traffic")
+            pytest.skip("Traffic generation disabled")
         assert dataplane is not None, "dataplane is required when running with --traffic"
         pkt = simple_udp_packet(eth_dst=self.dst_mac, eth_src=self.src_mac)
         tag_pkt = simple_udp_packet(eth_dst=self.dst_mac, eth_src=self.src_mac, dl_vlan_enable=True, vlan_vid=self.vlan_id_int, pktlen=104)
@@ -3164,7 +3164,7 @@ class TestFdbEvent:
         2. Verify FDB get returns item-not-found for flushed entry.
         """
         if not npu.run_traffic:
-            pytest.skip("Test requires traffic generation. Run with --traffic")
+            pytest.skip("Traffic generation disabled")
         assert dataplane is not None, "dataplane is required when running with --traffic"
         pkt = simple_udp_packet(eth_dst=self.dst_mac, eth_src=self.src_mac)
         tag_pkt = simple_udp_packet(eth_dst=self.dst_mac, eth_src=self.src_mac, dl_vlan_enable=True, vlan_vid=self.vlan_id_int, pktlen=104)
@@ -3208,7 +3208,7 @@ class TestFdbEvent:
         2. Verify FDB get returns item-not-found for deleted entry.
         """
         if not npu.run_traffic:
-            pytest.skip("Test requires traffic generation. Run with --traffic")
+            pytest.skip("Traffic generation disabled")
         assert dataplane is not None, "dataplane is required when running with --traffic"
         pkt = simple_udp_packet(eth_dst=self.dst_mac, eth_src=self.src_mac)
         tag_pkt = simple_udp_packet(eth_dst=self.dst_mac, eth_src=self.src_mac, dl_vlan_enable=True, vlan_vid=self.vlan_id_int, pktlen=104)
