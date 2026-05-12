@@ -172,6 +172,8 @@ jobs:
 
     - name: Run functional test cases
       run: ./exec.sh --no-tty -i client pytest --testbed=saivs_client_server -v -k "test_l2_basic"
+    - name: Run flex counters test cases
+      run: ./exec.sh --no-tty -i client pytest --testbed=saivs_client_server -v -k "test_flex_counters"
     - name: Run FDB functional tests
       run: ./exec.sh --no-tty -i client pytest --testbed=saivs_client_server -v test_fdb.py
     - name: Run unit tests

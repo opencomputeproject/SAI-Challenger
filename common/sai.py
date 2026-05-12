@@ -6,7 +6,6 @@ import pytest
 from saichallenger.common.sai_client.sai_client import SaiClient
 from saichallenger.common.sai_data import SaiObjType
 
-
 class CommandProcessor:
     """
     Process SAI commands with object reference substitution.
@@ -321,6 +320,31 @@ class Sai():
 
     def clear_stats(self, obj, attrs, do_assert=True):
         return self.sai_client.clear_stats(obj, attrs, do_assert)
+    
+    # Manage flex counters
+    def set_flex_counter_group(self, group_name, *, enable=True,
+                          poll_interval=0, clear_on_read=False, do_assert=True):
+        return self.sai_client.set_flex_counter_group(group_name=group_name, enable=enable, poll_interval=poll_interval, 
+                                                 clear_on_read=clear_on_read, do_assert=do_assert)
+
+    def del_flex_counter_group(self, group_name, do_assert=True):
+        return self.sai_client.del_flex_counter_group(group_name, do_assert)
+
+    def start_flex_counter_poll(self, group_name, oid, counters, do_assert=True):
+        return self.sai_client.start_flex_counter_poll(group_name=group_name, oid=oid, counters=counters, do_assert=do_assert)
+
+    def stop_flex_counter_poll(self, group_name, oid, do_assert=True):
+        return self.sai_client.stop_flex_counter_poll(group_name=group_name, oid=oid, do_assert=do_assert)
+
+    def clear_flex_counters(self):
+        return self.sai_client.clear_flex_counters()
+    
+    # Manage counters from COUNTERS_DB
+    def get_flex_counter(self, oid, counters, counter_table="COUNTERS"):
+        return self.sai_client.get_flex_counter(oid, counters, counter_table)
+
+    def del_flex_counter(self, oid, counter_table="COUNTERS"):
+        return self.sai_client.del_flex_counter(oid, counter_table)
 
     # Flush FDB
     def flush_fdb_entries(self, obj, attrs=None):

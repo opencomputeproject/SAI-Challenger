@@ -6,6 +6,28 @@ import os
 from saichallenger.common.sai_client.sai_client import SaiClient
 from saichallenger.common.sai_data import SaiObjType, SaiData
 
+SAI_COUNTER_TYPE_TO_ID_LIST = {
+    "SAI_PORT_STAT": "PORT_COUNTER_ID_LIST",
+    "SAI_PORT_ATTR": "PORT_PHY_ATTR_ID_LIST",
+    # "SAI_PORT_SERDES_ATTR": "PORT_PHY_SERDES_ATTR_ID_LIST", # TODO requires newer sonic-sairedis
+    "SAI_QUEUE_STAT": "QUEUE_COUNTER_ID_LIST",
+    "SAI_QUEUE_ATTR": "QUEUE_ATTR_ID_LIST",
+    "SAI_INGRESS_PRIORITY_GROUP_STAT": "PG_COUNTER_ID_LIST",
+    "SAI_INGRESS_PRIORITY_GROUP_ATTR": "PG_ATTR_ID_LIST",
+    "SAI_ROUTER_INTERFACE_STAT": "RIF_COUNTER_ID_LIST",
+    "SAI_SWITCH_STAT": "SWITCH_COUNTER_ID_LIST",
+    "SAI_MACSEC_FLOW_STAT": "MACSEC_FLOW_COUNTER_ID_LIST",
+    "SAI_MACSEC_SA_STAT": "MACSEC_SA_COUNTER_ID_LIST",
+    "SAI_MACSEC_SA_ATTR": "MACSEC_SA_ATTR_ID_LIST",
+    "SAI_COUNTER_STAT": "FLOW_COUNTER_ID_LIST",
+    "SAI_TUNNEL_STAT": "TUNNEL_COUNTER_ID_LIST",
+    "SAI_ENI_STAT": "ENI_COUNTER_ID_LIST",
+    "SAI_BUFFER_POOL_STAT": "BUFFER_POOL_COUNTER_ID_LIST",
+    "SAI_HA_SET_STAT": "HA_SET_COUNTER_ID_LIST",
+    "SAI_POLICER_STAT": "POLICER_COUNTER_ID_LIST",
+    "SAI_SWITCH_COUNTER_STAT": "SWITCH_COUNTER_ID_LIST",
+    "SAI_ACL_COUNTER_ATTR": "ACL_COUNTER_ATTR_ID_LIST",
+}
 
 class SaiRedisClient(SaiClient):
     """Redis SAI client implementation to wrap low level SAI calls"""
@@ -24,6 +46,8 @@ class SaiRedisClient(SaiClient):
 
         self.r = redis.Redis(host=self.server_ip, port=self.port, db=self.asic_db)
         self.loglevel_db = redis.Redis(host=self.server_ip, port=self.port, db=3)
+        self.counters_db = redis.Redis(host=self.server_ip, port=self.port, db=2, decode_responses=True)
+        self.flex_counter_db = redis.Redis(host=self.server_ip, port=self.port, db=5, decode_responses=True)
 
     def cleanup(self):
         '''
@@ -443,6 +467,107 @@ class SaiRedisClient(SaiClient):
         if do_assert:
             assert status[2] == 'SAI_STATUS_SUCCESS'
         return status[2]
+    
+    def set_flex_counter_group(self, group_name, *, enable=True,
+                          poll_interval=0, clear_on_read=False, do_assert=True):
+        attrs = []
+        attrs.extend(["FLEX_COUNTER_STATUS", "enable" if enable else "disable"])
+        attrs.extend(["STATS_MODE", "STATS_MODE_READ_AND_CLEAR" if clear_on_read else "STATS_MODE_READ"])
+        attrs.extend(["POLL_INTERVAL", poll_interval])
+
+        for i, attr in enumerate(attrs):
+            if type(attr) != str:
+                attrs[i] = json.dumps(attr)
+        attrs = json.dumps(attrs)
+
+        status = self.operate(group_name, attrs, "Sset_counter_group")
+        status[2] = status[2].decode("utf-8")
+
+        if do_assert:
+            assert status[2] == 'SAI_STATUS_SUCCESS'
+        return status[2]
+
+    def del_flex_counter_group(self, group_name, do_assert=True):
+        status = self.operate(group_name, "[]", "Ddel_counter_group")
+        status[2] = status[2].decode("utf-8")
+
+        if do_assert:
+            assert status[2] == 'SAI_STATUS_SUCCESS'
+        return status[2]
+
+    def _get_sai_type_from_counter(self, counter):
+        idx_stat = counter.find("_STAT_")
+        idx_attr = counter.find("_ATTR_")
+        if idx_stat != -1:
+            return counter[:idx_stat + 5]
+        if idx_attr != -1:
+            return counter[:idx_attr + 5]
+        return None
+
+    def start_flex_counter_poll(self, group_name, oid, counters, do_assert=True):
+        if not counters:
+            raise ValueError("counters must be a non-empty list")
+
+        # derive id_list from the first counter
+        sai_counter_type = self._get_sai_type_from_counter(counters[0])
+        if sai_counter_type is None:
+            raise ValueError(f"Cannot derive counter type from counter name {counters[0]}")
+        if not all(self._get_sai_type_from_counter(c) == sai_counter_type for c in counters):
+            raise ValueError(f"All counters must share the same SAI counter prefix {sai_counter_type}")
+        id_list = SAI_COUNTER_TYPE_TO_ID_LIST.get(sai_counter_type)
+        if id_list is None:
+            raise ValueError(f"Unsupported SAI counter prefix {sai_counter_type}")
+            
+        attrs = [id_list, ",".join(counters)]
+        attrs = json.dumps(attrs)
+        obj = group_name + ':' + oid
+
+        status = self.operate(obj, attrs, "Sstart_poll")
+        status[2] = status[2].decode("utf-8")
+
+        if do_assert:
+            assert status[2] == 'SAI_STATUS_SUCCESS'
+        return status[2]
+
+    def stop_flex_counter_poll(self, group_name, oid, do_assert=True):
+        obj = group_name + ':' + oid
+        status = self.operate(obj, "[]", "Dstop_poll")
+        status[2] = status[2].decode("utf-8")
+
+        if do_assert:
+            assert status[2] == 'SAI_STATUS_SUCCESS'
+        return status[2]
+
+    def clear_flex_counters(self):
+        # clear flex counters from FLEX_COUNTER_DB, they must be cleared by syncd
+        table_pfx = "FLEX_COUNTER_TABLE:"
+        group_pfx = "FLEX_COUNTER_GROUP_TABLE:"
+
+        for key in self.flex_counter_db.scan_iter(match=table_pfx + "*"):
+            rest = key.removeprefix(table_pfx)
+            group_name, _, oid = rest.partition(":")
+            self.stop_flex_counter_poll(group_name, oid)
+
+        for key in self.flex_counter_db.scan_iter(match=group_pfx + "*"):
+            group_name = key.removeprefix(group_pfx)
+            self.del_flex_counter_group(group_name)
+
+        # clear counters from COUNTERS_DB
+        self.counters_db.flushdb()
+    
+    def get_flex_counter(self, oid, counters, counter_table="COUNTERS"):
+        counter = counter_table + ":" + oid
+        exists = self.counters_db.exists(counter)
+        if counters:
+            data = self.counters_db.hmget(counter, counters)
+            return exists, dict(zip(counters, data))
+        else:
+            data = self.counters_db.hgetall(counter)
+            return exists, data
+
+    def del_flex_counter(self, oid, counter_table="COUNTERS"):
+        counter = counter_table + ":" + oid
+        return self.counters_db.delete(counter)
 
     def flush_fdb_entries(self, obj, attrs=None):
         """
