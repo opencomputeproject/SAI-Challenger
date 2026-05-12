@@ -51,11 +51,27 @@ def _sai_wait_fdb_age(timeout_sec):
     time.sleep(max(0.0, float(timeout_sec)) + aging_interval_buffer)
 
 
-def _refresh_topo_vlan_member_oid(topo, member_attr, new_oid):
-    """Keep topo.* and def_vlan_member_list in sync after remove+recreate of a VLAN member."""
-    old_oid = getattr(topo, member_attr)
-    if old_oid in topo.def_vlan_member_list:
-        topo.def_vlan_member_list[topo.def_vlan_member_list.index(old_oid)] = new_oid
+def _replace_tracked_oid(resource_list, old_oid, new_oid):
+    """Replace a stale OID in a topology tracking list."""
+    if old_oid in resource_list:
+        resource_list[resource_list.index(old_oid)] = new_oid
+
+
+def _refresh_topo_vlan_member(topo, member_attr, new_oid):
+    """Sync topo.* attribute and def_vlan_member_list after remove+recreate."""
+    _replace_tracked_oid(topo.def_vlan_member_list, getattr(topo, member_attr), new_oid)
+    setattr(topo, member_attr, new_oid)
+
+
+def _refresh_topo_bridge_port(topo, member_attr, new_oid):
+    """Sync topo.* attribute and def_bridge_port_list after remove+recreate."""
+    _replace_tracked_oid(topo.def_bridge_port_list, getattr(topo, member_attr), new_oid)
+    setattr(topo, member_attr, new_oid)
+
+
+def _refresh_topo_lag_member(topo, member_attr, new_oid):
+    """Sync topo.* attribute and def_lag_member_list after remove+recreate."""
+    _replace_tracked_oid(topo.def_lag_member_list, getattr(topo, member_attr), new_oid)
     setattr(topo, member_attr, new_oid)
 
 
@@ -111,7 +127,6 @@ class TestFdbStaticMac:
         if not npu.run_traffic:
             pytest.skip("Traffic generation disabled")
 
-        assert dataplane is not None, "dataplane is required when running with --traffic"
         for dst_ports, dst_mac in zip(self.dst_port_groups, self.macs):
             for src_port, src_mac in zip((self.dev_port0, self.dev_port1), self.macs[:1]):
                 if [src_port] == dst_ports:
@@ -148,9 +163,7 @@ class TestFdbStaticMac:
         if not npu.run_traffic:
             pytest.skip("Traffic generation disabled")
 
-        assert dataplane is not None, "dataplane is required when running with --traffic"
-        test_mac = self.macs[0]
-        pkt = simple_udp_packet(eth_dst=test_mac)
+        pkt = simple_udp_packet(eth_dst=self.macs[0])
         send_packet(dataplane, self.dev_port0, pkt)
         verify_no_other_packets(dataplane)
 
@@ -266,8 +279,6 @@ class TestFdbNoLearn:
         """
         if not npu.run_traffic:
             pytest.skip("Traffic generation disabled")
-        assert dataplane is not None, "dataplane is required when running with --traffic"
-
         pkt, tag_pkt = self._flood_from_port0_pkt()
         chck_pkt, tag_chck_pkt = self._reverse_pkt()
         try:
@@ -300,8 +311,6 @@ class TestFdbNoLearn:
         """
         if not npu.run_traffic:
             pytest.skip("Traffic generation disabled")
-        assert dataplane is not None, "dataplane is required when running with --traffic"
-
         pkt, tag_pkt = self._flood_from_port0_pkt()
         chck_pkt, tag_chck_pkt = self._reverse_pkt()
         try:
@@ -334,8 +343,6 @@ class TestFdbNoLearn:
         """
         if not npu.run_traffic:
             pytest.skip("Traffic generation disabled")
-        assert dataplane is not None, "dataplane is required when running with --traffic"
-
         pkt, tag_pkt = self._flood_from_port0_pkt()
         chck_pkt, tag_chck_pkt = self._reverse_pkt()
         try:
@@ -368,8 +375,6 @@ class TestFdbNoLearn:
         """
         if not npu.run_traffic:
             pytest.skip("Traffic generation disabled")
-        assert dataplane is not None, "dataplane is required when running with --traffic"
-
         pkt, tag_pkt = self._flood_from_port0_pkt()
         chck_pkt, tag_chck_pkt = self._reverse_pkt()
         try:
@@ -402,8 +407,6 @@ class TestFdbNoLearn:
         """
         if not npu.run_traffic:
             pytest.skip("Traffic generation disabled")
-        assert dataplane is not None, "dataplane is required when running with --traffic"
-
         pkt, tag_pkt = self._flood_from_port0_pkt()
         chck_pkt, tag_chck_pkt = self._reverse_pkt()
         port0_bp = self.port0_bp
@@ -435,15 +438,11 @@ class TestFdbNoLearn:
             new_member = npu.create_vlan_member(
                 self.vlan_oid, new_bp, "SAI_VLAN_TAGGING_MODE_UNTAGGED"
             )
-            self.port0_bp = new_bp
-            self.vlan10_member0 = new_member
             topo = self._topo
-            old_bp = topo.port0_bp
-            topo.def_bridge_port_list[topo.def_bridge_port_list.index(old_bp)] = new_bp
-            topo.port0_bp = new_bp
-            old_member = topo.vlan10_member0
-            topo.def_vlan_member_list[topo.def_vlan_member_list.index(old_member)] = new_member
-            topo.vlan10_member0 = new_member
+            _refresh_topo_bridge_port(topo, "port0_bp", new_bp)
+            self.port0_bp = new_bp
+            _refresh_topo_vlan_member(topo, "vlan10_member0", new_member)
+            self.vlan10_member0 = new_member
 
     def test_no_bp_no_learn(self, npu, dataplane):
         """
@@ -456,25 +455,25 @@ class TestFdbNoLearn:
         """
         if not npu.run_traffic:
             pytest.skip("Traffic generation disabled")
-        assert dataplane is not None, "dataplane is required when running with --traffic"
         if len(npu.port_oids) <= 24:
             pytest.skip("noBpNoLearnTest requires physical port index 24 (at least 25 ports)")
 
         pkt, tag_pkt = self._flood_from_port0_pkt()
         chck_pkt, tag_chck_pkt = self._reverse_pkt()
-        test_port_oid = npu.port_oids[24]
-        dev_port24 = 24
-        vlan10_ports = [[self.dev_port0], [self.dev_port1], self.lag_ports]
-        flood_pkt_list = [pkt, tag_pkt, pkt]
-        flood_chk_pkt_list = [tag_chck_pkt, chck_pkt]
-        flood_chk_port_list = [[self.dev_port1], self.lag_ports]
         try:
-            npu.set(test_port_oid, ["SAI_PORT_ATTR_PORT_VLAN_ID", str(self.vlan_id_int)])
-            send_packet(dataplane, dev_port24, pkt)
-            verify_each_packet_on_multiple_port_lists(dataplane, flood_pkt_list, vlan10_ports)
-
+            npu.set(npu.port_oids[24], ["SAI_PORT_ATTR_PORT_VLAN_ID", str(self.vlan_id_int)])
+            send_packet(dataplane, 24, pkt)
+            verify_each_packet_on_multiple_port_lists(
+                dataplane,
+                [pkt, tag_pkt, pkt],
+                [[self.dev_port0], [self.dev_port1], self.lag_ports],
+            )
             send_packet(dataplane, self.dev_port0, chck_pkt)
-            verify_each_packet_on_multiple_port_lists(dataplane, flood_chk_pkt_list, flood_chk_port_list)
+            verify_each_packet_on_multiple_port_lists(
+                dataplane,
+                [tag_chck_pkt, chck_pkt],
+                [[self.dev_port1], self.lag_ports],
+            )
         finally:
             npu.flush_fdb_entries(
                 npu.switch_oid,
@@ -483,7 +482,7 @@ class TestFdbNoLearn:
                     "SAI_FDB_FLUSH_ATTR_ENTRY_TYPE", "SAI_FDB_FLUSH_ENTRY_TYPE_ALL",
                 ],
             )
-            npu.set(test_port_oid, ["SAI_PORT_ATTR_PORT_VLAN_ID", "0"])
+            npu.set(npu.port_oids[24], ["SAI_PORT_ATTR_PORT_VLAN_ID", "0"])
 
 
 class TestFdbLearn:
@@ -544,8 +543,6 @@ class TestFdbLearn:
         """
         if not npu.run_traffic:
             pytest.skip("Traffic generation disabled")
-        assert dataplane is not None, "dataplane is required when running with --traffic"
-
         dst_mac = "00:11:22:33:44:55"
         try:
             # learning phase — full per-source flood packet-list verification
@@ -634,10 +631,12 @@ class TestFdbLearn:
                     vlan_vid=self.vlan_id_int,
                     pktlen=104,
                 )
-                flood_port_list = [[self.dev_port1], self.utg_lag_ports, self.tg_lag_ports, [24]]
-                flood_pkt_list = [tag_nv, pkt_nv, tag_nv, pkt_nv]
                 send_packet(dataplane, self.dev_port0, pkt_nv)
-                verify_each_packet_on_multiple_port_lists(dataplane, flood_pkt_list, flood_port_list)
+                verify_each_packet_on_multiple_port_lists(
+                    dataplane,
+                    [tag_nv, pkt_nv, tag_nv, pkt_nv],
+                    [[self.dev_port1], self.utg_lag_ports, self.tg_lag_ports, [24]],
+                )
                 pkt_f = simple_udp_packet(eth_dst=dst_mac, eth_src=new_vlan_member_mac, pktlen=100)
                 tag_f = simple_udp_packet(
                     eth_dst=dst_mac,
@@ -646,10 +645,12 @@ class TestFdbLearn:
                     vlan_vid=self.vlan_id_int,
                     pktlen=104,
                 )
-                flood_port_list2 = self.dst_port_groups
-                flood_pkt_list2 = [pkt_f, tag_f, pkt_f, tag_f]
                 send_packet(dataplane, 24, pkt_f)
-                verify_each_packet_on_multiple_port_lists(dataplane, flood_pkt_list2, flood_port_list2)
+                verify_each_packet_on_multiple_port_lists(
+                    dataplane,
+                    [pkt_f, tag_f, pkt_f, tag_f],
+                    self.dst_port_groups,
+                )
                 time.sleep(2)
                 pkt_chk = simple_udp_packet(eth_dst=new_vlan_member_mac, eth_src=self.macs[0], pktlen=100)
                 send_packet(dataplane, self.dev_port0, pkt_chk)
@@ -677,13 +678,15 @@ class TestFdbLearn:
                     vlan_vid=self.vlan_id_int,
                     pktlen=104,
                 )
-                flood_port_list_l = [
-                    [self.dev_port0], [self.dev_port1],
-                    self.tg_lag_ports, [24],
-                ]
-                flood_pkt_list_l = [pkt_l, tag_l, tag_l, pkt_l]
                 send_packet(dataplane, 25, pkt_l)
-                verify_each_packet_on_multiple_port_lists(dataplane, flood_pkt_list_l, flood_port_list_l)
+                verify_each_packet_on_multiple_port_lists(
+                    dataplane,
+                    [pkt_l, tag_l, tag_l, pkt_l],
+                    [
+                        [self.dev_port0], [self.dev_port1],
+                        self.tg_lag_ports, [24],
+                    ],
+                )
                 time.sleep(2)
                 pkt_tl = simple_udp_packet(eth_dst=new_lag_mac, eth_src=self.macs[0], pktlen=100)
                 send_packet(dataplane, self.dev_port0, pkt_tl)
@@ -713,8 +716,6 @@ class TestFdbLearn:
         """
         if not npu.run_traffic:
             pytest.skip("Traffic generation disabled")
-        assert dataplane is not None, "dataplane is required when running with --traffic"
-
         access_port = self.dev_port0
         trunk_port = self.dev_port1
         ap_mac = self.macs[0]
@@ -735,11 +736,14 @@ class TestFdbLearn:
             chck_inv_vlan_tag_pkt = simple_udp_packet(
                 eth_dst=lrn_mac, eth_src=ap_mac, dl_vlan_enable=True, vlan_vid=self.vlan_id_int, pktlen=104
             )
-            flood_pkt_list = [chck_inv_vlan_tag_pkt, chck_inv_vlan_pkt, chck_inv_vlan_tag_pkt]
             send_packet(dataplane, trunk_port, inv_vlan_tag_pkt)
             verify_no_other_packets(dataplane)
             send_packet(dataplane, access_port, chck_inv_vlan_pkt)
-            verify_each_packet_on_multiple_port_lists(dataplane, flood_pkt_list, flood_port_list)
+            verify_each_packet_on_multiple_port_lists(
+                dataplane,
+                [chck_inv_vlan_tag_pkt, chck_inv_vlan_pkt, chck_inv_vlan_tag_pkt],
+                flood_port_list,
+            )
 
             # Case 2 — broadcast src
             bcast_mac = "ff:ff:ff:ff:ff:ff"
@@ -750,11 +754,14 @@ class TestFdbLearn:
             chck_bcast_src_tag_pkt = simple_udp_packet(
                 eth_dst=bcast_mac, eth_src=ap_mac, dl_vlan_enable=True, vlan_vid=self.vlan_id_int, pktlen=104
             )
-            flood_pkt_list = [chck_bcast_src_tag_pkt, chck_bcast_src_pkt, chck_bcast_src_tag_pkt]
             send_packet(dataplane, trunk_port, bcast_src_tag_pkt)
             verify_no_other_packets(dataplane)
             send_packet(dataplane, access_port, chck_bcast_src_pkt)
-            verify_each_packet_on_multiple_port_lists(dataplane, flood_pkt_list, flood_port_list)
+            verify_each_packet_on_multiple_port_lists(
+                dataplane,
+                [chck_bcast_src_tag_pkt, chck_bcast_src_pkt, chck_bcast_src_tag_pkt],
+                flood_port_list,
+            )
 
             # Case 3 — multicast src
             mcast_mac = "01:00:5e:11:22:33"
@@ -765,11 +772,14 @@ class TestFdbLearn:
             chck_mcast_src_tag_pkt = simple_udp_packet(
                 eth_dst=mcast_mac, eth_src=ap_mac, dl_vlan_enable=True, vlan_vid=self.vlan_id_int, pktlen=104
             )
-            flood_pkt_list = [chck_mcast_src_tag_pkt, chck_mcast_src_pkt, chck_mcast_src_tag_pkt]
             send_packet(dataplane, trunk_port, mcast_src_tag_pkt)
             verify_no_other_packets(dataplane)
             send_packet(dataplane, access_port, chck_mcast_src_pkt)
-            verify_each_packet_on_multiple_port_lists(dataplane, flood_pkt_list, flood_port_list)
+            verify_each_packet_on_multiple_port_lists(
+                dataplane,
+                [chck_mcast_src_tag_pkt, chck_mcast_src_pkt, chck_mcast_src_tag_pkt],
+                flood_port_list,
+            )
 
             # Case 4 — src_mac statically added (ap_mac); learning conflict with lrn_mac on LAG
             lrn_mac = self.macs[2]
@@ -779,10 +789,12 @@ class TestFdbLearn:
             )
             static_src_pkt = simple_udp_packet(eth_dst=bcast_dst, eth_src=ap_mac, pktlen=100)
             chck_static_src_pkt = simple_udp_packet(eth_dst=ap_mac, eth_src=lrn_mac, pktlen=100)
-            flood_pkt_list_c4 = [static_src_pkt, static_src_pkt, static_src_tag_pkt]
-            flood_port_list_c4 = [[access_port], self.utg_lag_ports, self.tg_lag_ports]
             send_packet(dataplane, trunk_port, static_src_tag_pkt)
-            verify_each_packet_on_multiple_port_lists(dataplane, flood_pkt_list_c4, flood_port_list_c4)
+            verify_each_packet_on_multiple_port_lists(
+                dataplane,
+                [static_src_pkt, static_src_pkt, static_src_tag_pkt],
+                [[access_port], self.utg_lag_ports, self.tg_lag_ports],
+            )
             send_packet(dataplane, self.utg_lag_ports[1], chck_static_src_pkt)
             verify_packets(dataplane, chck_static_src_pkt, [access_port])
 
@@ -801,9 +813,8 @@ class TestFdbLearn:
                 pktlen=104,
             )
             flood_port_list5 = [self.utg_lag_ports, self.tg_lag_ports]
-            flood_pkt_list5 = [pkt, tag_pkt]
             send_packet(dataplane, self.dev_port0, pkt)
-            verify_each_packet_on_multiple_port_lists(dataplane, flood_pkt_list5, flood_port_list5)
+            verify_each_packet_on_multiple_port_lists(dataplane, [pkt, tag_pkt], flood_port_list5)
             tag_rm = simple_udp_packet(
                 eth_dst=bcast_dst,
                 eth_src=rm_vlan_member_mac,
@@ -821,9 +832,8 @@ class TestFdbLearn:
                 vlan_vid=self.vlan_id_int,
                 pktlen=104,
             )
-            flood_pkt_list_nv = [pkt_nv, tag_nv]
             send_packet(dataplane, self.dev_port0, pkt_nv)
-            verify_each_packet_on_multiple_port_lists(dataplane, flood_pkt_list_nv, flood_port_list5)
+            verify_each_packet_on_multiple_port_lists(dataplane, [pkt_nv, tag_nv], flood_port_list5)
 
             # Case 6 — removed LAG member (port5)
             rm_lag_member = self.lag1_member5
@@ -843,10 +853,12 @@ class TestFdbLearn:
                 vlan_vid=self.vlan_id_int,
                 pktlen=104,
             )
-            flood_pkt_list6 = [pkt_chk, tag_chk]
-            flood_port_list6 = [[trunk_port], utg_rm, self.tg_lag_ports]
             send_packet(dataplane, self.dev_port0, pkt_chk)
-            verify_each_packet_on_multiple_port_lists(dataplane, flood_pkt_list6, flood_port_list6)
+            verify_each_packet_on_multiple_port_lists(
+                dataplane,
+                [pkt_chk, tag_chk],
+                [[trunk_port], utg_rm, self.tg_lag_ports],
+            )
 
         finally:
             npu.flush_fdb_entries(
@@ -862,15 +874,11 @@ class TestFdbLearn:
                         "SAI_LAG_MEMBER_ATTR_PORT_ID", npu.port_oids[5],
                     ],
                 )
-                old_lm = topo.lag1_member5
-                topo.def_lag_member_list[topo.def_lag_member_list.index(old_lm)] = new_lm
-                topo.lag1_member5 = new_lm
+                _refresh_topo_lag_member(topo, "lag1_member5", new_lm)
                 self.lag1_member5 = new_lm
             if vlan_removed:
                 new_vm = npu.create_vlan_member(self.vlan_oid, self.port1_bp, "SAI_VLAN_TAGGING_MODE_TAGGED")
-                old_vm = topo.vlan10_member1
-                topo.def_vlan_member_list[topo.def_vlan_member_list.index(old_vm)] = new_vm
-                topo.vlan10_member1 = new_vm
+                _refresh_topo_vlan_member(topo, "vlan10_member1", new_vm)
                 self.vlan10_member1 = new_vm
 
 
@@ -980,7 +988,7 @@ class TestFdbMacMove:
         new_member = npu.create_vlan_member(
             request.cls.vlan_oid, topo.port1_bp, "SAI_VLAN_TAGGING_MODE_TAGGED"
         )
-        _refresh_topo_vlan_member_oid(topo, "vlan10_member1", new_member)
+        _refresh_topo_vlan_member(topo, "vlan10_member1", new_member)
 
     def test_dynamic_mac_move(self, npu, dataplane):
         """
@@ -993,8 +1001,6 @@ class TestFdbMacMove:
         """
         if not npu.run_traffic:
             pytest.skip("Traffic generation disabled")
-        assert dataplane is not None, "dataplane is required when running with --traffic"
-
         pkt = simple_udp_packet(eth_dst=self.chck_mac, eth_src=self.moving_mac)
         chck_pkt = simple_udp_packet(eth_dst=self.moving_mac, eth_src=self.chck_mac)
         port_chain = [self.dev_port0, self.dev_port1, self.dev_port5, self.dev_port27, self.dev_port1]
@@ -1028,8 +1034,6 @@ class TestFdbMacMove:
         """
         if not npu.run_traffic:
             pytest.skip("Traffic generation disabled")
-        assert dataplane is not None, "dataplane is required when running with --traffic"
-
         moving_key = _fdb_entry_key(npu, self.vlan_oid, self.moving_mac)
         pkt = simple_udp_packet(eth_dst=self.chck_mac, eth_src=self.moving_mac)
         chck_pkt = simple_udp_packet(eth_dst=self.moving_mac, eth_src=self.chck_mac)
@@ -1070,18 +1074,15 @@ class TestFdbMacMove:
         """
         if not npu.run_traffic:
             pytest.skip("Traffic generation disabled")
-        assert dataplane is not None, "dataplane is required when running with --traffic"
-
         fdb_key = _fdb_entry_key(npu, self.vlan_oid, self.moving_mac)
         port_chain = [self.dev_port0, self.dev_port1, self.dev_port5, self.dev_port27, self.dev_port1]
         bport_chain = [self.port0_bp, self.port1_bp, self.lag1_bp, self.lag10_bp, self.port1_bp]
         chck_pkt = simple_udp_packet(eth_dst=self.moving_mac, eth_src=self.chck_mac)
-        chck_port = self.dev_port24
         try:
             npu.create_fdb(self.vlan_oid, self.moving_mac, self.port0_bp, entry_type="SAI_FDB_ENTRY_TYPE_STATIC")
             for port, bport in zip(port_chain, bport_chain):
                 npu.set(fdb_key, ["SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID", bport])
-                send_packet(dataplane, chck_port, chck_pkt)
+                send_packet(dataplane, self.dev_port24, chck_pkt)
                 if port in self.lag1_ports:
                     verify_packet_any_port(dataplane, chck_pkt, self.lag1_ports)
                 elif port in self.lag3_ports:
@@ -1217,7 +1218,7 @@ class TestFdbFlush:
                 new_member = npu.create_vlan_member(
                     topo.vlan10, topo.port1_bp, "SAI_VLAN_TAGGING_MODE_TAGGED"
                 )
-                _refresh_topo_vlan_member_oid(topo, "vlan10_member1", new_member)
+                _refresh_topo_vlan_member(topo, "vlan10_member1", new_member)
 
             if vlan20_member1_ut is not None:
                 npu.set(topo.port3, ["SAI_PORT_ATTR_PORT_VLAN_ID", "0"])
@@ -1225,7 +1226,7 @@ class TestFdbFlush:
                 new_member = npu.create_vlan_member(
                     topo.vlan20, topo.port3_bp, "SAI_VLAN_TAGGING_MODE_TAGGED"
                 )
-                _refresh_topo_vlan_member_oid(topo, "vlan20_member1", new_member)
+                _refresh_topo_vlan_member(topo, "vlan20_member1", new_member)
 
             if vlan20_member2_ut is not None:
                 npu.set(topo.lag2, ["SAI_LAG_ATTR_PORT_VLAN_ID", "0"])
@@ -1233,7 +1234,7 @@ class TestFdbFlush:
                 new_member = npu.create_vlan_member(
                     topo.vlan20, topo.lag2_bp, "SAI_VLAN_TAGGING_MODE_TAGGED"
                 )
-                _refresh_topo_vlan_member_oid(topo, "vlan20_member2", new_member)
+                _refresh_topo_vlan_member(topo, "vlan20_member2", new_member)
 
     def _prepare_fdb(self, npu, dataplane):
         npu.flush_fdb_entries(npu.switch_oid, ["SAI_FDB_FLUSH_ATTR_ENTRY_TYPE", "SAI_FDB_FLUSH_ENTRY_TYPE_ALL"])
@@ -1308,11 +1309,9 @@ class TestFdbFlush:
         self.tp10_stat_mac = "00:10:00:66:66:66"
         self.tp10_dyn_mac = "00:10:ff:66:66:66"
         chck_vlan10_mac = self.vlan10_stat_macs[0]
-        chck_vlan10_port = self.dev_port0
         self.tp20_stat_mac = "00:20:00:66:66:66"
         self.tp20_dyn_mac = "00:20:ff:66:66:66"
         chck_vlan20_mac = self.vlan20_stat_macs[0]
-        chck_vlan20_port = self.dev_port2
 
         self.vlan10_member3 = npu.create_vlan_member(
             self.vlan10, self.trunk_port_bp, "SAI_VLAN_TAGGING_MODE_TAGGED"
@@ -1352,7 +1351,7 @@ class TestFdbFlush:
                 vlan_vid=self.vlan10_id,
                 pktlen=104,
             )
-            send_packet(dataplane, chck_vlan10_port, chck_vlan10_pkt)
+            send_packet(dataplane, self.dev_port0, chck_vlan10_pkt)
             verify_packets(dataplane, chck_vlan10_tag_pkt, [self.trunk_dev_port])
 
         for mac in (self.tp20_stat_mac, self.tp20_dyn_mac):
@@ -1364,7 +1363,7 @@ class TestFdbFlush:
                 vlan_vid=self.vlan20_id,
                 pktlen=104,
             )
-            send_packet(dataplane, chck_vlan20_port, chck_vlan20_pkt)
+            send_packet(dataplane, self.dev_port2, chck_vlan20_pkt)
             verify_packets(dataplane, chck_vlan20_tag_pkt, [self.trunk_dev_port])
 
     def _tear_down_trunk_port(self, npu):
@@ -1393,7 +1392,6 @@ class TestFdbFlush:
         """
         if not npu.run_traffic:
             pytest.skip("Traffic generation disabled")
-        assert dataplane is not None, "dataplane is required when running with --traffic"
         self._prepare_fdb(npu, dataplane)
         npu.flush_fdb_entries(
             npu.switch_oid,
@@ -1443,7 +1441,6 @@ class TestFdbFlush:
         """
         if not npu.run_traffic:
             pytest.skip("Traffic generation disabled")
-        assert dataplane is not None, "dataplane is required when running with --traffic"
         self._prepare_fdb(npu, dataplane)
         npu.flush_fdb_entries(
             npu.switch_oid,
@@ -1493,7 +1490,6 @@ class TestFdbFlush:
         """
         if not npu.run_traffic:
             pytest.skip("Traffic generation disabled")
-        assert dataplane is not None, "dataplane is required when running with --traffic"
         self._prepare_fdb(npu, dataplane)
         npu.flush_fdb_entries(
             npu.switch_oid,
@@ -1545,7 +1541,6 @@ class TestFdbFlush:
         """
         if not npu.run_traffic:
             pytest.skip("Traffic generation disabled")
-        assert dataplane is not None, "dataplane is required when running with --traffic"
         self._prepare_fdb(npu, dataplane)
         flushed_dev_port = self.vlan10_ports[0]
         flushed_mac = self.vlan10_stat_macs[0]
@@ -1607,7 +1602,6 @@ class TestFdbFlush:
         """
         if not npu.run_traffic:
             pytest.skip("Traffic generation disabled")
-        assert dataplane is not None, "dataplane is required when running with --traffic"
         self._prepare_fdb(npu, dataplane)
         flushed_dev_port = self.vlan10_ports[0]
         flushed_mac = self.vlan10_dyn_macs[0]
@@ -1669,7 +1663,6 @@ class TestFdbFlush:
         """
         if not npu.run_traffic:
             pytest.skip("Traffic generation disabled")
-        assert dataplane is not None, "dataplane is required when running with --traffic"
         self._prepare_fdb(npu, dataplane)
         flushed_dev_port = self.vlan10_ports[0]
         flushed_stat_mac = self.vlan10_stat_macs[0]
@@ -1741,7 +1734,6 @@ class TestFdbFlush:
         """
         if not npu.run_traffic:
             pytest.skip("Traffic generation disabled")
-        assert dataplane is not None, "dataplane is required when running with --traffic"
         self._prepare_fdb(npu, dataplane)
         flushed_dev_ports = self.vlan10_lag_ports
         flushed_macs = [self.vlan10_stat_macs[2], self.vlan10_stat_macs[3], self.vlan10_stat_macs[4]]
@@ -1803,7 +1795,6 @@ class TestFdbFlush:
         """
         if not npu.run_traffic:
             pytest.skip("Traffic generation disabled")
-        assert dataplane is not None, "dataplane is required when running with --traffic"
         self._prepare_fdb(npu, dataplane)
         flushed_dev_ports = self.vlan10_lag_ports
         flushed_macs = [self.vlan10_dyn_macs[2], self.vlan10_dyn_macs[3], self.vlan10_dyn_macs[4]]
@@ -1865,7 +1856,6 @@ class TestFdbFlush:
         """
         if not npu.run_traffic:
             pytest.skip("Traffic generation disabled")
-        assert dataplane is not None, "dataplane is required when running with --traffic"
         self._prepare_fdb(npu, dataplane)
         flushed_dev_ports = self.vlan10_lag_ports
         flushed_stat_macs = [self.vlan10_stat_macs[2], self.vlan10_stat_macs[3], self.vlan10_stat_macs[4]]
@@ -1921,9 +1911,6 @@ class TestFdbFlush:
         """
         if not npu.run_traffic:
             pytest.skip("Traffic generation disabled")
-        assert dataplane is not None, "dataplane is required when running with --traffic"
-        chck_vlan10_mac = self.vlan10_stat_macs[0]
-        chck_vlan10_port = self.dev_port0
         self._prepare_fdb(npu, dataplane)
         try:
             self._set_up_trunk_port(npu, dataplane)
@@ -1939,8 +1926,8 @@ class TestFdbFlush:
                 dataplane,
                 [self.tp10_stat_mac],
                 self.vlan10_ports,
-                [chck_vlan10_mac],
-                [chck_vlan10_port],
+                [self.vlan10_stat_macs[0]],
+                [self.dev_port0],
                 self.vlan10_lag_ports,
                 self.trunk_dev_port,
                 self.vlan10_id,
@@ -2008,9 +1995,6 @@ class TestFdbFlush:
         """
         if not npu.run_traffic:
             pytest.skip("Traffic generation disabled")
-        assert dataplane is not None, "dataplane is required when running with --traffic"
-        chck_vlan10_mac = self.vlan10_stat_macs[0]
-        chck_vlan10_port = self.dev_port0
         self._prepare_fdb(npu, dataplane)
         try:
             self._set_up_trunk_port(npu, dataplane)
@@ -2026,8 +2010,8 @@ class TestFdbFlush:
                 dataplane,
                 [self.tp10_dyn_mac],
                 self.vlan10_ports,
-                [chck_vlan10_mac],
-                [chck_vlan10_port],
+                [self.vlan10_stat_macs[0]],
+                [self.dev_port0],
                 self.vlan10_lag_ports,
                 self.trunk_dev_port,
                 self.vlan10_id,
@@ -2095,7 +2079,6 @@ class TestFdbFlush:
         """
         if not npu.run_traffic:
             pytest.skip("Traffic generation disabled")
-        assert dataplane is not None, "dataplane is required when running with --traffic"
         chck_vlan10_mac = self.vlan10_stat_macs[0]
         chck_vlan10_port = self.dev_port0
         self._prepare_fdb(npu, dataplane)
@@ -2190,7 +2173,6 @@ class TestFdbFlush:
         """
         if not npu.run_traffic:
             pytest.skip("Traffic generation disabled")
-        assert dataplane is not None, "dataplane is required when running with --traffic"
         self._prepare_fdb(npu, dataplane)
         npu.flush_fdb_entries(npu.switch_oid, ["SAI_FDB_FLUSH_ATTR_ENTRY_TYPE", "SAI_FDB_FLUSH_ENTRY_TYPE_STATIC"])
         self._verify_flood(
@@ -2236,7 +2218,6 @@ class TestFdbFlush:
         """
         if not npu.run_traffic:
             pytest.skip("Traffic generation disabled")
-        assert dataplane is not None, "dataplane is required when running with --traffic"
         self._prepare_fdb(npu, dataplane)
         npu.flush_fdb_entries(npu.switch_oid, ["SAI_FDB_FLUSH_ATTR_ENTRY_TYPE", "SAI_FDB_FLUSH_ENTRY_TYPE_DYNAMIC"])
         self._verify_flood(
@@ -2282,7 +2263,6 @@ class TestFdbFlush:
         """
         if not npu.run_traffic:
             pytest.skip("Traffic generation disabled")
-        assert dataplane is not None, "dataplane is required when running with --traffic"
         self._prepare_fdb(npu, dataplane)
         chck_vlan10_mac1 = "00:10:aa:11:11:11"
         chck_vlan10_mac2 = "00:10:aa:22:22:22"
@@ -2385,7 +2365,6 @@ class TestFdbAge:
         """
         if not npu.run_traffic:
             pytest.skip("Traffic generation disabled")
-        assert dataplane is not None, "dataplane is required when running with --traffic"
         lrn_mac = "00:01:01:01:01:01"
         lrn_port = 1
         vrf = self.vrf_port_dev
@@ -2406,10 +2385,12 @@ class TestFdbAge:
             verify_packets(dataplane, tag_pkt, [lrn_port])
 
             _sai_wait_fdb_age(self.age_time)
-            flood_port_list = [[0], [1], [4, 5, 6]]
-            flood_pkt_list = [pkt, tag_pkt, pkt]
             send_packet(dataplane, vrf, pkt)
-            verify_each_packet_on_multiple_port_lists(dataplane, flood_pkt_list, flood_port_list)
+            verify_each_packet_on_multiple_port_lists(
+                dataplane,
+                [pkt, tag_pkt, pkt],
+                [[0], [1], [4, 5, 6]],
+            )
         finally:
             npu.flush_fdb_entries(
                 npu.switch_oid,
@@ -2427,7 +2408,6 @@ class TestFdbAge:
         """
         if not npu.run_traffic:
             pytest.skip("Traffic generation disabled")
-        assert dataplane is not None, "dataplane is required when running with --traffic"
         lrn_mac = "00:01:01:01:01:01"
         lrn_port = 5
         lag_ports = [4, 5, 6]
@@ -2446,10 +2426,12 @@ class TestFdbAge:
             verify_packet_any_port(dataplane, pkt, lag_ports)
 
             _sai_wait_fdb_age(self.age_time)
-            flood_port_list = [[0], [1], [4, 5, 6]]
-            flood_pkt_list = [pkt, tag_pkt, pkt]
             send_packet(dataplane, vrf, pkt)
-            verify_each_packet_on_multiple_port_lists(dataplane, flood_pkt_list, flood_port_list)
+            verify_each_packet_on_multiple_port_lists(
+                dataplane,
+                [pkt, tag_pkt, pkt],
+                [[0], [1], [4, 5, 6]],
+            )
         finally:
             npu.flush_fdb_entries(
                 npu.switch_oid,
@@ -2467,7 +2449,6 @@ class TestFdbAge:
         """
         if not npu.run_traffic:
             pytest.skip("Traffic generation disabled")
-        assert dataplane is not None, "dataplane is required when running with --traffic"
         age_time = 25
         old_age_out = age_time - 15
         lrn_mac = "00:01:01:01:01:01"
@@ -2512,10 +2493,12 @@ class TestFdbAge:
             new_learn_timeout = age_time - (time.time() - timer_start)
             _sai_wait_fdb_age(new_learn_timeout)
 
-            flood_port_list = [[0], [1], [4, 5, 6]]
-            flood_pkt_list = [pkt, tag_pkt, pkt]
             send_packet(dataplane, vrf, pkt)
-            verify_each_packet_on_multiple_port_lists(dataplane, flood_pkt_list, flood_port_list)
+            verify_each_packet_on_multiple_port_lists(
+                dataplane,
+                [pkt, tag_pkt, pkt],
+                [[0], [1], [4, 5, 6]],
+            )
         finally:
             npu.flush_fdb_entries(
                 npu.switch_oid,
@@ -2534,7 +2517,6 @@ class TestFdbAge:
         """
         if not npu.run_traffic:
             pytest.skip("Traffic generation disabled")
-        assert dataplane is not None, "dataplane is required when running with --traffic"
         lrn_mac = "00:01:01:01:01:01"
         lrn_port = 1
         mv_port = 0
@@ -2563,10 +2545,12 @@ class TestFdbAge:
 
             _sai_wait_fdb_age(self.age_time)
 
-            flood_port_list = [[0], [1], [4, 5, 6]]
-            flood_pkt_list = [pkt, tag_pkt, pkt]
             send_packet(dataplane, vrf, pkt)
-            verify_each_packet_on_multiple_port_lists(dataplane, flood_pkt_list, flood_port_list)
+            verify_each_packet_on_multiple_port_lists(
+                dataplane,
+                [pkt, tag_pkt, pkt],
+                [[0], [1], [4, 5, 6]],
+            )
         finally:
             npu.flush_fdb_entries(
                 npu.switch_oid,
@@ -2729,7 +2713,6 @@ class TestFdbMiss:
         """
         if not npu.run_traffic:
             pytest.skip("Traffic generation disabled")
-        assert dataplane is not None, "dataplane is required when running with --traffic"
         try:
             send_packet(dataplane, self.send_port, self.ucast_pkt)
             verify_packets(dataplane, self.ucast_pkt, self.flood_ports)
@@ -2752,7 +2735,6 @@ class TestFdbMiss:
         """
         if not npu.run_traffic:
             pytest.skip("Traffic generation disabled")
-        assert dataplane is not None, "dataplane is required when running with --traffic"
         try:
             send_packet(dataplane, self.send_port, self.ucast_pkt)
             verify_packets(dataplane, self.ucast_pkt, self.flood_ports)
@@ -2782,7 +2764,6 @@ class TestFdbMiss:
         """
         if not npu.run_traffic:
             pytest.skip("Traffic generation disabled")
-        assert dataplane is not None, "dataplane is required when running with --traffic"
         try:
             send_packet(dataplane, self.send_port, self.ucast_pkt)
             verify_packets(dataplane, self.ucast_pkt, self.flood_ports)
@@ -2811,7 +2792,6 @@ class TestFdbMiss:
         """
         if not npu.run_traffic:
             pytest.skip("Traffic generation disabled")
-        assert dataplane is not None, "dataplane is required when running with --traffic"
         try:
             send_packet(dataplane, self.send_port, self.mcast_pkt)
             verify_packets(dataplane, self.mcast_pkt, self.flood_ports)
@@ -2842,7 +2822,6 @@ class TestFdbMiss:
         """
         if not npu.run_traffic:
             pytest.skip("Traffic generation disabled")
-        assert dataplane is not None, "dataplane is required when running with --traffic"
         try:
             send_packet(dataplane, self.send_port, self.mcast_pkt)
             verify_packets(dataplane, self.mcast_pkt, self.flood_ports)
@@ -2879,7 +2858,6 @@ class TestFdbMiss:
         """
         if not npu.run_traffic:
             pytest.skip("Traffic generation disabled")
-        assert dataplane is not None, "dataplane is required when running with --traffic"
         try:
             send_packet(dataplane, self.send_port, self.mcast_pkt)
             verify_packets(dataplane, self.mcast_pkt, self.flood_ports)
@@ -2915,7 +2893,6 @@ class TestFdbMiss:
         """
         if not npu.run_traffic:
             pytest.skip("Traffic generation disabled")
-        assert dataplane is not None, "dataplane is required when running with --traffic"
         try:
             send_packet(dataplane, self.send_port, self.bcast_pkt)
             verify_packets(dataplane, self.bcast_pkt, self.flood_ports)
@@ -2946,7 +2923,6 @@ class TestFdbMiss:
         """
         if not npu.run_traffic:
             pytest.skip("Traffic generation disabled")
-        assert dataplane is not None, "dataplane is required when running with --traffic"
         try:
             send_packet(dataplane, self.send_port, self.bcast_pkt)
             verify_packets(dataplane, self.bcast_pkt, self.flood_ports)
@@ -2983,7 +2959,6 @@ class TestFdbMiss:
         """
         if not npu.run_traffic:
             pytest.skip("Traffic generation disabled")
-        assert dataplane is not None, "dataplane is required when running with --traffic"
         try:
             send_packet(dataplane, self.send_port, self.bcast_pkt)
             verify_packets(dataplane, self.bcast_pkt, self.flood_ports)
@@ -3040,7 +3015,6 @@ class TestFdbEvent:
         """
         if not npu.run_traffic:
             pytest.skip("Traffic generation disabled")
-        assert dataplane is not None, "dataplane is required when running with --traffic"
         pkt = simple_udp_packet(eth_dst=self.dst_mac, eth_src=self.src_mac)
         tag_pkt = simple_udp_packet(eth_dst=self.dst_mac, eth_src=self.src_mac, dl_vlan_enable=True, vlan_vid=self.vlan_id_int, pktlen=104)
         try:
@@ -3074,7 +3048,6 @@ class TestFdbEvent:
         """
         if not npu.run_traffic:
             pytest.skip("Traffic generation disabled")
-        assert dataplane is not None, "dataplane is required when running with --traffic"
         age_time = 10
         pkt = simple_udp_packet(eth_dst=self.dst_mac, eth_src=self.src_mac)
         tag_pkt = simple_udp_packet(eth_dst=self.dst_mac, eth_src=self.src_mac, dl_vlan_enable=True, vlan_vid=self.vlan_id_int, pktlen=104)
@@ -3115,12 +3088,9 @@ class TestFdbEvent:
         """
         if not npu.run_traffic:
             pytest.skip("Traffic generation disabled")
-        assert dataplane is not None, "dataplane is required when running with --traffic"
         pkt = simple_udp_packet(eth_dst=self.dst_mac, eth_src=self.src_mac)
         tag_pkt = simple_udp_packet(eth_dst=self.dst_mac, eth_src=self.src_mac, dl_vlan_enable=True, vlan_vid=self.vlan_id_int, pktlen=104)
         mv_port = 4
-        flood_move_pkts = [pkt, tag_pkt]
-        flood_move_ports = [[0], [1]]
         try:
             send_packet(dataplane, 0, pkt)
             verify_each_packet_on_multiple_port_lists(dataplane, [tag_pkt, pkt], [[1], [4, 5, 6]])
@@ -3137,7 +3107,7 @@ class TestFdbEvent:
             assert data.value() == "SAI_FDB_ENTRY_TYPE_DYNAMIC"
 
             send_packet(dataplane, mv_port, pkt)
-            verify_each_packet_on_multiple_port_lists(dataplane, flood_move_pkts, flood_move_ports)
+            verify_each_packet_on_multiple_port_lists(dataplane, [pkt, tag_pkt], [[0], [1]])
             time.sleep(2)
             status, data = npu.get(fdb_key, ["SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID", "oid:0x0"], False)
             assert status == "SAI_STATUS_SUCCESS"
@@ -3165,7 +3135,6 @@ class TestFdbEvent:
         """
         if not npu.run_traffic:
             pytest.skip("Traffic generation disabled")
-        assert dataplane is not None, "dataplane is required when running with --traffic"
         pkt = simple_udp_packet(eth_dst=self.dst_mac, eth_src=self.src_mac)
         tag_pkt = simple_udp_packet(eth_dst=self.dst_mac, eth_src=self.src_mac, dl_vlan_enable=True, vlan_vid=self.vlan_id_int, pktlen=104)
         try:
@@ -3209,7 +3178,6 @@ class TestFdbEvent:
         """
         if not npu.run_traffic:
             pytest.skip("Traffic generation disabled")
-        assert dataplane is not None, "dataplane is required when running with --traffic"
         pkt = simple_udp_packet(eth_dst=self.dst_mac, eth_src=self.src_mac)
         tag_pkt = simple_udp_packet(eth_dst=self.dst_mac, eth_src=self.src_mac, dl_vlan_enable=True, vlan_vid=self.vlan_id_int, pktlen=104)
         try:
