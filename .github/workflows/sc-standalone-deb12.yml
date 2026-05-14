@@ -71,10 +71,8 @@ jobs:
 
     - name: Run tests
       run: ./exec.sh --no-tty pytest --testbed=saivs_standalone -v test_l2_basic.py -v test_vrf.py -v test_dc_t1.py
-    - name: Run FDB functional tests
-      run: ./exec.sh --no-tty pytest --testbed=saivs_standalone -v test_fdb.py
-    - name: Run VLAN functional tests
-      run: ./exec.sh --no-tty pytest --testbed=saivs_standalone -v test_l2_vlan.py
+    - name: Run FDB and VLAN functional tests
+      run: ./exec.sh --no-tty pytest --testbed=saivs_standalone -v test_fdb.py test_vlan.py
     - name: Run sairedis tests
       run: ./exec.sh --no-tty pytest --testbed=saivs_standalone -v -k "test_sairec"
     - name: Run unit tests
@@ -98,10 +96,8 @@ jobs:
 
     - name: Run thrift tests
       run: ./exec.sh --no-tty -s thrift pytest --testbed=saivs_thrift_standalone -v test_l2_basic.py -v test_vrf.py -v test_dc_t1.py
-    - name: Run FDB functional tests
-      run: ./exec.sh --no-tty -s thrift pytest --testbed=saivs_thrift_standalone -v test_fdb.py
-    - name: Run VLAN functional tests
-      run: ./exec.sh --no-tty -s thrift pytest --testbed=saivs_thrift_standalone -v test_l2_vlan.py
+    - name: Run FDB and VLAN functional tests
+      run: ./exec.sh --no-tty -s thrift pytest --testbed=saivs_thrift_standalone -v test_fdb.py test_vlan.py
     - name: Run thift data-driven tests
       run: ./exec.sh --no-tty -s thrift pytest --testbed=saivs_thrift_standalone -v test_l2_basic_dd.py
     - name: Run thrift unit tests
