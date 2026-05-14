@@ -85,37 +85,7 @@ class TestL2Vlan:
         request.cls.topo = topo
         request.cls.i_pkt_count = 0
         request.cls.e_pkt_count = 0
-
-        request.cls.vlan10 = topo.vlan10
-        request.cls.vlan20 = topo.vlan20
-        request.cls.vlan30 = topo.vlan30
-        request.cls.default_1q_bridge = topo.default_1q_bridge
-        request.cls.switch_id = topo.switch_id
-
-        request.cls.port0 = topo.port0
-        request.cls.port1 = topo.port1
-        request.cls.port2 = topo.port2
-        request.cls.port3 = topo.port3
-        request.cls.port24 = npu.port_oids[24]
-        request.cls.port25 = npu.port_oids[25]
-        request.cls.port26 = npu.port_oids[26]
-        request.cls.port27 = npu.port_oids[27]
-        request.cls.port28 = npu.port_oids[28]
-        request.cls.port29 = npu.port_oids[29]
-        request.cls.port30 = npu.port_oids[30]
-        request.cls.port31 = npu.port_oids[31]
-
-        request.cls.port0_bp = topo.port0_bp
-        request.cls.port1_bp = topo.port1_bp
-        request.cls.port2_bp = topo.port2_bp
-        request.cls.port3_bp = topo.port3_bp
-        request.cls.port20_bp = topo.port20_bp
-        request.cls.port21_bp = topo.port21_bp
-        request.cls.lag1 = topo.lag1
-        request.cls.lag2 = topo.lag2
-        request.cls.lag1_bp = topo.lag1_bp
-        request.cls.lag2_bp = topo.lag2_bp
-
+        
         request.cls.mac0 = "00:00:00:00:00:11"
         request.cls.mac1 = "00:00:00:00:00:22"
         request.cls.mac2 = "00:00:00:00:00:33"
@@ -130,30 +100,30 @@ class TestL2Vlan:
                     "SAI_BRIDGE_PORT_ATTR_ADMIN_STATE", "true",
                 ],
             )
-            setattr(request.cls, "port%d_bp" % i, bp)
+            setattr(topo, "port%d_bp" % i, bp)
 
         request.cls.vlan10_member3 = npu.create_vlan_member(
-            topo.vlan10, request.cls.port24_bp,
+            topo.vlan10, topo.port24_bp,
             "SAI_VLAN_TAGGING_MODE_UNTAGGED",
         )
         request.cls.vlan10_member4 = npu.create_vlan_member(
-            topo.vlan10, request.cls.port25_bp,
+            topo.vlan10, topo.port25_bp,
             "SAI_VLAN_TAGGING_MODE_TAGGED",
         )
 
-        npu.set(request.cls.port24, ["SAI_PORT_ATTR_PORT_VLAN_ID", "10"])
+        npu.set(npu.port_oids[24], ["SAI_PORT_ATTR_PORT_VLAN_ID", "10"])
 
-        npu.create_fdb(topo.vlan10, request.cls.mac0, request.cls.port0_bp)
-        npu.create_fdb(topo.vlan10, request.cls.mac1, request.cls.port1_bp)
-        npu.create_fdb(topo.vlan10, request.cls.mac2, request.cls.port24_bp)
-        npu.create_fdb(topo.vlan10, request.cls.mac3, request.cls.port25_bp)
+        npu.create_fdb(topo.vlan10, self.mac0, topo.port0_bp)
+        npu.create_fdb(topo.vlan10, self.mac1, topo.port1_bp)
+        npu.create_fdb(topo.vlan10, self.mac2, topo.port24_bp)
+        npu.create_fdb(topo.vlan10, self.mac3, topo.port25_bp)
 
         request.cls.lag10 = npu.create(SaiObjType.LAG, [])
         request.cls.lag_mbr31 = npu.create(
             SaiObjType.LAG_MEMBER,
             [
                 "SAI_LAG_MEMBER_ATTR_LAG_ID", request.cls.lag10,
-                "SAI_LAG_MEMBER_ATTR_PORT_ID", request.cls.port28,
+                "SAI_LAG_MEMBER_ATTR_PORT_ID", npu.port_oids[28],
             ],
         )
         request.cls.lag11 = npu.create(SaiObjType.LAG, [])
@@ -161,7 +131,7 @@ class TestL2Vlan:
             SaiObjType.LAG_MEMBER,
             [
                 "SAI_LAG_MEMBER_ATTR_LAG_ID", request.cls.lag11,
-                "SAI_LAG_MEMBER_ATTR_PORT_ID", request.cls.port29,
+                "SAI_LAG_MEMBER_ATTR_PORT_ID", npu.port_oids[29],
             ],
         )
 
@@ -184,11 +154,11 @@ class TestL2Vlan:
 
         request.cls.vlan40 = npu.create(SaiObjType.VLAN, ["SAI_VLAN_ATTR_VLAN_ID", "40"])
         request.cls.vlan_member41 = npu.create_vlan_member(
-            request.cls.vlan40, request.cls.port26_bp,
+            request.cls.vlan40, topo.port26_bp,
             "SAI_VLAN_TAGGING_MODE_UNTAGGED",
         )
         request.cls.vlan_member42 = npu.create_vlan_member(
-            request.cls.vlan40, request.cls.port27_bp,
+            request.cls.vlan40, topo.port27_bp,
             "SAI_VLAN_TAGGING_MODE_TAGGED",
         )
         request.cls.vlan_member43 = npu.create_vlan_member(
@@ -202,11 +172,11 @@ class TestL2Vlan:
 
         request.cls.vlan50 = npu.create(SaiObjType.VLAN, ["SAI_VLAN_ATTR_VLAN_ID", "50"])
         request.cls.vlan_member51 = npu.create_vlan_member(
-            request.cls.vlan50, request.cls.port26_bp,
+            request.cls.vlan50, topo.port26_bp,
             "SAI_VLAN_TAGGING_MODE_TAGGED",
         )
         request.cls.vlan_member52 = npu.create_vlan_member(
-            request.cls.vlan50, request.cls.port27_bp,
+            request.cls.vlan50, topo.port27_bp,
             "SAI_VLAN_TAGGING_MODE_UNTAGGED",
         )
         request.cls.vlan_member53 = npu.create_vlan_member(
@@ -220,11 +190,11 @@ class TestL2Vlan:
 
         request.cls.vlan60 = npu.create(SaiObjType.VLAN, ["SAI_VLAN_ATTR_VLAN_ID", "60"])
         request.cls.vlan_member61 = npu.create_vlan_member(
-            request.cls.vlan60, request.cls.port26_bp,
+            request.cls.vlan60, topo.port26_bp,
             "SAI_VLAN_TAGGING_MODE_TAGGED",
         )
         request.cls.vlan_member62 = npu.create_vlan_member(
-            request.cls.vlan60, request.cls.port27_bp,
+            request.cls.vlan60, topo.port27_bp,
             "SAI_VLAN_TAGGING_MODE_TAGGED",
         )
         request.cls.vlan_member63 = npu.create_vlan_member(
@@ -238,11 +208,11 @@ class TestL2Vlan:
 
         request.cls.vlan70 = npu.create(SaiObjType.VLAN, ["SAI_VLAN_ATTR_VLAN_ID", "70"])
         request.cls.vlan_member71 = npu.create_vlan_member(
-            request.cls.vlan70, request.cls.port26_bp,
+            request.cls.vlan70, topo.port26_bp,
             "SAI_VLAN_TAGGING_MODE_TAGGED",
         )
         request.cls.vlan_member72 = npu.create_vlan_member(
-            request.cls.vlan70, request.cls.port27_bp,
+            request.cls.vlan70, topo.port27_bp,
             "SAI_VLAN_TAGGING_MODE_TAGGED",
         )
         request.cls.vlan_member73 = npu.create_vlan_member(
@@ -259,7 +229,7 @@ class TestL2Vlan:
         npu.set(topo.port2, ["SAI_PORT_ATTR_PORT_VLAN_ID", "20"])
 
         for bv in (
-            request.cls.vlan10,
+            topo.vlan10,
             request.cls.vlan40,
             request.cls.vlan50,
             request.cls.vlan60,
@@ -278,12 +248,12 @@ class TestL2Vlan:
                 except Exception:
                     pass
 
-        npu.remove_fdb(request.cls.vlan10, request.cls.mac0)
-        npu.remove_fdb(request.cls.vlan10, request.cls.mac1)
-        npu.remove_fdb(request.cls.vlan10, request.cls.mac2)
-        npu.remove_fdb(request.cls.vlan10, request.cls.mac3)
+        npu.remove_fdb(topo.vlan10, self.mac0)
+        npu.remove_fdb(topo.vlan10, self.mac1)
+        npu.remove_fdb(topo.vlan10, self.mac2)
+        npu.remove_fdb(topo.vlan10, self.mac3)
 
-        npu.set(request.cls.port24, ["SAI_PORT_ATTR_PORT_VLAN_ID", "1"])
+        npu.set(npu.port_oids[24], ["SAI_PORT_ATTR_PORT_VLAN_ID", "1"])
 
         npu.remove(request.cls.vlan10_member3)
         npu.remove(request.cls.vlan10_member4)
@@ -319,14 +289,14 @@ class TestL2Vlan:
         npu.remove(request.cls.vlan60)
         npu.remove(request.cls.vlan70)
 
-        npu.remove(request.cls.port31_bp)
-        npu.remove(request.cls.port30_bp)
-        npu.remove(request.cls.port29_bp)
-        npu.remove(request.cls.port28_bp)
-        npu.remove(request.cls.port27_bp)
-        npu.remove(request.cls.port26_bp)
-        npu.remove(request.cls.port25_bp)
-        npu.remove(request.cls.port24_bp)
+        npu.remove(topo.port31_bp)
+        npu.remove(topo.port30_bp)
+        npu.remove(topo.port29_bp)
+        npu.remove(topo.port28_bp)
+        npu.remove(topo.port27_bp)
+        npu.remove(topo.port26_bp)
+        npu.remove(topo.port25_bp)
+        npu.remove(topo.port24_bp)
 
     def _inc_vlan10_ucast(self):
         type(self).i_pkt_count += 1
@@ -486,7 +456,7 @@ class TestL2Vlan:
             send_packet(dataplane, 1, tag_pkt_40)
             verify_no_other_packets(dataplane, timeout=1)
 
-            self.npu.set(self.port1, ["SAI_PORT_ATTR_PORT_VLAN_ID", "10"])
+            self.npu.set(self.topo.port1, ["SAI_PORT_ATTR_PORT_VLAN_ID", "10"])
 
             send_packet(dataplane, 1, tag_pkt)
             verify_packet(dataplane, tag_pkt, 25)
@@ -507,9 +477,9 @@ class TestL2Vlan:
             send_packet(dataplane, 1, tag_pkt_40)
             verify_no_other_packets(dataplane, timeout=1)
 
-            self.npu.set(self.vlan20, ["SAI_VLAN_ATTR_LEARN_DISABLE", "true"])
-            self.npu.set(self.port2, ["SAI_PORT_ATTR_PORT_VLAN_ID", "20"])
-            self.npu.set(self.port1, ["SAI_PORT_ATTR_PORT_VLAN_ID", "20"])
+            self.npu.set(self.topo.vlan20, ["SAI_VLAN_ATTR_LEARN_DISABLE", "true"])
+            self.npu.set(self.topo.port2, ["SAI_PORT_ATTR_PORT_VLAN_ID", "20"])
+            self.npu.set(self.topo.port1, ["SAI_PORT_ATTR_PORT_VLAN_ID", "20"])
 
             tag_pkt_20 = simple_udp_packet(
                 eth_dst=self.mac3,
@@ -527,7 +497,7 @@ class TestL2Vlan:
                 [lag1_ports, [2], [3]],
             )
 
-            self.npu.create_fdb(self.vlan20, fdb20_mac, self.lag2_bp)
+            self.npu.create_fdb(self.topo.vlan20, fdb20_mac, self.topo.lag2_bp)
             fdb20_installed = True
 
             tag_pkt_lag = simple_udp_packet(
@@ -551,13 +521,13 @@ class TestL2Vlan:
                 [[2], [3]],
             )
 
-            self.npu.set(self.lag2, ["SAI_LAG_ATTR_PORT_VLAN_ID", "1"])
+            self.npu.set(self.topo.lag2, ["SAI_LAG_ATTR_PORT_VLAN_ID", "1"])
 
             send_packet(dataplane, 1, tag_pkt)
             verify_packet(dataplane, tag_pkt, 25)
             self._inc_vlan10_ucast()
 
-            self.npu.set(self.port1, ["SAI_PORT_ATTR_PORT_VLAN_ID", "1"])
+            self.npu.set(self.topo.port1, ["SAI_PORT_ATTR_PORT_VLAN_ID", "1"])
 
             send_packet(dataplane, 1, untag_pkt)
             verify_no_other_packets(dataplane, timeout=1)
@@ -567,12 +537,12 @@ class TestL2Vlan:
             self._inc_vlan10_ucast()
 
         finally:
-            self.npu.set(self.port2, ["SAI_PORT_ATTR_PORT_VLAN_ID", "20"], False)
-            self.npu.set(self.port1, ["SAI_PORT_ATTR_PORT_VLAN_ID", "1"])
+            self.npu.set(self.topo.port2, ["SAI_PORT_ATTR_PORT_VLAN_ID", "20"], False)
+            self.npu.set(self.topo.port1, ["SAI_PORT_ATTR_PORT_VLAN_ID", "1"])
             if fdb20_installed:
-                self.npu.remove_fdb(self.vlan20, fdb20_mac)
-            self.npu.set(self.vlan20, ["SAI_VLAN_ATTR_LEARN_DISABLE", "false"])
-            self.npu.set(self.lag2, ["SAI_LAG_ATTR_PORT_VLAN_ID", "1"])
+                self.npu.remove_fdb(self.topo.vlan20, fdb20_mac)
+            self.npu.set(self.topo.vlan20, ["SAI_VLAN_ATTR_LEARN_DISABLE", "false"])
+            self.npu.set(self.topo.lag2, ["SAI_LAG_ATTR_PORT_VLAN_ID", "1"])
 
     def test_priority_tagging(self, npu, dataplane):
         """
@@ -593,18 +563,18 @@ class TestL2Vlan:
         mac8 = "00:88:88:88:88:88"
 
         vm1 = self.npu.create_vlan_member(
-            self.vlan20, self.port26_bp,
+            self.topo.vlan20, self.topo.port26_bp,
             "SAI_VLAN_TAGGING_MODE_TAGGED",
         )
         vm2 = self.npu.create_vlan_member(
-            self.vlan20, self.port27_bp,
+            self.topo.vlan20, self.topo.port27_bp,
             "SAI_VLAN_TAGGING_MODE_UNTAGGED",
         )
 
-        self.npu.create_fdb(self.vlan10, mac5, self.lag1_bp)
-        self.npu.create_fdb(self.vlan20, mac6, self.lag2_bp)
-        self.npu.create_fdb(self.vlan20, mac7, self.port26_bp)
-        self.npu.create_fdb(self.vlan20, mac8, self.port27_bp)
+        self.npu.create_fdb(self.topo.vlan10, mac5, self.topo.lag1_bp)
+        self.npu.create_fdb(self.topo.vlan20, mac6, self.topo.lag2_bp)
+        self.npu.create_fdb(self.topo.vlan20, mac7, self.topo.port26_bp)
+        self.npu.create_fdb(self.topo.vlan20, mac8, self.topo.port27_bp)
 
         try:
             pkt = simple_udp_packet(
@@ -719,8 +689,8 @@ class TestL2Vlan:
             send_packet(dataplane, 7, pkt)
             verify_no_other_packets(dataplane, timeout=1)
 
-            self.npu.set(self.lag2, ["SAI_LAG_ATTR_PORT_VLAN_ID", "20"])
-            self.npu.set(self.port1, ["SAI_PORT_ATTR_PORT_VLAN_ID", "10"])
+            self.npu.set(self.topo.lag2, ["SAI_LAG_ATTR_PORT_VLAN_ID", "20"])
+            self.npu.set(self.topo.port1, ["SAI_PORT_ATTR_PORT_VLAN_ID", "10"])
 
             pkt = simple_udp_packet(
                 eth_dst=self.mac3,
@@ -793,12 +763,12 @@ class TestL2Vlan:
             verify_packet(dataplane, exp_pkt, 27)
 
         finally:
-            self.npu.set(self.port1, ["SAI_PORT_ATTR_PORT_VLAN_ID", "1"])
-            self.npu.set(self.lag2, ["SAI_LAG_ATTR_PORT_VLAN_ID", "1"])
-            self.npu.remove_fdb(self.vlan10, mac5)  # FIX A
-            self.npu.remove_fdb(self.vlan20, mac6)  # FIX A
-            self.npu.remove_fdb(self.vlan20, mac7)  # FIX A
-            self.npu.remove_fdb(self.vlan20, mac8)  # FIX A
+            self.npu.set(self.topo.port1, ["SAI_PORT_ATTR_PORT_VLAN_ID", "1"])
+            self.npu.set(self.topo.lag2, ["SAI_LAG_ATTR_PORT_VLAN_ID", "1"])
+            self.npu.remove_fdb(self.topo.vlan10, mac5)  # FIX A
+            self.npu.remove_fdb(self.topo.vlan20, mac6)  # FIX A
+            self.npu.remove_fdb(self.topo.vlan20, mac7)  # FIX A
+            self.npu.remove_fdb(self.topo.vlan20, mac8)  # FIX A
             self.npu.remove(vm1)
             self.npu.remove(vm2)
 
@@ -865,7 +835,7 @@ class TestL2Vlan:
         self._inc_vlan10_ucast()
 
         pre = self.npu.get_stats(
-            self.port0,
+            self.topo.port0,
             ["SAI_PORT_STAT_IF_IN_VLAN_DISCARDS", ""],
         ).counters()
         if_in_vlan_discards_pre = pre["SAI_PORT_STAT_IF_IN_VLAN_DISCARDS"]
@@ -874,7 +844,7 @@ class TestL2Vlan:
         verify_no_other_packets(dataplane, timeout=1)
 
         post = self.npu.get_stats(
-            self.port0,
+            self.topo.port0,
             ["SAI_PORT_STAT_IF_IN_VLAN_DISCARDS", ""],
         ).counters()
         if_in_vlan_discards = post["SAI_PORT_STAT_IF_IN_VLAN_DISCARDS"]
@@ -897,9 +867,9 @@ class TestL2Vlan:
         mac8b = "00:88:88:88:88:88"
         mac9 = "00:99:99:99:99:99"
 
-        self.npu.create_fdb(self.vlan40, mac8b, self.port26_bp)
-        self.npu.create_fdb(self.vlan20, mac7, self.port26_bp)
-        self.npu.create_fdb(self.vlan20, mac9, self.lag2_bp)
+        self.npu.create_fdb(self.vlan40, mac8b, self.topo.port26_bp)
+        self.npu.create_fdb(self.topo.vlan20, mac7, self.topo.port26_bp)
+        self.npu.create_fdb(self.topo.vlan20, mac9, self.topo.lag2_bp)
 
         try:
             pkt = simple_tcp_packet(
@@ -936,9 +906,9 @@ class TestL2Vlan:
             verify_no_other_packets(dataplane, timeout=1)
 
         finally:
-            self.npu.remove_fdb(self.vlan20, mac7) 
+            self.npu.remove_fdb(self.topo.vlan20, mac7) 
             self.npu.remove_fdb(self.vlan40, mac8b) 
-            self.npu.remove_fdb(self.vlan20, mac9) 
+            self.npu.remove_fdb(self.topo.vlan20, mac9) 
 
     def _basic_vlan_flood(self, dataplane, vlan_data, pkt_u, tag_req, arp_u, arp_t):
         npu = self.npu
@@ -988,8 +958,8 @@ class TestL2Vlan:
         vm44_n = vm52_n = vm63_n = vm71_n = None
         members_removed = False
 
-        self.npu.set(self.port26, ["SAI_PORT_ATTR_PORT_VLAN_ID", "40"])
-        self.npu.set(self.port27, ["SAI_PORT_ATTR_PORT_VLAN_ID", "50"])
+        self.npu.set(self.npu.port_oids[26], ["SAI_PORT_ATTR_PORT_VLAN_ID", "40"])
+        self.npu.set(self.npu.port_oids[27], ["SAI_PORT_ATTR_PORT_VLAN_ID", "50"])
         self.npu.set(self.lag10, ["SAI_LAG_ATTR_PORT_VLAN_ID", "60"])
         self.npu.set(self.lag11, ["SAI_LAG_ATTR_PORT_VLAN_ID", "70"])
 
@@ -1050,7 +1020,7 @@ class TestL2Vlan:
             )
             request.cls.vlan_member44 = vm44_n
             vm52_n = self.npu.create_vlan_member(
-                self.vlan50, self.port27_bp,
+                self.vlan50, self.topo.port27_bp,
                 "SAI_VLAN_TAGGING_MODE_UNTAGGED",
             )
             request.cls.vlan_member52 = vm52_n
@@ -1060,7 +1030,7 @@ class TestL2Vlan:
             )
             request.cls.vlan_member63 = vm63_n
             vm71_n = self.npu.create_vlan_member(
-                self.vlan70, self.port26_bp,
+                self.vlan70, self.topo.port26_bp,
                 "SAI_VLAN_TAGGING_MODE_TAGGED",
             )
             request.cls.vlan_member71 = vm71_n
@@ -1083,7 +1053,7 @@ class TestL2Vlan:
                     )
                 if vm52_n is None:
                     vm52_n = self.npu.create_vlan_member(
-                        self.vlan50, self.port27_bp,
+                        self.vlan50, self.topo.port27_bp,
                         "SAI_VLAN_TAGGING_MODE_UNTAGGED",
                     )
                 if vm63_n is None:
@@ -1093,7 +1063,7 @@ class TestL2Vlan:
                     )
                 if vm71_n is None:
                     vm71_n = self.npu.create_vlan_member(
-                        self.vlan70, self.port26_bp,
+                        self.vlan70, self.topo.port26_bp,
                         "SAI_VLAN_TAGGING_MODE_TAGGED",
                     )
                 request.cls.vlan_member44 = vm44_n
@@ -1101,8 +1071,8 @@ class TestL2Vlan:
                 request.cls.vlan_member63 = vm63_n
                 request.cls.vlan_member71 = vm71_n
 
-            self.npu.set(self.port26, ["SAI_PORT_ATTR_PORT_VLAN_ID", "1"])
-            self.npu.set(self.port27, ["SAI_PORT_ATTR_PORT_VLAN_ID", "1"])
+            self.npu.set(self.npu.port_oids[26], ["SAI_PORT_ATTR_PORT_VLAN_ID", "1"])
+            self.npu.set(self.npu.port_oids[27], ["SAI_PORT_ATTR_PORT_VLAN_ID", "1"])
             self.npu.set(self.lag10, ["SAI_LAG_ATTR_PORT_VLAN_ID", "1"])
             self.npu.set(self.lag11, ["SAI_LAG_ATTR_PORT_VLAN_ID", "1"])
 
@@ -1132,11 +1102,11 @@ class TestL2Vlan:
         try:
             vlan100 = self.npu.create(SaiObjType.VLAN, ["SAI_VLAN_ATTR_VLAN_ID", "100"])
             vm101 = self.npu.create_vlan_member(
-                vlan100, self.port26_bp,
+                vlan100, self.topo.port26_bp,
                 "SAI_VLAN_TAGGING_MODE_TAGGED",
             )
             vm102 = self.npu.create_vlan_member(
-                vlan100, self.port27_bp,
+                vlan100, self.topo.port27_bp,
                 "SAI_VLAN_TAGGING_MODE_TAGGED",
             )
             vm103 = self.npu.create_vlan_member(
@@ -1148,17 +1118,17 @@ class TestL2Vlan:
                 "SAI_VLAN_TAGGING_MODE_TAGGED",
             )
             vm105 = self.npu.create_vlan_member(
-                vlan100, self.port30_bp,
+                vlan100, self.topo.port30_bp,
                 "SAI_VLAN_TAGGING_MODE_TAGGED",
             )
 
             vlan200 = self.npu.create(SaiObjType.VLAN, ["SAI_VLAN_ATTR_VLAN_ID", "200"])
             vm201 = self.npu.create_vlan_member(
-                vlan200, self.port26_bp,
+                vlan200, self.topo.port26_bp,
                 "SAI_VLAN_TAGGING_MODE_UNTAGGED",
             )
             vm202 = self.npu.create_vlan_member(
-                vlan200, self.port27_bp,
+                vlan200, self.topo.port27_bp,
                 "SAI_VLAN_TAGGING_MODE_UNTAGGED",
             )
             vm203 = self.npu.create_vlan_member(
@@ -1172,8 +1142,8 @@ class TestL2Vlan:
 
             self.npu.set(vlan100, ["SAI_VLAN_ATTR_LEARN_DISABLE", "true"])
             self.npu.set(vlan200, ["SAI_VLAN_ATTR_LEARN_DISABLE", "true"])
-            self.npu.set(self.port26, ["SAI_PORT_ATTR_PORT_VLAN_ID", "200"])
-            self.npu.set(self.port27, ["SAI_PORT_ATTR_PORT_VLAN_ID", "200"])
+            self.npu.set(self.npu.port_oids[26], ["SAI_PORT_ATTR_PORT_VLAN_ID", "200"])
+            self.npu.set(self.npu.port_oids[27], ["SAI_PORT_ATTR_PORT_VLAN_ID", "200"])
             self.npu.set(self.lag10, ["SAI_LAG_ATTR_PORT_VLAN_ID", "200"])
             self.npu.set(self.lag11, ["SAI_LAG_ATTR_PORT_VLAN_ID", "200"])
 
@@ -1197,8 +1167,8 @@ class TestL2Vlan:
                 pktlen=100,
             )
 
-            lag_mbr32 = self.npu.create(SaiObjType.LAG_MEMBER, ["SAI_LAG_MEMBER_ATTR_LAG_ID", self.lag10, "SAI_LAG_MEMBER_ATTR_PORT_ID", self.port24])  
-            lag_mbr42 = self.npu.create(SaiObjType.LAG_MEMBER, ["SAI_LAG_MEMBER_ATTR_LAG_ID", self.lag11, "SAI_LAG_MEMBER_ATTR_PORT_ID", self.port25]) 
+            lag_mbr32 = self.npu.create(SaiObjType.LAG_MEMBER, ["SAI_LAG_MEMBER_ATTR_LAG_ID", self.lag10, "SAI_LAG_MEMBER_ATTR_PORT_ID", self.npu.port_oids[24]])  
+            lag_mbr42 = self.npu.create(SaiObjType.LAG_MEMBER, ["SAI_LAG_MEMBER_ATTR_LAG_ID", self.lag11, "SAI_LAG_MEMBER_ATTR_PORT_ID", self.npu.port_oids[25]]) 
 
             lag1_ports = [28, 24]
             lag2_ports = [29, 25]
@@ -1259,8 +1229,8 @@ class TestL2Vlan:
                 [[26], lag1_ports, lag2_ports, [27]],
             )
 
-            lag_mbr32 = self.npu.create(SaiObjType.LAG_MEMBER, ["SAI_LAG_MEMBER_ATTR_LAG_ID", self.lag10, "SAI_LAG_MEMBER_ATTR_PORT_ID", self.port24])
-            lag_mbr42 = self.npu.create(SaiObjType.LAG_MEMBER, ["SAI_LAG_MEMBER_ATTR_LAG_ID", self.lag11, "SAI_LAG_MEMBER_ATTR_PORT_ID", self.port25])
+            lag_mbr32 = self.npu.create(SaiObjType.LAG_MEMBER, ["SAI_LAG_MEMBER_ATTR_LAG_ID", self.lag10, "SAI_LAG_MEMBER_ATTR_PORT_ID", self.npu.port_oids[24]])
+            lag_mbr42 = self.npu.create(SaiObjType.LAG_MEMBER, ["SAI_LAG_MEMBER_ATTR_LAG_ID", self.lag11, "SAI_LAG_MEMBER_ATTR_PORT_ID", self.npu.port_oids[25]])
 
             lag1_ports = [28, 24]
             lag2_ports = [29, 25]
@@ -1331,10 +1301,10 @@ class TestL2Vlan:
 
             vm205 = self.npu.create_vlan_member(
                 vlan200,
-                self.port30_bp,
+                self.topo.port30_bp,
                 "SAI_VLAN_TAGGING_MODE_UNTAGGED",
             )
-            self.npu.set(self.port30, ["SAI_PORT_ATTR_PORT_VLAN_ID", "200"])
+            self.npu.set(self.npu.port_oids[30], ["SAI_PORT_ATTR_PORT_VLAN_ID", "200"])
             port30_pvid_200 = True
             send_packet(dataplane, 27, pkt200)
             verify_each_packet_on_multiple_port_lists(
@@ -1368,14 +1338,14 @@ class TestL2Vlan:
             if vm205 is not None:
                 self.npu.remove(vm205)
             if port30_pvid_200:
-                self.npu.set(self.port30, ["SAI_PORT_ATTR_PORT_VLAN_ID", "1"])
+                self.npu.set(self.npu.port_oids[30], ["SAI_PORT_ATTR_PORT_VLAN_ID", "1"])
             if lag_mbr32 is not None:
                 self.npu.remove(lag_mbr32)
             if lag_mbr42 is not None:
                 self.npu.remove(lag_mbr42)
 
-            self.npu.set(self.port26, ["SAI_PORT_ATTR_PORT_VLAN_ID", "1"])
-            self.npu.set(self.port27, ["SAI_PORT_ATTR_PORT_VLAN_ID", "1"])
+            self.npu.set(self.npu.port_oids[26], ["SAI_PORT_ATTR_PORT_VLAN_ID", "1"])
+            self.npu.set(self.npu.port_oids[27], ["SAI_PORT_ATTR_PORT_VLAN_ID", "1"])
             self.npu.set(self.lag10, ["SAI_LAG_ATTR_PORT_VLAN_ID", "1"])
             self.npu.set(self.lag11, ["SAI_LAG_ATTR_PORT_VLAN_ID", "1"])
             if vlan100 is not None:
@@ -1418,16 +1388,16 @@ class TestL2Vlan:
 
         flood_none = "SAI_VLAN_FLOOD_CONTROL_TYPE_NONE"
         vlan100 = self.npu.create(SaiObjType.VLAN, ["SAI_VLAN_ATTR_VLAN_ID", "100"])
-        vm101 = self.npu.create_vlan_member(vlan100, self.port24_bp, "SAI_VLAN_TAGGING_MODE_UNTAGGED")
-        vm102 = self.npu.create_vlan_member(vlan100, self.port25_bp, "SAI_VLAN_TAGGING_MODE_UNTAGGED")
-        vm103 = self.npu.create_vlan_member(vlan100, self.port26_bp, "SAI_VLAN_TAGGING_MODE_UNTAGGED")
-        vm104 = self.npu.create_vlan_member(vlan100, self.port27_bp, "SAI_VLAN_TAGGING_MODE_UNTAGGED")
+        vm101 = self.npu.create_vlan_member(vlan100, self.topo.port24_bp, "SAI_VLAN_TAGGING_MODE_UNTAGGED")
+        vm102 = self.npu.create_vlan_member(vlan100, self.topo.port25_bp, "SAI_VLAN_TAGGING_MODE_UNTAGGED")
+        vm103 = self.npu.create_vlan_member(vlan100, self.topo.port26_bp, "SAI_VLAN_TAGGING_MODE_UNTAGGED")
+        vm104 = self.npu.create_vlan_member(vlan100, self.topo.port27_bp, "SAI_VLAN_TAGGING_MODE_UNTAGGED")
 
         self.npu.set(vlan100, ["SAI_VLAN_ATTR_LEARN_DISABLE", "true"])
-        self.npu.set(self.port24, ["SAI_PORT_ATTR_PORT_VLAN_ID", "100"])
-        self.npu.set(self.port25, ["SAI_PORT_ATTR_PORT_VLAN_ID", "100"])
-        self.npu.set(self.port26, ["SAI_PORT_ATTR_PORT_VLAN_ID", "100"])
-        self.npu.set(self.port27, ["SAI_PORT_ATTR_PORT_VLAN_ID", "100"])
+        self.npu.set(self.npu.port_oids[24], ["SAI_PORT_ATTR_PORT_VLAN_ID", "100"])
+        self.npu.set(self.npu.port_oids[25], ["SAI_PORT_ATTR_PORT_VLAN_ID", "100"])
+        self.npu.set(self.npu.port_oids[26], ["SAI_PORT_ATTR_PORT_VLAN_ID", "100"])
+        self.npu.set(self.npu.port_oids[27], ["SAI_PORT_ATTR_PORT_VLAN_ID", "100"])
 
         ucast_pkt = simple_tcp_packet(
             eth_dst=self.mac0,
@@ -1472,10 +1442,10 @@ class TestL2Vlan:
             verify_no_other_packets(dataplane, timeout=1)
 
         finally:
-            self.npu.set(self.port24, ["SAI_PORT_ATTR_PORT_VLAN_ID", "1"])
-            self.npu.set(self.port25, ["SAI_PORT_ATTR_PORT_VLAN_ID", "1"])
-            self.npu.set(self.port26, ["SAI_PORT_ATTR_PORT_VLAN_ID", "1"])
-            self.npu.set(self.port27, ["SAI_PORT_ATTR_PORT_VLAN_ID", "1"])
+            self.npu.set(self.npu.port_oids[24], ["SAI_PORT_ATTR_PORT_VLAN_ID", "1"])
+            self.npu.set(self.npu.port_oids[25], ["SAI_PORT_ATTR_PORT_VLAN_ID", "1"])
+            self.npu.set(self.npu.port_oids[26], ["SAI_PORT_ATTR_PORT_VLAN_ID", "1"])
+            self.npu.set(self.npu.port_oids[27], ["SAI_PORT_ATTR_PORT_VLAN_ID", "1"])
             self.npu.set(vlan100, ["SAI_VLAN_ATTR_LEARN_DISABLE", "false"])
             self.npu.remove(vm101)
             self.npu.remove(vm102)
@@ -1495,7 +1465,7 @@ class TestL2Vlan:
         if not npu.run_traffic:
             pytest.skip("Traffic generation disabled")
 
-        stats = _vlan_stats_map(npu, self.vlan10)
+        stats = _vlan_stats_map(self.npu, self.topo.vlan10)
         in_packets = stats["SAI_VLAN_STAT_IN_PACKETS"]
         in_ucast_packets = stats["SAI_VLAN_STAT_IN_UCAST_PKTS"]
         out_packets = stats["SAI_VLAN_STAT_OUT_PACKETS"]
@@ -1523,14 +1493,14 @@ class TestL2Vlan:
         if not npu.run_traffic:
             pytest.skip("Traffic generation disabled")
 
-        self.npu.set(self.vlan10, ["SAI_VLAN_ATTR_LEARN_DISABLE", "true"])
+        self.npu.set(self.topo.vlan10, ["SAI_VLAN_ATTR_LEARN_DISABLE", "true"])
 
         prune_lag = self.npu.create(SaiObjType.LAG, [])
-        prune_lag_mbr1 = self.npu.create(SaiObjType.LAG_MEMBER, ["SAI_LAG_MEMBER_ATTR_LAG_ID", prune_lag, "SAI_LAG_MEMBER_ATTR_PORT_ID", self.port26])
-        prune_lag_mbr2 = self.npu.create(SaiObjType.LAG_MEMBER, ["SAI_LAG_MEMBER_ATTR_LAG_ID", prune_lag, "SAI_LAG_MEMBER_ATTR_PORT_ID", self.port27])
+        prune_lag_mbr1 = self.npu.create(SaiObjType.LAG_MEMBER, ["SAI_LAG_MEMBER_ATTR_LAG_ID", prune_lag, "SAI_LAG_MEMBER_ATTR_PORT_ID", self.npu.port_oids[26]])
+        prune_lag_mbr2 = self.npu.create(SaiObjType.LAG_MEMBER, ["SAI_LAG_MEMBER_ATTR_LAG_ID", prune_lag, "SAI_LAG_MEMBER_ATTR_PORT_ID", self.npu.port_oids[27]])
         prune_lag_bp = self.npu.create(SaiObjType.BRIDGE_PORT, ["SAI_BRIDGE_PORT_ATTR_TYPE", "SAI_BRIDGE_PORT_TYPE_PORT", 
                                                                 "SAI_BRIDGE_PORT_ATTR_PORT_ID", prune_lag, "SAI_BRIDGE_PORT_ATTR_ADMIN_STATE", "true"])
-        vlan_member = self.npu.create_vlan_member(self.vlan10, prune_lag_bp, "SAI_VLAN_TAGGING_MODE_UNTAGGED",)
+        vlan_member = self.npu.create_vlan_member(self.topo.vlan10, prune_lag_bp, "SAI_VLAN_TAGGING_MODE_UNTAGGED",)
         self.npu.set(prune_lag, ["SAI_LAG_ATTR_PORT_VLAN_ID", "10"])
 
         prune_lag2 = None
@@ -1579,7 +1549,7 @@ class TestL2Vlan:
             prune_lag2_bp = self.npu.create(SaiObjType.BRIDGE_PORT, ["SAI_BRIDGE_PORT_ATTR_TYPE", "SAI_BRIDGE_PORT_TYPE_PORT", 
                                                                      "SAI_BRIDGE_PORT_ATTR_PORT_ID", prune_lag2, "SAI_BRIDGE_PORT_ATTR_ADMIN_STATE", "true"])
             vlan_member2 = self.npu.create_vlan_member(
-                self.vlan10,
+                self.topo.vlan10,
                 prune_lag2_bp,
                 "SAI_VLAN_TAGGING_MODE_UNTAGGED",
             )
@@ -1591,7 +1561,7 @@ class TestL2Vlan:
                 [lag0_ports, lag1_ports, [24], [1], [25]],
             )
 
-            prune_lag_mbr3 = self.npu.create(SaiObjType.LAG_MEMBER, ["SAI_LAG_MEMBER_ATTR_LAG_ID", prune_lag2, "SAI_LAG_MEMBER_ATTR_PORT_ID", self.port30])
+            prune_lag_mbr3 = self.npu.create(SaiObjType.LAG_MEMBER, ["SAI_LAG_MEMBER_ATTR_LAG_ID", prune_lag2, "SAI_LAG_MEMBER_ATTR_PORT_ID", self.npu.port_oids[30]])
             lag2_ports = [30]
             send_packet(dataplane, 0, pkt)
             verify_each_packet_on_multiple_port_lists(
@@ -1606,7 +1576,7 @@ class TestL2Vlan:
                 [lag0_ports, lag1_ports, [0], [24], [1], [25]],
             )
 
-            prune_lag_mbr4 = self.npu.create(SaiObjType.LAG_MEMBER, ["SAI_LAG_MEMBER_ATTR_LAG_ID", prune_lag2, "SAI_LAG_MEMBER_ATTR_PORT_ID", self.port31])
+            prune_lag_mbr4 = self.npu.create(SaiObjType.LAG_MEMBER, ["SAI_LAG_MEMBER_ATTR_LAG_ID", prune_lag2, "SAI_LAG_MEMBER_ATTR_PORT_ID", self.npu.port_oids[31]])
             lag2_ports = [30, 31]
             send_packet(dataplane, 0, pkt)
             verify_each_packet_on_multiple_port_lists(
@@ -1632,13 +1602,13 @@ class TestL2Vlan:
             )
 
             port31_bp_local = self.npu.create(SaiObjType.BRIDGE_PORT, ["SAI_BRIDGE_PORT_ATTR_TYPE", "SAI_BRIDGE_PORT_TYPE_PORT", 
-                                                                       "SAI_BRIDGE_PORT_ATTR_PORT_ID", self.port31, "SAI_BRIDGE_PORT_ATTR_ADMIN_STATE", "true"]) 
+                                                                       "SAI_BRIDGE_PORT_ATTR_PORT_ID", self.npu.port_oids[31], "SAI_BRIDGE_PORT_ATTR_ADMIN_STATE", "true"]) 
             vlan_member3 = self.npu.create_vlan_member(
-                self.vlan10,
+                self.topo.vlan10,
                 port31_bp_local,
                 "SAI_VLAN_TAGGING_MODE_UNTAGGED",
             )
-            self.npu.set(self.port31, ["SAI_PORT_ATTR_PORT_VLAN_ID", "10"])
+            self.npu.set(self.npu.port_oids[31], ["SAI_PORT_ATTR_PORT_VLAN_ID", "10"])
             send_packet(dataplane, 0, pkt)
             verify_each_packet_on_multiple_port_lists(
                 dataplane,
@@ -1652,7 +1622,7 @@ class TestL2Vlan:
                 [lag0_ports, lag1_ports, lag2_ports, [0], [24], [1], [25]],
             )
 
-            self.npu.set(self.port31, ["SAI_PORT_ATTR_PORT_VLAN_ID", "1"])
+            self.npu.set(self.npu.port_oids[31], ["SAI_PORT_ATTR_PORT_VLAN_ID", "1"])
             self.npu.remove(vlan_member3)
             vlan_member3 = None
             self.npu.remove(port31_bp_local)
@@ -1668,7 +1638,7 @@ class TestL2Vlan:
             )
 
         finally:
-            self.npu.set(self.port31, ["SAI_PORT_ATTR_PORT_VLAN_ID", "1"])
+            self.npu.set(self.npu.port_oids[31], ["SAI_PORT_ATTR_PORT_VLAN_ID", "1"])
             if vlan_member3 is not None:
                 self.npu.remove(vlan_member3)
             if port31_bp_local is not None:
@@ -1696,7 +1666,7 @@ class TestL2Vlan:
             if prune_lag2 is not None:
                 self.npu.remove(prune_lag2)
 
-            self.npu.set(self.vlan10, ["SAI_VLAN_ATTR_LEARN_DISABLE", "false"])
+            self.npu.set(self.topo.vlan10, ["SAI_VLAN_ATTR_LEARN_DISABLE", "false"])
 
     def test_counters_clear(self, npu, dataplane):
         """
@@ -1719,7 +1689,7 @@ class TestL2Vlan:
             ip_ttl=64,
         )
         stat_keys = _vlan_stat_names()
-        stats = _vlan_stats_map(self.npu, self.vlan10)
+        stats = _vlan_stats_map(self.npu, self.topo.vlan10)
         in_bytes_pre = stats["SAI_VLAN_STAT_IN_OCTETS"]
         out_bytes_pre = stats["SAI_VLAN_STAT_OUT_OCTETS"]
         in_packets_pre = stats["SAI_VLAN_STAT_IN_PACKETS"]
@@ -1730,7 +1700,7 @@ class TestL2Vlan:
         send_packet(dataplane, 0, pkt)
         verify_packet(dataplane, pkt, 24)
 
-        stats = _vlan_stats_map(self.npu, self.vlan10)
+        stats = _vlan_stats_map(self.npu, self.topo.vlan10)
         assert stats["SAI_VLAN_STAT_IN_PACKETS"] == in_packets_pre + 1
         assert stats["SAI_VLAN_STAT_IN_UCAST_PKTS"] == in_ucast_packets_pre + 1
         assert stats["SAI_VLAN_STAT_IN_OCTETS"] - in_bytes_pre != 0
@@ -1741,9 +1711,9 @@ class TestL2Vlan:
         send_packet(dataplane, 0, pkt)
         verify_packet(dataplane, pkt, 24)
 
-        self.npu.clear_stats(self.vlan10, stat_keys)
+        self.npu.clear_stats(self.topo.vlan10, stat_keys)
 
-        stats = _vlan_stats_map(self.npu, self.vlan10)
+        stats = _vlan_stats_map(self.npu, self.topo.vlan10)
         assert stats["SAI_VLAN_STAT_IN_PACKETS"] == 0
         assert stats["SAI_VLAN_STAT_IN_UCAST_PKTS"] == 0
         assert stats["SAI_VLAN_STAT_IN_OCTETS"] == 0
@@ -1769,25 +1739,25 @@ class TestL2Vlan:
             self.vlan10_member4,
         }
 
-        status, data = npu.get(self.vlan10, ["SAI_VLAN_ATTR_MEMBER_LIST", npu.make_list(100, "oid:0x0")], False,)
+        status, data = self.npu.get(self.topo.vlan10, ["SAI_VLAN_ATTR_MEMBER_LIST", self.npu.make_list(100, "oid:0x0")], False,)
         assert status == "SAI_STATUS_SUCCESS"
         vlan_members = set(data.to_list())
         assert len(vlan_members) == 5
         assert vlan_members == expected5
 
-        vlan10_member5 = npu.create_vlan_member(self.vlan10, self.port26_bp, "SAI_VLAN_TAGGING_MODE_UNTAGGED",)
-        vlan10_member6 = npu.create_vlan_member(self.vlan10, self.port27_bp, "SAI_VLAN_TAGGING_MODE_TAGGED",)
+        vlan10_member5 = self.npu.create_vlan_member(self.topo.vlan10, self.topo.port26_bp, "SAI_VLAN_TAGGING_MODE_UNTAGGED",)
+        vlan10_member6 = self.npu.create_vlan_member(self.topo.vlan10, self.topo.port27_bp, "SAI_VLAN_TAGGING_MODE_TAGGED",)
 
         expected7 = expected5 | {vlan10_member5, vlan10_member6}
-        status, data = npu.get(self.vlan10, ["SAI_VLAN_ATTR_MEMBER_LIST", npu.make_list(100, "oid:0x0")], False,)
+        status, data = self.npu.get(self.topo.vlan10, ["SAI_VLAN_ATTR_MEMBER_LIST", self.npu.make_list(100, "oid:0x0")], False,)
         assert status == "SAI_STATUS_SUCCESS"
         vlan_members = set(data.to_list())
         assert len(vlan_members) == 7
         assert vlan_members == expected7
 
-        npu.remove(vlan10_member5)
-        npu.remove(vlan10_member6)
-        status, data = npu.get(self.vlan10, ["SAI_VLAN_ATTR_MEMBER_LIST", npu.make_list(100, "oid:0x0")], False,)
+        self.npu.remove(vlan10_member5)
+        self.npu.remove(vlan10_member6)
+        status, data = self.npu.get(self.topo.vlan10, ["SAI_VLAN_ATTR_MEMBER_LIST", self.npu.make_list(100, "oid:0x0")], False,)
         assert status == "SAI_STATUS_SUCCESS"
         vlan_members = set(data.to_list())
         assert len(vlan_members) == 5
@@ -1803,26 +1773,26 @@ class TestL2Vlan:
         2. Issue get/set/remove against an invalid VLAN OID and expect each operation to fail.
         3. Attempt to create a VLAN member with a logical port OID instead of a bridge port OID and expect failure.
         """
-        status, vlan_dup = npu.create(
+        status, vlan_dup = self.npu.create(
             SaiObjType.VLAN,
             ["SAI_VLAN_ATTR_VLAN_ID", "10"],
             do_assert=False,
         )
 
         if status == "SAI_STATUS_SUCCESS":
-            npu.remove(vlan_dup)
+            self.npu.remove(vlan_dup)
             pytest.skip("saivs does not enforce duplicate VLAN ID uniqueness")
         assert status != "SAI_STATUS_SUCCESS"
 
         bad_vlan = "oid:0x1"
         try:
-            status, _data = npu.get(bad_vlan, ["SAI_VLAN_ATTR_VLAN_ID", ""], False)
+            status, _data = self.npu.get(bad_vlan, ["SAI_VLAN_ATTR_VLAN_ID", ""], False)
         except Exception:
             status = "SAI_STATUS_FAILURE"
         assert status != "SAI_STATUS_SUCCESS"
 
         try:
-            status = npu.set(
+            status = self.npu.set(
                 bad_vlan,
                 ["SAI_VLAN_ATTR_LEARN_DISABLE", "true"],
                 do_assert=False,
@@ -1832,16 +1802,16 @@ class TestL2Vlan:
         assert status != "SAI_STATUS_SUCCESS"
 
         try:
-            status = npu.remove(bad_vlan, False)
+            status = self.npu.remove(bad_vlan, False)
         except Exception:
             status = "SAI_STATUS_FAILURE"
         assert status != "SAI_STATUS_SUCCESS"
 
-        status, _ = npu.create(
+        status, _ = self.npu.create(
             SaiObjType.VLAN_MEMBER,
             [
-                "SAI_VLAN_MEMBER_ATTR_VLAN_ID", self.vlan10,
-                "SAI_VLAN_MEMBER_ATTR_BRIDGE_PORT_ID", self.port0,
+                "SAI_VLAN_MEMBER_ATTR_VLAN_ID", self.topo.vlan10,
+                "SAI_VLAN_MEMBER_ATTR_BRIDGE_PORT_ID", self.topo.port0,
                 "SAI_VLAN_MEMBER_ATTR_VLAN_TAGGING_MODE",
                 "SAI_VLAN_TAGGING_MODE_TAGGED",
             ],
@@ -1865,7 +1835,7 @@ class TestL2Vlan:
         vlan100 = self.npu.create(SaiObjType.VLAN, ["SAI_VLAN_ATTR_VLAN_ID", "100"])
         vlan_member = self.npu.create_vlan_member(
             vlan100,
-            self.port0_bp,
+            self.topo.port0_bp,
             "SAI_VLAN_TAGGING_MODE_TAGGED",
         )
         try:
@@ -1883,7 +1853,7 @@ class TestL2Vlan:
 
             self.npu.remove(vlan_member)
             vlan_member = self.npu.create_vlan_member(
-                vlan100, self.lag1_bp,
+                vlan100, self.topo.lag1_bp,
                 "SAI_VLAN_TAGGING_MODE_TAGGED",
             )
 
@@ -1963,8 +1933,8 @@ class TestL2Vlan:
                 SaiObjType.ACL_ENTRY,
                 self._acl_drop_entry_attrs(acl_table, "10"),
             )
-            self.npu.set(self.vlan10, ["SAI_VLAN_ATTR_INGRESS_ACL", acl_table])
-            st, data = self.npu.get(self.vlan10, ["SAI_VLAN_ATTR_INGRESS_ACL", ""], False)
+            self.npu.set(self.topo.vlan10, ["SAI_VLAN_ATTR_INGRESS_ACL", acl_table])
+            st, data = self.npu.get(self.topo.vlan10, ["SAI_VLAN_ATTR_INGRESS_ACL", ""], False)
             assert st == "SAI_STATUS_SUCCESS"
             assert data.oid() == acl_table
 
@@ -1973,7 +1943,7 @@ class TestL2Vlan:
 
         finally:
             if acl_table is not None:
-                self.npu.set(self.vlan10, ["SAI_VLAN_ATTR_INGRESS_ACL", "oid:0x0"])
+                self.npu.set(self.topo.vlan10, ["SAI_VLAN_ATTR_INGRESS_ACL", "oid:0x0"])
             if acl_entry is not None:
                 self.npu.remove(acl_entry)
             if acl_table is not None:
@@ -2022,8 +1992,8 @@ class TestL2Vlan:
                 SaiObjType.ACL_ENTRY,
                 self._acl_drop_entry_attrs(acl_table, "10"),
             )
-            self.npu.set(self.vlan10, ["SAI_VLAN_ATTR_EGRESS_ACL", acl_table])
-            st, data = self.npu.get(self.vlan10, ["SAI_VLAN_ATTR_EGRESS_ACL", ""], False)
+            self.npu.set(self.topo.vlan10, ["SAI_VLAN_ATTR_EGRESS_ACL", acl_table])
+            st, data = self.npu.get(self.topo.vlan10, ["SAI_VLAN_ATTR_EGRESS_ACL", ""], False)
             assert st == "SAI_STATUS_SUCCESS"
             assert data.oid() == acl_table
 
@@ -2032,7 +2002,7 @@ class TestL2Vlan:
 
         finally:
             if acl_table is not None:
-                self.npu.set(self.vlan10, ["SAI_VLAN_ATTR_EGRESS_ACL", "oid:0x0"])
+                self.npu.set(self.topo.vlan10, ["SAI_VLAN_ATTR_EGRESS_ACL", "oid:0x0"])
             if acl_entry is not None:
                 self.npu.remove(acl_entry)
             if acl_table is not None:
@@ -2052,17 +2022,17 @@ class TestL2Vlan:
             pytest.skip("Traffic generation disabled")
 
         vlan100 = self.npu.create(SaiObjType.VLAN, ["SAI_VLAN_ATTR_VLAN_ID", "100", "SAI_VLAN_ATTR_LEARN_DISABLE", "true"])
-        vm101 = self.npu.create_vlan_member(vlan100, self.port26_bp, "SAI_VLAN_TAGGING_MODE_TAGGED",)
-        vm102 = self.npu.create_vlan_member(vlan100, self.port27_bp, "SAI_VLAN_TAGGING_MODE_TAGGED",)
-        vm103 = self.npu.create_vlan_member(vlan100, self.port30_bp, "SAI_VLAN_TAGGING_MODE_TAGGED",)
+        vm101 = self.npu.create_vlan_member(vlan100, self.topo.port26_bp, "SAI_VLAN_TAGGING_MODE_TAGGED",)
+        vm102 = self.npu.create_vlan_member(vlan100, self.topo.port27_bp, "SAI_VLAN_TAGGING_MODE_TAGGED",)
+        vm103 = self.npu.create_vlan_member(vlan100, self.topo.port30_bp, "SAI_VLAN_TAGGING_MODE_TAGGED",)
 
         vlan200 = self.npu.create(SaiObjType.VLAN, ["SAI_VLAN_ATTR_VLAN_ID", "200", "SAI_VLAN_ATTR_LEARN_DISABLE", "true"]) 
-        vm201 = self.npu.create_vlan_member(vlan200, self.port26_bp, "SAI_VLAN_TAGGING_MODE_UNTAGGED",)
-        vm202 = self.npu.create_vlan_member(vlan200, self.port27_bp, "SAI_VLAN_TAGGING_MODE_UNTAGGED",)
-        vm203 = self.npu.create_vlan_member(vlan200, self.port30_bp, "SAI_VLAN_TAGGING_MODE_UNTAGGED",)
+        vm201 = self.npu.create_vlan_member(vlan200, self.topo.port26_bp, "SAI_VLAN_TAGGING_MODE_UNTAGGED",)
+        vm202 = self.npu.create_vlan_member(vlan200, self.topo.port27_bp, "SAI_VLAN_TAGGING_MODE_UNTAGGED",)
+        vm203 = self.npu.create_vlan_member(vlan200, self.topo.port30_bp, "SAI_VLAN_TAGGING_MODE_UNTAGGED",)
 
-        self.npu.set(self.port26, ["SAI_PORT_ATTR_PORT_VLAN_ID", "200"])
-        self.npu.set(self.port27, ["SAI_PORT_ATTR_PORT_VLAN_ID", "200"])
+        self.npu.set(self.npu.port_oids[26], ["SAI_PORT_ATTR_PORT_VLAN_ID", "200"])
+        self.npu.set(self.npu.port_oids[27], ["SAI_PORT_ATTR_PORT_VLAN_ID", "200"])
 
         pkt = simple_arp_packet(
             eth_src="00:22:22:33:44:55",
@@ -2096,8 +2066,8 @@ class TestL2Vlan:
             assert data.value() == "false"
 
         finally:
-            self.npu.set(self.port26, ["SAI_PORT_ATTR_PORT_VLAN_ID", "1"])
-            self.npu.set(self.port27, ["SAI_PORT_ATTR_PORT_VLAN_ID", "1"])
+            self.npu.set(self.npu.port_oids[26], ["SAI_PORT_ATTR_PORT_VLAN_ID", "1"])
+            self.npu.set(self.npu.port_oids[27], ["SAI_PORT_ATTR_PORT_VLAN_ID", "1"])
             _flush_dyn_fdb(self.npu, vlan100)
             _flush_dyn_fdb(self.npu, vlan200)
             for oid in (vm101, vm102, vm103, vm201, vm202, vm203):
@@ -2129,17 +2099,17 @@ class TestL2Vlan:
 
         try:
             vlan100 = self.npu.create(SaiObjType.VLAN, ["SAI_VLAN_ATTR_VLAN_ID", "100", "SAI_VLAN_ATTR_MAX_LEARNED_ADDRESSES", "3"]) 
-            vm101 = self.npu.create_vlan_member(vlan100, self.port26_bp, "SAI_VLAN_TAGGING_MODE_TAGGED",)
-            vm102 = self.npu.create_vlan_member(vlan100, self.port27_bp, "SAI_VLAN_TAGGING_MODE_TAGGED",)
-            vm103 = self.npu.create_vlan_member(vlan100, self.port30_bp, "SAI_VLAN_TAGGING_MODE_TAGGED",)
+            vm101 = self.npu.create_vlan_member(vlan100, self.topo.port26_bp, "SAI_VLAN_TAGGING_MODE_TAGGED",)
+            vm102 = self.npu.create_vlan_member(vlan100, self.topo.port27_bp, "SAI_VLAN_TAGGING_MODE_TAGGED",)
+            vm103 = self.npu.create_vlan_member(vlan100, self.topo.port30_bp, "SAI_VLAN_TAGGING_MODE_TAGGED",)
 
             vlan200 = self.npu.create(SaiObjType.VLAN, ["SAI_VLAN_ATTR_VLAN_ID", "200", "SAI_VLAN_ATTR_MAX_LEARNED_ADDRESSES", "3"])  
-            vm201 = self.npu.create_vlan_member(vlan200, self.port26_bp, "SAI_VLAN_TAGGING_MODE_UNTAGGED",)
-            vm202 = self.npu.create_vlan_member(vlan200, self.port27_bp, "SAI_VLAN_TAGGING_MODE_UNTAGGED",)
-            vm203 = self.npu.create_vlan_member(vlan200, self.port30_bp, "SAI_VLAN_TAGGING_MODE_UNTAGGED",)
+            vm201 = self.npu.create_vlan_member(vlan200, self.topo.port26_bp, "SAI_VLAN_TAGGING_MODE_UNTAGGED",)
+            vm202 = self.npu.create_vlan_member(vlan200, self.topo.port27_bp, "SAI_VLAN_TAGGING_MODE_UNTAGGED",)
+            vm203 = self.npu.create_vlan_member(vlan200, self.topo.port30_bp, "SAI_VLAN_TAGGING_MODE_UNTAGGED",)
 
-            self.npu.set(self.port26, ["SAI_PORT_ATTR_PORT_VLAN_ID", "200"])
-            self.npu.set(self.port27, ["SAI_PORT_ATTR_PORT_VLAN_ID", "200"])
+            self.npu.set(self.npu.port_oids[26], ["SAI_PORT_ATTR_PORT_VLAN_ID", "200"])
+            self.npu.set(self.npu.port_oids[27], ["SAI_PORT_ATTR_PORT_VLAN_ID", "200"])
 
             pkt = simple_arp_packet(
                 eth_src="00:22:22:33:44:55",
@@ -2191,7 +2161,7 @@ class TestL2Vlan:
             send_packet(dataplane, 27, arp_resp_2)
             verify_packet(dataplane, arp_resp_2, 26)
 
-            fdb_entry28 = self.npu.create_fdb(vlan200, mac_static, self.port26_bp)
+            fdb_entry28 = self.npu.create_fdb(vlan200, mac_static, self.topo.port26_bp)
 
             send_packet(dataplane, 26, pkt_3)
             verify_packets(dataplane, pkt_3, [27, 30])
@@ -2214,8 +2184,8 @@ class TestL2Vlan:
             if mac_static is not None:
                 self.npu.remove_fdb(vlan200, mac_static)
 
-            self.npu.set(self.port26, ["SAI_PORT_ATTR_PORT_VLAN_ID", "1"])
-            self.npu.set(self.port27, ["SAI_PORT_ATTR_PORT_VLAN_ID", "1"])
+            self.npu.set(self.npu.port_oids[26], ["SAI_PORT_ATTR_PORT_VLAN_ID", "1"])
+            self.npu.set(self.npu.port_oids[27], ["SAI_PORT_ATTR_PORT_VLAN_ID", "1"])
             
             for oid in (vm101, vm102, vm103, vm201, vm202, vm203):
                 if oid is not None:
