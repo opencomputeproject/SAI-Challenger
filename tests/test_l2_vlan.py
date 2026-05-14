@@ -2209,39 +2209,18 @@ class TestL2Vlan:
             verify_packet(dataplane, arp_resp_3, 26)
 
         finally:
-            try:
-                _flush_dyn_fdb(self.npu, vlan100)
-            except Exception as e:
-                print(f"Warning: Failed to flush vlan100 FDB: {e}")
-
-            try:
-                _flush_dyn_fdb(self.npu, vlan200)
-            except Exception as e:
-                print(f"Warning: Failed to flush vlan200 FDB: {e}")
-
-            try:
+            _flush_dyn_fdb(self.npu, vlan100)
+            _flush_dyn_fdb(self.npu, vlan200)
+            if mac_static is not None:
                 self.npu.remove_fdb(vlan200, mac_static)
-            except Exception:
-                pass
 
-            self.npu.set(self.port26, ["SAI_PORT_ATTR_PORT_VLAN_ID", "1"], False)
-            self.npu.set(self.port27, ["SAI_PORT_ATTR_PORT_VLAN_ID", "1"], False)
-
+            self.npu.set(self.port26, ["SAI_PORT_ATTR_PORT_VLAN_ID", "1"])
+            self.npu.set(self.port27, ["SAI_PORT_ATTR_PORT_VLAN_ID", "1"])
+            
             for oid in (vm101, vm102, vm103, vm201, vm202, vm203):
                 if oid is not None:
-                    try:
-                        self.npu.remove(oid)
-                    except Exception:
-                        pass
-
+                    self.npu.remove(oid)
             if vlan200 is not None:
-                try:
-                    self.npu.remove(vlan200)
-                except Exception:
-                    pass
-
+                self.npu.remove(vlan200)
             if vlan100 is not None:
-                try:
-                    self.npu.remove(vlan100)
-                except Exception:
-                    pass
+                self.npu.remove(vlan100)
