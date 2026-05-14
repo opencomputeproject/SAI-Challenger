@@ -11,6 +11,9 @@ from saichallenger.common.sai_npu import SaiNpu
 from saichallenger.common.sai_testbed import SaiTestbedMeta
 from saichallenger.common.sai_testbed import SaiTestbed
 
+from sai_client.sai_redis_client.sai_redis_client import SaiRedisClient
+
+
 VERSION = '0.1'
 
 sai_c_path = "/etc/sai-c"
@@ -425,6 +428,229 @@ def clear(oid, cntrs):
 
     status = sai.clear_stats(oid, attrs, False)
     click.echo(status + '\n')
+
+
+@cli.group(invoke_without_command=True)
+@click.pass_context
+def counter(ctx):
+    """Manage Redis flex counters polls, groups and retrieve counters from COUNTERS_DB"""
+    sai = get_sai_entity()
+    if not isinstance(sai.sai_client, SaiRedisClient):
+        raise click.UsageError("Only Redis client supports counters")
+    
+    if ctx.invoked_subcommand is None:
+        click.echo(ctx.get_help())
+
+
+@counter.group()
+def group():
+    """Manage Redis flex counters groups"""
+    pass
+
+
+def _parse_clear_on_read(val):
+    v = val.strip()
+    if v == "STATS_MODE_READ":
+        return False
+    if v == "STATS_MODE_READ_AND_CLEAR":
+        return True
+    raise ValueError(f"Invalid STATS_MODE value: {val}")
+
+
+def _parse_flex_counter_enable(val):
+    v = val.strip().lower()
+    if v == "enable":
+        return True
+    if v == "disable":
+        return False
+    raise ValueError(f"Invalid FLEX_COUNTER_STATUS value: {val}")
+
+
+def _parse_flex_counter_group_attrs(attrs):
+    """
+    Map CLI key/value pairs onto Sai.set_flex_counter_group keyword args.
+    Keys: POLL_INTERVAL, STATS_MODE, FLEX_COUNTER_STATUS.
+    """
+    kwargs = {}
+    if len(attrs) % 2 != 0:
+        raise ValueError(
+            "Flex counter group attributes must be <key> <value> pairs; got: {}".format(
+                " ".join(attrs))
+        )
+    it = iter(attrs)
+    for key in it:
+        val = next(it)
+        key_upper = key.upper()
+        if key_upper == "POLL_INTERVAL":
+            kwargs["poll_interval"] = int(val)
+        elif key_upper == "STATS_MODE":
+            kwargs["clear_on_read"] = _parse_clear_on_read(val)
+        elif key_upper == "FLEX_COUNTER_STATUS":
+            kwargs["enable"] = _parse_flex_counter_enable(val)
+        else:
+            raise ValueError(
+                "Unknown flex counter group key {!r}; use POLL_INTERVAL, "
+                "STATS_MODE or FLEX_COUNTER_STATUS".format(key)
+            )
+    return kwargs
+
+
+# 'counter group set' command
+@group.command()
+@click.argument('group_name', metavar='<counter group name>', required=True, type=str)
+@click.argument('attrs', metavar='<attr> <value>', required=True, type=str, nargs=-1)
+def set(group_name, attrs):
+    """Set Redis flex counters group attributes (POLL_INTERVAL, STATS_MODE, FLEX_COUNTER_STATUS)."""
+    click.echo()
+    group_name = group_name.upper()
+
+    try:
+        extra = _parse_flex_counter_group_attrs(attrs)
+    except ValueError as e:
+        click.echo(str(e) + "\n")
+        return False
+
+    sai = get_sai_entity()
+
+    try:
+        status = sai.set_flex_counter_group(group_name=group_name, do_assert=False, **extra)
+    except ValueError as e:
+        click.echo(str(e) + "\n")
+        return False
+
+    if status == "SAI_STATUS_SUCCESS":
+        click.echo("Created/Updated flex counter group {}\n".format(group_name))
+    else:
+        click.echo(status + '\n')
+
+
+# 'counter group del' command
+@group.command('del')
+@click.argument('group_name', metavar='<counter group name>', required=True, type=str)
+def delete(group_name):
+    """Delete Redis flex counters group"""
+    click.echo()
+    group_name = group_name.upper()
+
+    sai = get_sai_entity()
+    status = sai.del_flex_counter_group(group_name, False)
+    if status == "SAI_STATUS_SUCCESS":
+        click.echo("Deleted group name {}\n".format(group_name))
+    else:
+        click.echo(status + '\n')
+
+
+@counter.group()
+def poll():
+    """Manage Redis flex counters poll"""
+    pass
+
+
+# 'counter poll start' command
+@poll.command()
+@click.argument('group_name', metavar='<counter group name>', required=True, type=str)
+@click.argument('oid', metavar='<oid>', required=True, type=str)
+@click.argument('cntrs', metavar='<counters_csv>', required=True, type=str)
+def start(group_name, oid, cntrs):
+    """Start polling of the counter"""
+    click.echo()
+    group_name = group_name.upper()
+
+    if not oid.startswith("oid:"):
+        click.echo("SAI object ID must start with 'oid:' prefix\n")
+        return False
+
+    counters = [c.strip() for c in cntrs.split(",") if c.strip()]
+    if not counters:
+        click.echo("No counter names in {!r}\n".format(cntrs))
+        return False
+
+    sai = get_sai_entity()
+    try:
+        status = sai.start_flex_counter_poll(
+            group_name=group_name,
+            oid=oid,
+            counters=counters,
+            do_assert=False,
+        )
+    except ValueError as e:
+        click.echo(str(e) + "\n")
+        return False
+
+    if status == "SAI_STATUS_SUCCESS":
+        click.echo("Started polling counters for {}:{}\n".format(group_name, oid))
+    else:
+        click.echo(status + '\n')
+
+
+# 'counter poll stop' command
+@poll.command()
+@click.argument('group_name', metavar='<counter group name>', required=True, type=str)
+@click.argument('oid', metavar='<oid>', required=True, type=str)
+def stop(group_name, oid):
+    """Stop polling of counter"""
+    click.echo()
+    group_name = group_name.upper()
+
+    if not oid.startswith("oid:"):
+        click.echo("SAI object ID must start with 'oid:' prefix\n")
+        return False
+
+    sai = get_sai_entity()
+    try:
+        status = sai.stop_flex_counter_poll(group_name=group_name, oid=oid, do_assert=False)
+    except ValueError as e:
+        click.echo(str(e) + "\n")
+        return False
+
+    if status == "SAI_STATUS_SUCCESS":
+        click.echo("Stopped polling for {}:{}\n".format(group_name, oid))
+    else:
+        click.echo(status + '\n')
+
+
+# 'counter get' command
+@counter.command()
+@click.argument('oid', metavar='<oid>', required=True, type=str)
+@click.argument('cntrs', metavar='<cntrs>', required=False, type=str, nargs=-1)
+def get(oid, cntrs):
+    """Get counters for object from COUNTERS_DB"""
+    click.echo()
+    if not oid.startswith("oid:"):
+        click.echo("SAI object ID must start with 'oid:' prefix\n")
+        return False
+
+    sai = get_sai_entity()
+    exists, data = sai.get_flex_counter(oid, cntrs)
+    if not exists:
+        click.echo("Counter {} doesn't exist".format(oid))
+        return False
+
+    for cntr, value in data.items():
+        value = value if value is not None else "[missing]"
+        click.echo("{:<48} {:>8}".format(cntr, value))
+
+    click.echo()
+
+
+# 'counter del' command
+@counter.command('del')
+@click.argument('oid', metavar='<oid>', required=True, type=str)
+def delete(oid):
+    """Delete counters for object from COUNTERS_DB"""
+    click.echo()
+    if not oid.startswith("oid:"):
+        click.echo("SAI object ID must start with 'oid:' prefix\n")
+        return False
+    
+    sai = get_sai_entity()
+    exists = sai.del_flex_counter(oid)
+
+    if not exists:
+        click.echo("Counter:{} doesn't exist".format(oid))
+        return False
+    
+    click.echo("Counter {} was deleted from COUNTERS_DB".format(oid))
 
 
 # 'version' subcommand
