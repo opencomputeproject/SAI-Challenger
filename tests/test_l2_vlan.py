@@ -278,107 +278,55 @@ class TestL2Vlan:
                 except Exception:
                     pass
 
-        try:
-            npu.remove_fdb(request.cls.vlan10, request.cls.mac0)
-        except Exception as e:
-            print(f"teardown warning: remove_fdb mac0: {e}")
-        try:
-            npu.remove_fdb(request.cls.vlan10, request.cls.mac1)
-        except Exception as e:
-            print(f"teardown warning: remove_fdb mac1: {e}")
-        try:
-            npu.remove_fdb(request.cls.vlan10, request.cls.mac2)
-        except Exception as e:
-            print(f"teardown warning: remove_fdb mac2: {e}")
-        try:
-            npu.remove_fdb(request.cls.vlan10, request.cls.mac3)
-        except Exception as e:
-            print(f"teardown warning: remove_fdb mac3: {e}")
+        npu.remove_fdb(request.cls.vlan10, request.cls.mac0)
+        npu.remove_fdb(request.cls.vlan10, request.cls.mac1)
+        npu.remove_fdb(request.cls.vlan10, request.cls.mac2)
+        npu.remove_fdb(request.cls.vlan10, request.cls.mac3)
 
         npu.set(request.cls.port24, ["SAI_PORT_ATTR_PORT_VLAN_ID", "1"])
 
-        try:
-            npu.remove(request.cls.vlan10_member3)
-        except Exception as e:
-            print(f"teardown warning: remove {request.cls.vlan10_member3}: {e}")
-        try:
-            npu.remove(request.cls.vlan10_member4)
-        except Exception as e:
-            print(f"teardown warning: remove {request.cls.vlan10_member4}: {e}")
+        npu.remove(request.cls.vlan10_member3)
+        npu.remove(request.cls.vlan10_member4)
 
-        for oid in (
-            request.cls.vlan_member41,
-            request.cls.vlan_member42,
-            request.cls.vlan_member43,
-            request.cls.vlan_member44,
-            request.cls.vlan_member51,
-            request.cls.vlan_member52,
-            request.cls.vlan_member53,
-            request.cls.vlan_member54,
-            request.cls.vlan_member61,
-            request.cls.vlan_member62,
-            request.cls.vlan_member63,
-            request.cls.vlan_member64,
-            request.cls.vlan_member71,
-            request.cls.vlan_member72,
-            request.cls.vlan_member73,
-            request.cls.vlan_member74,
-        ):
-            try:
-                npu.remove(oid)
-            except Exception as e:
-                print(f"teardown warning: remove {oid}: {e}")
+        npu.remove(request.cls.vlan_member41)
+        npu.remove(request.cls.vlan_member42)
+        npu.remove(request.cls.vlan_member43)
+        npu.remove(request.cls.vlan_member44)
+        npu.remove(request.cls.vlan_member51)
+        npu.remove(request.cls.vlan_member52)
+        npu.remove(request.cls.vlan_member53)
+        npu.remove(request.cls.vlan_member54)
+        npu.remove(request.cls.vlan_member61)
+        npu.remove(request.cls.vlan_member62)
+        npu.remove(request.cls.vlan_member63)
+        npu.remove(request.cls.vlan_member64)
+        npu.remove(request.cls.vlan_member71)
+        npu.remove(request.cls.vlan_member72)
+        npu.remove(request.cls.vlan_member73)
+        npu.remove(request.cls.vlan_member74)
 
-        try:
-            npu.remove(request.cls.lag_mbr31)
-        except Exception as e:
-            print(f"teardown warning: remove {request.cls.lag_mbr31}: {e}")
-        try:
-            npu.remove(request.cls.lag_mbr41)
-        except Exception as e:
-            print(f"teardown warning: remove {request.cls.lag_mbr41}: {e}")
+        npu.remove(request.cls.lag_mbr31)
+        npu.remove(request.cls.lag_mbr41)
 
-        try:
-            npu.remove(request.cls.lag10_bp)
-        except Exception as e:
-            print(f"teardown warning: remove {request.cls.lag10_bp}: {e}")
-        try:
-            npu.remove(request.cls.lag11_bp)
-        except Exception as e:
-            print(f"teardown warning: remove {request.cls.lag11_bp}: {e}")
+        npu.remove(request.cls.lag10_bp)
+        npu.remove(request.cls.lag11_bp)
 
-        try:
-            npu.remove(request.cls.lag10)
-        except Exception as e:
-            print(f"teardown warning: remove {request.cls.lag10}: {e}")
-        try:
-            npu.remove(request.cls.lag11)
-        except Exception as e:
-            print(f"teardown warning: remove {request.cls.lag11}: {e}")
+        npu.remove(request.cls.lag10)
+        npu.remove(request.cls.lag11)
 
-        try:
-            npu.remove(request.cls.vlan40)
-        except Exception as e:
-            print(f"teardown warning: remove {request.cls.vlan40}: {e}")
-        try:
-            npu.remove(request.cls.vlan50)
-        except Exception as e:
-            print(f"teardown warning: remove {request.cls.vlan50}: {e}")
-        try:
-            npu.remove(request.cls.vlan60)
-        except Exception as e:
-            print(f"teardown warning: remove {request.cls.vlan60}: {e}")
-        try:
-            npu.remove(request.cls.vlan70)
-        except Exception as e:
-            print(f"teardown warning: remove {request.cls.vlan70}: {e}")
+        npu.remove(request.cls.vlan40)
+        npu.remove(request.cls.vlan50)
+        npu.remove(request.cls.vlan60)
+        npu.remove(request.cls.vlan70)
 
-        for i in range(31, 23, -1):
-            oid = getattr(request.cls, "port%d_bp" % i)
-            try:
-                npu.remove(oid)
-            except Exception as e:
-                print(f"teardown warning: remove {oid}: {e}")
+        npu.remove(request.cls.port31_bp)
+        npu.remove(request.cls.port30_bp)
+        npu.remove(request.cls.port29_bp)
+        npu.remove(request.cls.port28_bp)
+        npu.remove(request.cls.port27_bp)
+        npu.remove(request.cls.port26_bp)
+        npu.remove(request.cls.port25_bp)
+        npu.remove(request.cls.port24_bp)
 
     def _inc_vlan10_ucast(self):
         type(self).i_pkt_count += 1
@@ -1024,7 +972,7 @@ class TestL2Vlan:
             finally:
                 _flush_dyn_fdb(npu, vlan_key)
 
-    def test_vlan_flood(self, npu, dataplane):
+    def test_vlan_flood(self, npu, dataplane, request):
         """
         Description:
         VLAN flooding across members with mixed tagging and dynamic FDB learning.
@@ -1100,22 +1048,22 @@ class TestL2Vlan:
                 self.vlan40, self.lag11_bp,
                 "SAI_VLAN_TAGGING_MODE_TAGGED",
             )
+            request.cls.vlan_member44 = vm44_n
             vm52_n = self.npu.create_vlan_member(
                 self.vlan50, self.port27_bp,
                 "SAI_VLAN_TAGGING_MODE_UNTAGGED",
             )
+            request.cls.vlan_member52 = vm52_n
             vm63_n = self.npu.create_vlan_member(
                 self.vlan60, self.lag10_bp,
                 "SAI_VLAN_TAGGING_MODE_UNTAGGED",
             )
+            request.cls.vlan_member63 = vm63_n
             vm71_n = self.npu.create_vlan_member(
                 self.vlan70, self.port26_bp,
                 "SAI_VLAN_TAGGING_MODE_TAGGED",
             )
-            type(self).vlan_member44 = vm44_n
-            type(self).vlan_member52 = vm52_n
-            type(self).vlan_member63 = vm63_n
-            type(self).vlan_member71 = vm71_n
+            request.cls.vlan_member71 = vm71_n
             members_removed = False
 
             vlan_data = {
@@ -1148,10 +1096,10 @@ class TestL2Vlan:
                         self.vlan70, self.port26_bp,
                         "SAI_VLAN_TAGGING_MODE_TAGGED",
                     )
-                self.vlan_member44 = vm44_n
-                self.vlan_member52 = vm52_n
-                self.vlan_member63 = vm63_n
-                self.vlan_member71 = vm71_n
+                request.cls.vlan_member44 = vm44_n
+                request.cls.vlan_member52 = vm52_n
+                request.cls.vlan_member63 = vm63_n
+                request.cls.vlan_member71 = vm71_n
 
             self.npu.set(self.port26, ["SAI_PORT_ATTR_PORT_VLAN_ID", "1"])
             self.npu.set(self.port27, ["SAI_PORT_ATTR_PORT_VLAN_ID", "1"])
