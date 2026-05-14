@@ -765,10 +765,10 @@ class TestL2Vlan:
         finally:
             self.npu.set(self.topo.port1, ["SAI_PORT_ATTR_PORT_VLAN_ID", "1"])
             self.npu.set(self.topo.lag2, ["SAI_LAG_ATTR_PORT_VLAN_ID", "1"])
-            self.npu.remove_fdb(self.topo.vlan10, mac5)  # FIX A
-            self.npu.remove_fdb(self.topo.vlan20, mac6)  # FIX A
-            self.npu.remove_fdb(self.topo.vlan20, mac7)  # FIX A
-            self.npu.remove_fdb(self.topo.vlan20, mac8)  # FIX A
+            self.npu.remove_fdb(self.topo.vlan10, mac5)
+            self.npu.remove_fdb(self.topo.vlan20, mac6)
+            self.npu.remove_fdb(self.topo.vlan20, mac7)
+            self.npu.remove_fdb(self.topo.vlan20, mac8)
             self.npu.remove(vm1)
             self.npu.remove(vm2)
 
