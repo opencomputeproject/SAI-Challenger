@@ -31,8 +31,30 @@ def on_prev_test_failure(prev_test_failed, npu):
 
 @pytest.fixture(scope="module")
 def sai_ptf_topology(npu):
+    _detach_from_default(npu, list(range(len(npu.port_oids))))
+
     with saichallenger.topologies.sai_ptf_topology.config(npu) as topo:
         yield topo
+
+
+def _detach_from_default(npu, port_indices):
+    """
+    Detach ports from default VLAN 1 and remove default 1Q bridge ports.
+    """
+    for idx in port_indices:
+        bp = npu.dot1q_bp_oids[idx]
+        try:
+            # VLAN-member in VLAN 1
+            npu.remove_vlan_member(npu.default_vlan_oid, bp)
+        except Exception:
+            # nothing to remove (skipped)
+            pass
+        try:
+            # bridge-port
+            npu.remove(bp)
+        except Exception:
+            # nothing to remove (skipped)
+            pass
 
 
 def _fdb_entry_key(npu, vlan_oid, mac):
