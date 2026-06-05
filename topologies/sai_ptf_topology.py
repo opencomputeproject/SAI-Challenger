@@ -122,6 +122,7 @@ class SaiPtfTopologyMixin:
             setattr(self, "port%d" % i, npu.port_oids[i])
 
         self.remove_default_vlan_members()
+        self.remove_default_bridge_ports()
         self.create_sai_helper_topology()
 
     def teardown_ptf_topology(self) -> None:
@@ -135,7 +136,14 @@ class SaiPtfTopologyMixin:
         self.destroy_vlans_with_members()
         self.destroy_bridge_ports()
         self.destroy_lags_with_members()
+        self.restore_default_bridge_ports()
         self.restore_default_vlan_members()
+
+    def remove_default_bridge_ports(self) -> None:
+        """Remove default 1Q bridge ports."""
+        for idx in list(range(len(self.npu.port_oids))):
+            bp = self.npu.dot1q_bp_oids[idx]
+            self.npu.remove(bp)
 
     def remove_default_vlan_members(self) -> None:
         """Detach all ports from the default VLAN and save them for later restore."""
@@ -144,15 +152,30 @@ class SaiPtfTopologyMixin:
         self._saved_default_vlan_members = []
         for mbr_oid in mbr_oids:
             bp_oid = self.npu.get(mbr_oid, ["SAI_VLAN_MEMBER_ATTR_BRIDGE_PORT_ID"]).oid()
+            port_oid = self.npu.get(bp_oid, ["SAI_BRIDGE_PORT_ATTR_PORT_ID"]).oid()
             tag = self.npu.get(mbr_oid, ["SAI_VLAN_MEMBER_ATTR_VLAN_TAGGING_MODE"]).value()
-            self._saved_default_vlan_members.append({"bp_oid": bp_oid, "tagging": tag})
+            self._saved_default_vlan_members.append({"port_oid": port_oid, "tagging": tag})
             self.npu.remove(mbr_oid)
+
+    def restore_default_bridge_ports(self) -> None:
+        """Re-create default bridge ports."""
+        for rec in self._saved_default_vlan_members:
+            bp_oid = self.npu.create(
+                SaiObjType.BRIDGE_PORT,
+                [
+                    "SAI_BRIDGE_PORT_ATTR_TYPE", "SAI_BRIDGE_PORT_TYPE_PORT",
+                    "SAI_BRIDGE_PORT_ATTR_PORT_ID", rec["port_oid"],
+                    "SAI_BRIDGE_PORT_ATTR_ADMIN_STATE", "true"
+                ]
+            )
+            rec.update({"port_oid": bp_oid})
+        self.npu.dot1q_bp_oids = self.npu.get(self.npu.dot1q_br_oid, ["SAI_BRIDGE_ATTR_PORT_LIST"]).to_list()
 
     def restore_default_vlan_members(self) -> None:
         """Re-attach ports to the default VLAN as they were before setup."""
         for rec in self._saved_default_vlan_members:
             self.npu.create_vlan_member(
-                self.npu.default_vlan_oid, rec["bp_oid"], rec["tagging"]
+                self.npu.default_vlan_oid, rec["port_oid"], rec["tagging"]
             )
 
     @staticmethod
