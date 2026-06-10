@@ -16,6 +16,7 @@ on:
       - 'scripts/**'
       - 'configs/**'
       - 'tests/**'
+      - 'topologies/**'
       - 'setup.py'
       - 'build.sh'
       - 'run.sh'
