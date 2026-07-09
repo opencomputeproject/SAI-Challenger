@@ -48,6 +48,7 @@ class SaiRedisClient(SaiClient):
         self.loglevel_db = redis.Redis(host=self.server_ip, port=self.port, db=3)
         self.counters_db = redis.Redis(host=self.server_ip, port=self.port, db=2, decode_responses=True)
         self.flex_counter_db = redis.Redis(host=self.server_ip, port=self.port, db=5, decode_responses=True)
+        self.state_db = redis.Redis(host=self.server_ip, port=self.port, db=6, decode_responses=True)
 
     def cleanup(self):
         '''
@@ -568,6 +569,53 @@ class SaiRedisClient(SaiClient):
     def del_flex_counter(self, oid, counter_table="COUNTERS"):
         counter = counter_table + ":" + oid
         return self.counters_db.delete(counter)
+
+    def pre_shutdown(self, tout=30):
+        pre_shutdown_msg = json.dumps(["PRE-SHUTDOWN", "PRE-SHUTDOWN"])
+        self.r.publish("RESTARTQUERY", pre_shutdown_msg)
+
+        # wait for pre-shutdown to succeed
+        successful_pre_shutdown = False
+        state = None
+        for i in range(tout + 1):
+            state = self.state_db.hget("WARM_RESTART_TABLE|warm-shutdown", "state")
+            if state == "pre-shutdown-succeeded":
+                successful_pre_shutdown = True
+                break
+            if i < tout:
+                time.sleep(1)
+
+        assert successful_pre_shutdown, f"Pre-shutdown failed: {state}"
+    
+    def warm_shutdown(self, tout=30):
+        # set WARM_RESTART_ENABLE_TABLE|syncd enable=true so that syncd sets boot type to warm
+        # after shutdown
+        self.state_db.hset("WARM_RESTART_ENABLE_TABLE|syncd", "enable", "true")
+
+        warm_shutdown_msg = json.dumps(["WARM", "WARM"])
+        self.r.publish("RESTARTQUERY", warm_shutdown_msg)
+
+        # wait for warm-shutdown to succeed
+        successful_warm_shutdown = False
+        state = None
+        for i in range(tout + 1):
+            state = self.state_db.hget("WARM_RESTART_TABLE|warm-shutdown", "state")
+            if state == "warm-shutdown-succeeded":
+                successful_warm_shutdown = True
+                break
+            if i < tout:
+                time.sleep(1)
+
+        assert successful_warm_shutdown, f"Warm-shutdown failed: {state}"
+
+        # clear state as we won't need it anymore
+        self.state_db.hdel("WARM_RESTART_TABLE|warm-shutdown", "state")
+
+    def verify_restore_after_warm_shutdown(self, tout=5):
+        self.__assert_syncd_running()
+        # syncd is running, but it may have not restored state before warm-shutdown
+        time.sleep(tout)
+
 
     def flush_fdb_entries(self, obj, attrs=None):
         """

@@ -76,6 +76,15 @@ class SaiClient:
     def del_flex_counter(self, oid, counter_table="COUNTERS"):
         raise NotImplementedError
 
+    def pre_shutdown(self, tout=30):
+        raise NotImplementedError
+    
+    def warm_shutdown(self, tout=30):
+        raise NotImplementedError
+
+    def verify_restore_after_warm_shutdown(self, tout=5):
+        raise NotImplementedError
+
     # Flush FDB
     def flush_fdb_entries(self, obj, attrs=None):
         raise NotImplementedError

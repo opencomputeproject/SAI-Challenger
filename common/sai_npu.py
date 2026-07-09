@@ -105,6 +105,46 @@ class SaiNpu(Sai):
         attr = []
         self.init(attr)
 
+    def perform_warm_reboot(self, pre_tout=30, warm_tout=30, after_warm_tout=5):
+        # disable FDB aging and learning for the switch and bridge ports
+        switch_fdb_aging_time = self.get(self.switch_oid, ["SAI_SWITCH_ATTR_FDB_AGING_TIME"]).value()
+        self.set(self.switch_oid, ["SAI_SWITCH_ATTR_FDB_AGING_TIME", "0"], do_assert=True)
+        for bp_oid in self.dot1q_bp_oids:
+            self.set(bp_oid, ["SAI_BRIDGE_PORT_ATTR_FDB_LEARNING_MODE", "SAI_BRIDGE_PORT_FDB_LEARNING_MODE_DISABLE"], do_assert=True)
+
+        super().perform_warm_reboot(pre_tout=pre_tout, warm_tout=warm_tout, after_warm_tout=after_warm_tout)
+        self._verify_warm_boot()
+
+        # restore FDB aging and learning for the switch and bridge ports
+        for bp_oid in self.dot1q_bp_oids:
+            self.set(bp_oid, ["SAI_BRIDGE_PORT_ATTR_FDB_LEARNING_MODE", "SAI_BRIDGE_PORT_FDB_LEARNING_MODE_HW"], do_assert=True)
+        self.set(self.switch_oid, ["SAI_SWITCH_ATTR_FDB_AGING_TIME", switch_fdb_aging_time], do_assert=True)
+
+
+    
+    def _verify_warm_boot(self):
+        switch_type = self.get(self.switch_oid, ["SAI_SWITCH_ATTR_TYPE"]).value()
+        assert switch_type == "SAI_SWITCH_TYPE_NPU", "Switch type is not NPU"
+
+        dot1q_br_oid = self.get(self.switch_oid, ["SAI_SWITCH_ATTR_DEFAULT_1Q_BRIDGE_ID"]).oid()
+        assert dot1q_br_oid == self.dot1q_br_oid, "Default .1Q bridge ID is not the same"
+
+        default_vlan_oid = self.get(self.switch_oid, ["SAI_SWITCH_ATTR_DEFAULT_VLAN_ID"]).oid()
+        assert default_vlan_oid == self.default_vlan_oid, "Default VLAN ID is not the same"
+
+        default_vlan_id = self.get(self.default_vlan_oid, ["SAI_VLAN_ATTR_VLAN_ID"]).value()
+        assert default_vlan_id == self.default_vlan_id, "Default VLAN ID is not the same"
+
+        default_vrf_oid = self.get(self.switch_oid, ["SAI_SWITCH_ATTR_DEFAULT_VIRTUAL_ROUTER_ID"]).oid()
+        assert default_vrf_oid == self.default_vrf_oid, "Default VRF ID is not the same"
+
+        port_oids = self.get(self.switch_oid, ["SAI_SWITCH_ATTR_PORT_LIST"]).to_list()
+        assert port_oids == self.port_oids, "Port list is not the same"
+
+        dot1q_bp_oids = self.get(self.dot1q_br_oid, ["SAI_BRIDGE_ATTR_PORT_LIST"]).to_list()
+        assert dot1q_bp_oids == self.dot1q_bp_oids, "Bridge port list is not the same"
+
+
     def create_fdb(self, vlan_oid, mac, bp_oid, entry_type="SAI_FDB_ENTRY_TYPE_STATIC", action="SAI_PACKET_ACTION_FORWARD", do_assert=True):
         return self.create(
                    'SAI_OBJECT_TYPE_FDB_ENTRY:' + json.dumps(

@@ -346,6 +346,11 @@ class Sai():
     def del_flex_counter(self, oid, counter_table="COUNTERS"):
         return self.sai_client.del_flex_counter(oid, counter_table)
 
+    def perform_warm_reboot(self, pre_tout=30, warm_tout=30, after_warm_tout=5):
+        self.sai_client.pre_shutdown(tout=pre_tout)
+        self.sai_client.warm_shutdown(tout=warm_tout)
+        self.sai_client.verify_restore_after_warm_shutdown(tout=after_warm_tout)
+    
     # Flush FDB
     def flush_fdb_entries(self, obj, attrs=None):
         self.sai_client.flush_fdb_entries(obj, attrs)
