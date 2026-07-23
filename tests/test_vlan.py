@@ -74,6 +74,14 @@ def _vlan_stats_map(npu, vlan_oid):
     return npu.get_stats(vlan_oid, _vlan_stat_names()).counters()
 
 
+def _safe_remove_fdb(npu, vlan, mac):
+    status = npu.remove_fdb(vlan, mac, do_assert=False)
+    assert status in (
+        "SAI_STATUS_SUCCESS",
+        "SAI_STATUS_ITEM_NOT_FOUND",
+    ), f"Failed to remove FDB entry {mac} from {vlan}: {status}"
+
+
 class TestL2Vlan:
     @pytest.fixture(scope="class", autouse=True)
     def setup_teardown(self, request, npu, sai_ptf_topology):
@@ -765,10 +773,10 @@ class TestL2Vlan:
         finally:
             self.npu.set(self.topo.port1, ["SAI_PORT_ATTR_PORT_VLAN_ID", "1"])
             self.npu.set(self.topo.lag2, ["SAI_LAG_ATTR_PORT_VLAN_ID", "1"])
-            self.npu.remove_fdb(self.topo.vlan10, mac5)
-            self.npu.remove_fdb(self.topo.vlan20, mac6)
-            self.npu.remove_fdb(self.topo.vlan20, mac7)
-            self.npu.remove_fdb(self.topo.vlan20, mac8)
+            _safe_remove_fdb(self.npu, self.topo.vlan10, mac5)
+            _safe_remove_fdb(self.npu, self.topo.vlan20, mac6)
+            _safe_remove_fdb(self.npu, self.topo.vlan20, mac7)
+            _safe_remove_fdb(self.npu, self.topo.vlan20, mac8)
             self.npu.remove(vm1)
             self.npu.remove(vm2)
 
@@ -906,9 +914,10 @@ class TestL2Vlan:
             verify_no_other_packets(dataplane, timeout=1)
 
         finally:
-            self.npu.remove_fdb(self.topo.vlan20, mac7) 
-            self.npu.remove_fdb(self.vlan40, mac8b) 
-            self.npu.remove_fdb(self.topo.vlan20, mac9) 
+            _safe_remove_fdb(npu, self.topo.vlan20, mac7)
+            _safe_remove_fdb(npu, self.vlan40, mac8b)
+            _safe_remove_fdb(npu, self.topo.vlan20, mac9)
+
 
     def _basic_vlan_flood(self, dataplane, vlan_data, pkt_u, tag_req, arp_u, arp_t):
         npu = self.npu
