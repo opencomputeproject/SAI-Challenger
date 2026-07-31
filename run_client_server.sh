@@ -5,7 +5,7 @@ TG=ptf
 TARGET=saivs
 ASIC_TYPE=trident2
 
-while getopts "hat" OPT; do
+while getopts "ha:t:" OPT; do
     case ${OPT} in
     h)
         echo "Setup docker based testbed: 1) start client docker; 2) start server docker; 3) create links."
