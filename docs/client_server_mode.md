@@ -13,10 +13,10 @@ Build server Docker image for ASIC `trident2` target `saivs`:
 ```
 
 In case the target Docker image is intended to be built using the private repo that includes some sairedis and/or sai headers extensions the repository credentials should be passed.
-For example: the sonic-sairedis git-hub URL for the npu/broadcom/BCM56850/saivs/Dockerfile target is changed to: https://${GIT_UNAME}:${GIT_TOKEN}@github.com/private-repo/sonic-sairedis.git
+For example: the sonic-sairedis git-hub URL for the npu/broadcom/BCM56850/saivs/Dockerfile.server target is changed to: https://${GIT_UNAME}:${GIT_TOKEN}@github.com/private-repo/sonic-sairedis.git
 ```bash
 ARG BASE_OS
-FROM sc-base:${BASE_OS}
+FROM sc-server-base:${BASE_OS}
 
 ARG GIT_UNAME
 ARG GIT_TOKEN
@@ -34,11 +34,11 @@ RUN git clone https://${GIT_UNAME}:${GIT_TOKEN}@github.com/private-repo/sonic-sa
 
 Build the Docker image for ASIC `trident2` target `saivs` from the private repositories: ${GIT_UNAME}:${GIT_TOKEN}
 ```sh
-./build.sh -i client -g user_mame user_token
-./build.sh -i server -a trident2 -t saivs -g user_mame user_token
+./build.sh -i client -g user_name user_token
+./build.sh -i server -a trident2 -t saivs -g user_name user_token
 ```
 
-**NOTE:** The "user_mame" and "user_token" are private repository user name and http token.
+**NOTE:** The "user_name" and "user_token" are private repository user name and http token.
 
 ### Start docker environment
 

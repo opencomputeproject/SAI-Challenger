@@ -29,10 +29,10 @@ RUN git clone https://${GIT_UNAME}:${GIT_TOKEN}@github.com/private-repo/sonic-sa
 
 Build the Docker image for ASIC `trident2` target `saivs` from the private repositories: ${GIT_UNAME}:${GIT_TOKEN}
 ```sh
-./build.sh -a trident2 -t saivs -g user_mame user_token
+./build.sh -a trident2 -t saivs -g user_name user_token
 ```
 
-**NOTE:** The "user_mame" and "user_token" are private repository user name and http token.
+**NOTE:** The "user_name" and "user_token" are private repository user name and http token.
 
 Start Docker container:
 ```sh
