@@ -22,7 +22,20 @@ Quick reference - attribute mapping:
 | ``self.dataplane``        | pytest fixture ``dataplane``                     |
 +---------------------------+--------------------------------------------------+
 
-Ports configuration (U/T = untagged/tagged VLAN member):
+Layouts:
+
++-----------------+------------------------------------------------------------+
+| Layout          | Objects created                                            |
++=================+============================================================+
+| ``l2_basic``    | BP 0–3, VLAN 10/20 (ports only), PVIDs                     |
+| ``l2_advanced`` | ``l2_basic`` + lag1/lag2 in VLAN 10/20                     |
+| ``l3_basic``    | ``l2_advanced`` + port10–13 RIFs, default drop routes      |
+| ``l3_advanced`` | ``l3_basic`` + lag3/4 RIFs, VLAN 30 / lag5 SVI             |
++-----------------+------------------------------------------------------------+
+
+Ports configuration (U/T = untagged/tagged VLAN member).
+Rows from port4 apply from ``l2_advanced``; port10 RIFs from ``l3_basic``;
+lag3+ / VLAN 30 from ``l3_advanced``:
 
 +--------+------+-----------+-------------+--------+------------+------------+
 | Port   | LAG  | _member   | Bridge port | VLAN   | _member    | RIF        |
@@ -89,6 +102,8 @@ class SaiPtfTopologyMixin:
     (port0, lag1, vlan10, port10_rif, ...) so test code stays readable.
     """
 
+    LAYOUTS = ("l2_basic", "l2_advanced", "l3_basic", "l3_advanced")
+
     npu: Any
     switch_id: str
     default_vrf: str
@@ -98,10 +113,14 @@ class SaiPtfTopologyMixin:
 
     def __init__(self, npu: Any) -> None:
         self.npu = npu
+        self.layout = "l3_advanced"
 
-    def setup(self) -> None:
-        """Initialize NPU reference, build aliases and bring up the full topology."""
-
+    def setup(self, layout=None) -> None:
+        if layout is None:
+            layout = self.layout
+        if layout not in self.LAYOUTS:
+            raise ValueError(f"topology layout must be one of {self.LAYOUTS}, got {layout}")
+        self.layout = layout
         self.def_bridge_port_list = []
         self.def_lag_list = []
         self.def_lag_member_list = []
@@ -131,10 +150,12 @@ class SaiPtfTopologyMixin:
     def teardown(self) -> None:
         """Tear down topology in the correct SAI order and restore default VLAN state."""
         self.npu.set(self.port2, ["SAI_PORT_ATTR_PORT_VLAN_ID", "0"])
-        self.npu.set(self.lag1, ["SAI_LAG_ATTR_PORT_VLAN_ID", "0"])
         self.npu.set(self.port0, ["SAI_PORT_ATTR_PORT_VLAN_ID", "0"])
+        if self.layout != "l2_basic":
+            self.npu.set(self.lag1, ["SAI_LAG_ATTR_PORT_VLAN_ID", "0"])
 
-        self.destroy_default_routes()
+        if self.layout in ("l3_basic", "l3_advanced"):
+            self.destroy_default_routes()
         self.destroy_routing_interfaces()
         self.destroy_vlans_with_members()
         self.destroy_bridge_ports()
@@ -364,20 +385,12 @@ class SaiPtfTopologyMixin:
 
     def create_sai_helper_topology(self) -> None:
         """Build the full port/VLAN/LAG/RIF layout as described in the module docstring."""
-        self.create_bridge_ports([0, 1, 2, 3, 20, 21])
-
-        self.create_lag_with_members(1, [4, 5, 6])
-        self.create_lag_with_members(2, [7, 8, 9])
-        self.create_lag_with_members(3, [14, 15, 16])
-        self.create_lag_with_members(4, [17, 18, 19])
-        self.create_lag_with_members(5, [22, 23])
-
+        self.create_bridge_ports([0, 1, 2, 3])
         self.create_vlan_with_members(
             10,
             {
                 self.port0_bp: "untagged",
                 self.port1_bp: "tagged",
-                self.lag1_bp: "untagged",
             },
         )
         self.create_vlan_with_members(
@@ -385,9 +398,42 @@ class SaiPtfTopologyMixin:
             {
                 self.port2_bp: "untagged",
                 self.port3_bp: "tagged",
-                self.lag2_bp: "untagged",
             },
         )
+        self.npu.set(self.port0, ["SAI_PORT_ATTR_PORT_VLAN_ID", "10"])
+        self.npu.set(self.port2, ["SAI_PORT_ATTR_PORT_VLAN_ID", "20"])
+        if self.layout == "l2_basic":
+            return
+
+        self.create_lag_with_members(1, [4, 5, 6])
+        self.create_lag_with_members(2, [7, 8, 9])
+        self.vlan10_member2 = self.npu.create_vlan_member(
+            self.vlan10, self.lag1_bp, self._tagging_mode("untagged")
+        )
+        self.vlan20_member2 = self.npu.create_vlan_member(
+            self.vlan20, self.lag2_bp, self._tagging_mode("untagged")
+        )
+        self.def_vlan_member_list.extend([self.vlan10_member2, self.vlan20_member2])
+        self.npu.set(self.lag1, ["SAI_LAG_ATTR_PORT_VLAN_ID", "10"])
+        if self.layout == "l2_advanced":
+            return
+
+        self.create_routing_interfaces(
+            [
+                {"type": "port", "port_or_vlan": 10},
+                {"type": "port", "port_or_vlan": 11},
+                {"type": "port", "port_or_vlan": 12},
+                {"type": "port", "port_or_vlan": 13},
+            ]
+        )
+        self.create_default_routes()
+        if self.layout == "l3_basic":
+            return
+
+        self.create_bridge_ports([20, 21])
+        self.create_lag_with_members(3, [14, 15, 16])
+        self.create_lag_with_members(4, [17, 18, 19])
+        self.create_lag_with_members(5, [22, 23])
         self.create_vlan_with_members(
             30,
             {
@@ -396,24 +442,13 @@ class SaiPtfTopologyMixin:
                 self.lag5_bp: "untagged",
             },
         )
-
-        self.npu.set(self.port0, ["SAI_PORT_ATTR_PORT_VLAN_ID", "10"])
-        self.npu.set(self.lag1, ["SAI_LAG_ATTR_PORT_VLAN_ID", "10"])
-        self.npu.set(self.port2, ["SAI_PORT_ATTR_PORT_VLAN_ID", "20"])
-
         self.create_routing_interfaces(
             [
                 {"type": "vlan", "port_or_vlan": 30},
                 {"type": "lag", "port_or_vlan": 3},
                 {"type": "lag", "port_or_vlan": 4},
-                {"type": "port", "port_or_vlan": 10},
-                {"type": "port", "port_or_vlan": 11},
-                {"type": "port", "port_or_vlan": 12},
-                {"type": "port", "port_or_vlan": 13},
             ]
         )
-
-        self.create_default_routes()
 
     def _cpu_queue(self, idx=0):
         """Retrieves the CPU QoS queue OID at the specified index (default is 0)."""

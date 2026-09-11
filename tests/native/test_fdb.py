@@ -39,7 +39,7 @@ def skip_all(testbed_instance):
 def register_topology(npu, topology):
     npu._topo = topology
     npu._topo_initialized = False
-    npu._topo.setup()
+    npu._topo.setup("l2_advanced")
     yield
     npu._topo.teardown()
  
