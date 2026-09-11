@@ -49,12 +49,12 @@ RUN apt-get update \
 # 2. Build SONiC-patched VPP
 # ============================================================
 
-RUN git clone https://github.com/sonic-net/sonic-platform-vpp.git \
-        /tmp/sonic-platform-vpp \
+RUN git clone --branch 202605 --single-branch \
+    https://github.com/sonic-net/sonic-platform-vpp.git \
+    /tmp/sonic-platform-vpp \
     && cd /tmp/sonic-platform-vpp/vppbld \
     && mkdir -p /tmp/vpp-artifacts \
-    && make \
-        build_locally \
+    && make build_locally \
         DEST=/tmp/vpp-artifacts \
         CONFIGURED_ARCH=amd64 \
         VPP_VERSION_SONIC=26.06-0.5+b1sonic1 \
@@ -222,6 +222,8 @@ COPY configs/sai.profile       /etc/sai.d/sai.profile
 COPY configs/lanemap.ini       /usr/share/sonic/hwsku/lanemap.ini
 COPY configs/supervisord.conf  /etc/supervisor/conf.d/supervisord.conf
 
+COPY configs/syncd_startup.sh /usr/bin/syncd_startup.sh
+COPY configs/vpp_hostif_reset.sh /usr/bin/vpp_hostif_reset.sh
 
 
 WORKDIR /sai-challenger/tests
