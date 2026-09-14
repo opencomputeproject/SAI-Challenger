@@ -424,9 +424,6 @@ class TestL2Vlan:
         2. Disable learning on VLAN 20, move native VLANs to 20, and verify LAG flooding with a static FDB entry.
         3. Restore port and LAG native VLAN defaults and remove the static FDB entry created for the LAG source MAC.
         """
-        if not npu.run_traffic:
-            pytest.skip("Traffic generation disabled")
-
         fdb20_mac = "00:00:00:00:00:55"
         fdb20_installed = False
         try:
@@ -444,9 +441,10 @@ class TestL2Vlan:
                 ip_ttl=64,
                 pktlen=100,
             )
-            send_packet(dataplane, 1, tag_pkt)
-            verify_packet(dataplane, tag_pkt, 25)
-            self._inc_vlan10_ucast()
+            if npu.run_traffic:
+                send_packet(dataplane, 1, tag_pkt)
+                verify_packet(dataplane, tag_pkt, 25)
+                self._inc_vlan10_ucast()
 
             tag_pkt1 = simple_udp_packet(
                 eth_dst=self.mac0,
@@ -462,12 +460,13 @@ class TestL2Vlan:
                 ip_ttl=64,
                 pktlen=100,
             )
-            send_packet(dataplane, 1, tag_pkt1)
-            verify_packet(dataplane, untag_pkt1, 0)
-            self._inc_vlan10_ucast()
+            if npu.run_traffic:
+                send_packet(dataplane, 1, tag_pkt1)
+                verify_packet(dataplane, untag_pkt1, 0)
+                self._inc_vlan10_ucast()
 
-            send_packet(dataplane, 1, untag_pkt)
-            verify_no_other_packets(dataplane, timeout=1)
+                send_packet(dataplane, 1, untag_pkt)
+                verify_no_other_packets(dataplane, timeout=1)
 
             tag_pkt_40 = simple_udp_packet(
                 eth_dst=self.mac3,
@@ -477,29 +476,31 @@ class TestL2Vlan:
                 ip_ttl=64,
                 pktlen=104,
             )
-            send_packet(dataplane, 1, tag_pkt_40)
-            verify_no_other_packets(dataplane, timeout=1)
+            if npu.run_traffic:
+                send_packet(dataplane, 1, tag_pkt_40)
+                verify_no_other_packets(dataplane, timeout=1)
 
             self.npu.set(self.topo.port1, ["SAI_PORT_ATTR_PORT_VLAN_ID", "10"])
 
-            send_packet(dataplane, 1, tag_pkt)
-            verify_packet(dataplane, tag_pkt, 25)
-            self._inc_vlan10_ucast()
+            if npu.run_traffic:
+                send_packet(dataplane, 1, tag_pkt)
+                verify_packet(dataplane, tag_pkt, 25)
+                self._inc_vlan10_ucast()
 
-            send_packet(dataplane, 1, tag_pkt1)
-            verify_packet(dataplane, untag_pkt1, 0)
-            self._inc_vlan10_ucast()
+                send_packet(dataplane, 1, tag_pkt1)
+                verify_packet(dataplane, untag_pkt1, 0)
+                self._inc_vlan10_ucast()
 
-            send_packet(dataplane, 1, untag_pkt)
-            verify_packet(dataplane, tag_pkt, 25)
-            self._inc_vlan10_ucast()
+                send_packet(dataplane, 1, untag_pkt)
+                verify_packet(dataplane, tag_pkt, 25)
+                self._inc_vlan10_ucast()
 
-            send_packet(dataplane, 1, untag_pkt1)
-            verify_packet(dataplane, untag_pkt1, 0)
-            self._inc_vlan10_ucast()
+                send_packet(dataplane, 1, untag_pkt1)
+                verify_packet(dataplane, untag_pkt1, 0)
+                self._inc_vlan10_ucast()
 
-            send_packet(dataplane, 1, tag_pkt_40)
-            verify_no_other_packets(dataplane, timeout=1)
+                send_packet(dataplane, 1, tag_pkt_40)
+                verify_no_other_packets(dataplane, timeout=1)
 
             self.npu.set(self.topo.vlan20, ["SAI_VLAN_ATTR_LEARN_DISABLE", "true"])
             self.npu.set(self.topo.port2, ["SAI_PORT_ATTR_PORT_VLAN_ID", "20"])
@@ -514,12 +515,13 @@ class TestL2Vlan:
                 pktlen=104,
             )
             lag1_ports = [7, 8, 9]
-            send_packet(dataplane, 1, untag_pkt)
-            verify_each_packet_on_multiple_port_lists(
-                dataplane,
-                [tag_pkt_20, untag_pkt, tag_pkt_20],
-                [lag1_ports, [2], [3]],
-            )
+            if npu.run_traffic:
+                send_packet(dataplane, 1, untag_pkt)
+                verify_each_packet_on_multiple_port_lists(
+                    dataplane,
+                    [tag_pkt_20, untag_pkt, tag_pkt_20],
+                    [lag1_ports, [2], [3]],
+                )
 
             self.npu.create_fdb(self.topo.vlan20, fdb20_mac, self.topo.lag2_bp)
             fdb20_installed = True
@@ -538,27 +540,30 @@ class TestL2Vlan:
                 ip_ttl=64,
                 pktlen=100,
             )
-            send_packet(dataplane, 7, untag_pkt_lag)
-            verify_each_packet_on_multiple_port_lists(
-                dataplane,
-                [untag_pkt_lag, tag_pkt_lag],
-                [[2], [3]],
-            )
+            if npu.run_traffic:
+                send_packet(dataplane, 7, untag_pkt_lag)
+                verify_each_packet_on_multiple_port_lists(
+                    dataplane,
+                    [untag_pkt_lag, tag_pkt_lag],
+                    [[2], [3]],
+                )
 
             self.npu.set(self.topo.lag2, ["SAI_LAG_ATTR_PORT_VLAN_ID", "1"])
 
-            send_packet(dataplane, 1, tag_pkt)
-            verify_packet(dataplane, tag_pkt, 25)
-            self._inc_vlan10_ucast()
+            if npu.run_traffic:
+                send_packet(dataplane, 1, tag_pkt)
+                verify_packet(dataplane, tag_pkt, 25)
+                self._inc_vlan10_ucast()
 
             self.npu.set(self.topo.port1, ["SAI_PORT_ATTR_PORT_VLAN_ID", "1"])
 
-            send_packet(dataplane, 1, untag_pkt)
-            verify_no_other_packets(dataplane, timeout=1)
+            if npu.run_traffic:
+                send_packet(dataplane, 1, untag_pkt)
+                verify_no_other_packets(dataplane, timeout=1)
 
-            send_packet(dataplane, 1, tag_pkt)
-            verify_packet(dataplane, tag_pkt, 25)
-            self._inc_vlan10_ucast()
+                send_packet(dataplane, 1, tag_pkt)
+                verify_packet(dataplane, tag_pkt, 25)
+                self._inc_vlan10_ucast()
 
         finally:
             self.npu.set(self.topo.port2, ["SAI_PORT_ATTR_PORT_VLAN_ID", "20"], False)
@@ -578,9 +583,6 @@ class TestL2Vlan:
         2. Send priority-tagged frames from multiple ingress paths and verify expected VLAN tags on egress.
         3. Toggle native VLAN configuration on port1 and lag2, then remove temporary VLAN members and static FDB keys.
         """
-        if not npu.run_traffic:
-            pytest.skip("Traffic generation disabled")
-
         mac5 = "00:55:55:55:55:55"
         mac6 = "00:66:66:66:66:66"
         mac7 = "00:77:77:77:77:77"
@@ -601,190 +603,192 @@ class TestL2Vlan:
         self.npu.create_fdb(self.topo.vlan20, mac8, self.topo.port27_bp)
 
         try:
-            pkt = simple_udp_packet(
-                eth_dst=self.mac2,
-                eth_src=self.mac0,
-                dl_vlan_enable=True,
-                vlan_vid=0,
-                ip_ttl=64,
-                pktlen=104,
-            )
-            exp_pkt = simple_udp_packet(
-                eth_dst=self.mac2,
-                eth_src=self.mac0,
-                ip_ttl=64,
-                pktlen=100,
-            )
-            send_packet(dataplane, 0, pkt)
-            verify_packet(dataplane, exp_pkt, 24)
-            self._inc_vlan10_ucast()
+            if npu.run_traffic:
+                pkt = simple_udp_packet(
+                    eth_dst=self.mac2,
+                    eth_src=self.mac0,
+                    dl_vlan_enable=True,
+                    vlan_vid=0,
+                    ip_ttl=64,
+                    pktlen=104,
+                )
+                exp_pkt = simple_udp_packet(
+                    eth_dst=self.mac2,
+                    eth_src=self.mac0,
+                    ip_ttl=64,
+                    pktlen=100,
+                )
+                send_packet(dataplane, 0, pkt)
+                verify_packet(dataplane, exp_pkt, 24)
+                self._inc_vlan10_ucast()
 
-            pkt = simple_udp_packet(
-                eth_dst=self.mac1,
-                eth_src=self.mac0,
-                dl_vlan_enable=True,
-                vlan_vid=0,
-                ip_ttl=64,
-            )
-            exp_pkt = simple_udp_packet(
-                eth_dst=self.mac1,
-                eth_src=self.mac0,
-                dl_vlan_enable=True,
-                vlan_vid=10,
-                ip_ttl=64,
-            )
-            send_packet(dataplane, 0, pkt)
-            verify_packet(dataplane, exp_pkt, 1)
-            self._inc_vlan10_ucast()
+                pkt = simple_udp_packet(
+                    eth_dst=self.mac1,
+                    eth_src=self.mac0,
+                    dl_vlan_enable=True,
+                    vlan_vid=0,
+                    ip_ttl=64,
+                )
+                exp_pkt = simple_udp_packet(
+                    eth_dst=self.mac1,
+                    eth_src=self.mac0,
+                    dl_vlan_enable=True,
+                    vlan_vid=10,
+                    ip_ttl=64,
+                )
+                send_packet(dataplane, 0, pkt)
+                verify_packet(dataplane, exp_pkt, 1)
+                self._inc_vlan10_ucast()
 
-            pkt = simple_udp_packet(
-                eth_dst=self.mac2,
-                eth_src=mac5,
-                dl_vlan_enable=True,
-                vlan_vid=0,
-                ip_ttl=64,
-                pktlen=104,
-            )
-            exp_pkt = simple_udp_packet(
-                eth_dst=self.mac2,
-                eth_src=mac5,
-                ip_ttl=64,
-                pktlen=100,
-            )
-            send_packet(dataplane, 4, pkt)
-            verify_packet(dataplane, exp_pkt, 24)
-            self._inc_vlan10_ucast()
+                pkt = simple_udp_packet(
+                    eth_dst=self.mac2,
+                    eth_src=mac5,
+                    dl_vlan_enable=True,
+                    vlan_vid=0,
+                    ip_ttl=64,
+                    pktlen=104,
+                )
+                exp_pkt = simple_udp_packet(
+                    eth_dst=self.mac2,
+                    eth_src=mac5,
+                    ip_ttl=64,
+                    pktlen=100,
+                )
+                send_packet(dataplane, 4, pkt)
+                verify_packet(dataplane, exp_pkt, 24)
+                self._inc_vlan10_ucast()
 
-            pkt = simple_udp_packet(
-                eth_dst=self.mac1,
-                eth_src=mac5,
-                dl_vlan_enable=True,
-                vlan_vid=0,
-                ip_ttl=64,
-            )
-            exp_pkt = simple_udp_packet(
-                eth_dst=self.mac1,
-                eth_src=mac5,
-                dl_vlan_enable=True,
-                vlan_vid=10,
-                ip_ttl=64,
-            )
-            send_packet(dataplane, 4, pkt)
-            verify_packet(dataplane, exp_pkt, 1)
-            self._inc_vlan10_ucast()
+                pkt = simple_udp_packet(
+                    eth_dst=self.mac1,
+                    eth_src=mac5,
+                    dl_vlan_enable=True,
+                    vlan_vid=0,
+                    ip_ttl=64,
+                )
+                exp_pkt = simple_udp_packet(
+                    eth_dst=self.mac1,
+                    eth_src=mac5,
+                    dl_vlan_enable=True,
+                    vlan_vid=10,
+                    ip_ttl=64,
+                )
+                send_packet(dataplane, 4, pkt)
+                verify_packet(dataplane, exp_pkt, 1)
+                self._inc_vlan10_ucast()
 
-            pkt = simple_udp_packet(
-                eth_dst=self.mac3,
-                eth_src=self.mac1,
-                dl_vlan_enable=True,
-                vlan_vid=0,
-                ip_ttl=64,
-            )
-            send_packet(dataplane, 1, pkt)
-            verify_no_other_packets(dataplane, timeout=1)
+                pkt = simple_udp_packet(
+                    eth_dst=self.mac3,
+                    eth_src=self.mac1,
+                    dl_vlan_enable=True,
+                    vlan_vid=0,
+                    ip_ttl=64,
+                )
+                send_packet(dataplane, 1, pkt)
+                verify_no_other_packets(dataplane, timeout=1)
 
-            pkt = simple_udp_packet(
-                eth_dst=self.mac0,
-                eth_src=self.mac1,
-                dl_vlan_enable=True,
-                vlan_vid=0,
-                ip_ttl=64,
-            )
-            send_packet(dataplane, 1, pkt)
-            verify_no_other_packets(dataplane, timeout=1)
+                pkt = simple_udp_packet(
+                    eth_dst=self.mac0,
+                    eth_src=self.mac1,
+                    dl_vlan_enable=True,
+                    vlan_vid=0,
+                    ip_ttl=64,
+                )
+                send_packet(dataplane, 1, pkt)
+                verify_no_other_packets(dataplane, timeout=1)
 
-            pkt = simple_udp_packet(
-                eth_dst=self.mac3,
-                eth_src=mac6,
-                dl_vlan_enable=True,
-                vlan_vid=0,
-                ip_ttl=64,
-            )
-            send_packet(dataplane, 7, pkt)
-            verify_no_other_packets(dataplane, timeout=1)
+                pkt = simple_udp_packet(
+                    eth_dst=self.mac3,
+                    eth_src=mac6,
+                    dl_vlan_enable=True,
+                    vlan_vid=0,
+                    ip_ttl=64,
+                )
+                send_packet(dataplane, 7, pkt)
+                verify_no_other_packets(dataplane, timeout=1)
 
-            pkt = simple_udp_packet(
-                eth_dst=self.mac0,
-                eth_src=mac6,
-                dl_vlan_enable=True,
-                vlan_vid=0,
-                ip_ttl=64,
-            )
-            send_packet(dataplane, 7, pkt)
-            verify_no_other_packets(dataplane, timeout=1)
+                pkt = simple_udp_packet(
+                    eth_dst=self.mac0,
+                    eth_src=mac6,
+                    dl_vlan_enable=True,
+                    vlan_vid=0,
+                    ip_ttl=64,
+                )
+                send_packet(dataplane, 7, pkt)
+                verify_no_other_packets(dataplane, timeout=1)
 
             self.npu.set(self.topo.lag2, ["SAI_LAG_ATTR_PORT_VLAN_ID", "20"])
             self.npu.set(self.topo.port1, ["SAI_PORT_ATTR_PORT_VLAN_ID", "10"])
 
-            pkt = simple_udp_packet(
-                eth_dst=self.mac3,
-                eth_src=self.mac1,
-                dl_vlan_enable=True,
-                vlan_vid=0,
-                ip_ttl=64,
-            )
-            exp_pkt = simple_udp_packet(
-                eth_dst=self.mac3,
-                eth_src=self.mac1,
-                dl_vlan_enable=True,
-                vlan_vid=10,
-                ip_ttl=64,
-            )
-            send_packet(dataplane, 1, pkt)
-            verify_packet(dataplane, exp_pkt, 25)
-            self._inc_vlan10_ucast()
+            if npu.run_traffic:
+                pkt = simple_udp_packet(
+                    eth_dst=self.mac3,
+                    eth_src=self.mac1,
+                    dl_vlan_enable=True,
+                    vlan_vid=0,
+                    ip_ttl=64,
+                )
+                exp_pkt = simple_udp_packet(
+                    eth_dst=self.mac3,
+                    eth_src=self.mac1,
+                    dl_vlan_enable=True,
+                    vlan_vid=10,
+                    ip_ttl=64,
+                )
+                send_packet(dataplane, 1, pkt)
+                verify_packet(dataplane, exp_pkt, 25)
+                self._inc_vlan10_ucast()
 
-            pkt = simple_udp_packet(
-                eth_dst=mac7,
-                eth_src=mac6,
-                dl_vlan_enable=True,
-                vlan_vid=0,
-                ip_ttl=64,
-            )
-            exp_pkt = simple_udp_packet(
-                eth_dst=mac7,
-                eth_src=mac6,
-                dl_vlan_enable=True,
-                vlan_vid=20,
-                ip_ttl=64,
-            )
-            send_packet(dataplane, 7, pkt)
-            verify_packet(dataplane, exp_pkt, 26)
+                pkt = simple_udp_packet(
+                    eth_dst=mac7,
+                    eth_src=mac6,
+                    dl_vlan_enable=True,
+                    vlan_vid=0,
+                    ip_ttl=64,
+                )
+                exp_pkt = simple_udp_packet(
+                    eth_dst=mac7,
+                    eth_src=mac6,
+                    dl_vlan_enable=True,
+                    vlan_vid=20,
+                    ip_ttl=64,
+                )
+                send_packet(dataplane, 7, pkt)
+                verify_packet(dataplane, exp_pkt, 26)
 
-            pkt = simple_udp_packet(
-                eth_dst=self.mac0,
-                eth_src=self.mac1,
-                dl_vlan_enable=True,
-                vlan_vid=0,
-                ip_ttl=64,
-                pktlen=104,
-            )
-            exp_pkt = simple_udp_packet(
-                eth_dst=self.mac0,
-                eth_src=self.mac1,
-                ip_ttl=64,
-                pktlen=100,
-            )
-            send_packet(dataplane, 1, pkt)
-            verify_packet(dataplane, exp_pkt, 0)
-            self._inc_vlan10_ucast()
+                pkt = simple_udp_packet(
+                    eth_dst=self.mac0,
+                    eth_src=self.mac1,
+                    dl_vlan_enable=True,
+                    vlan_vid=0,
+                    ip_ttl=64,
+                    pktlen=104,
+                )
+                exp_pkt = simple_udp_packet(
+                    eth_dst=self.mac0,
+                    eth_src=self.mac1,
+                    ip_ttl=64,
+                    pktlen=100,
+                )
+                send_packet(dataplane, 1, pkt)
+                verify_packet(dataplane, exp_pkt, 0)
+                self._inc_vlan10_ucast()
 
-            pkt = simple_udp_packet(
-                eth_dst=mac8,
-                eth_src=mac6,
-                dl_vlan_enable=True,
-                vlan_vid=0,
-                ip_ttl=64,
-                pktlen=104,
-            )
-            exp_pkt = simple_udp_packet(
-                eth_dst=mac8,
-                eth_src=mac6,
-                ip_ttl=64,
-                pktlen=100,
-            )
-            send_packet(dataplane, 7, pkt)
-            verify_packet(dataplane, exp_pkt, 27)
+                pkt = simple_udp_packet(
+                    eth_dst=mac8,
+                    eth_src=mac6,
+                    dl_vlan_enable=True,
+                    vlan_vid=0,
+                    ip_ttl=64,
+                    pktlen=104,
+                )
+                exp_pkt = simple_udp_packet(
+                    eth_dst=mac8,
+                    eth_src=mac6,
+                    ip_ttl=64,
+                    pktlen=100,
+                )
+                send_packet(dataplane, 7, pkt)
+                verify_packet(dataplane, exp_pkt, 27)
 
         finally:
             self.npu.set(self.topo.port1, ["SAI_PORT_ATTR_PORT_VLAN_ID", "1"])
@@ -806,9 +810,6 @@ class TestL2Vlan:
         2. Send valid VLAN 10 traffic and confirm forwarding to the trunk.
         3. Send VLAN 11 traffic from the access port and assert the VLAN discard counter increments by one.
         """
-        if not npu.run_traffic:
-            pytest.skip("Traffic generation disabled")
-
         v100_pkt = simple_tcp_packet(
             eth_dst=self.mac0,
             eth_src=self.mac1,
@@ -848,15 +849,16 @@ class TestL2Vlan:
             ip_ttl=64,
         )
 
-        send_packet(dataplane, 1, v100_pkt)
-        verify_no_other_packets(dataplane, timeout=1)
+        if npu.run_traffic:
+            send_packet(dataplane, 1, v100_pkt)
+            verify_no_other_packets(dataplane, timeout=1)
 
-        send_packet(dataplane, 1, untagged_pkt)
-        verify_no_other_packets(dataplane, timeout=1)
+            send_packet(dataplane, 1, untagged_pkt)
+            verify_no_other_packets(dataplane, timeout=1)
 
-        send_packet(dataplane, 0, v10_pkt)
-        verify_packet(dataplane, exp_at_pkt, 1)
-        self._inc_vlan10_ucast()
+            send_packet(dataplane, 0, v10_pkt)
+            verify_packet(dataplane, exp_at_pkt, 1)
+            self._inc_vlan10_ucast()
 
         pre = self.npu.get_stats(
             self.topo.port0,
@@ -864,15 +866,16 @@ class TestL2Vlan:
         ).counters()
         if_in_vlan_discards_pre = pre["SAI_PORT_STAT_IF_IN_VLAN_DISCARDS"]
 
-        send_packet(dataplane, 0, v11_pkt)
-        verify_no_other_packets(dataplane, timeout=1)
+        if npu.run_traffic:
+            send_packet(dataplane, 0, v11_pkt)
+            verify_no_other_packets(dataplane, timeout=1)
 
-        post = self.npu.get_stats(
-            self.topo.port0,
-            ["SAI_PORT_STAT_IF_IN_VLAN_DISCARDS", ""],
-        ).counters()
-        if_in_vlan_discards = post["SAI_PORT_STAT_IF_IN_VLAN_DISCARDS"]
-        assert if_in_vlan_discards_pre + 1 == if_in_vlan_discards
+            post = self.npu.get_stats(
+                self.topo.port0,
+                ["SAI_PORT_STAT_IF_IN_VLAN_DISCARDS", ""],
+            ).counters()
+            if_in_vlan_discards = post["SAI_PORT_STAT_IF_IN_VLAN_DISCARDS"]
+            assert if_in_vlan_discards_pre + 1 == if_in_vlan_discards
 
     def test_lag_pv_miss(self, npu, dataplane):
         """
@@ -884,9 +887,6 @@ class TestL2Vlan:
         2. Forward VLAN 20 traffic from the LAG to the access VLAN, and expect drops for VLAN 40/50 misses.
         3. Remove the temporary static FDB entries created for the test.
         """
-        if not npu.run_traffic:
-            pytest.skip("Traffic generation disabled")
-
         mac7 = "00:77:77:77:77:77"
         mac8b = "00:88:88:88:88:88"
         mac9 = "00:99:99:99:99:99"
@@ -896,38 +896,39 @@ class TestL2Vlan:
         self.npu.create_fdb(self.topo.vlan20, mac9, self.topo.lag2_bp)
 
         try:
-            pkt = simple_tcp_packet(
-                eth_dst=mac7,
-                eth_src=mac9,
-                dl_vlan_enable=True,
-                vlan_vid=20,
-                ip_dst="10.0.0.1",
-                ip_ttl=64,
-            )
-            send_packet(dataplane, 8, pkt)
-            verify_packet(dataplane, pkt, 26)
+            if npu.run_traffic:
+                pkt = simple_tcp_packet(
+                    eth_dst=mac7,
+                    eth_src=mac9,
+                    dl_vlan_enable=True,
+                    vlan_vid=20,
+                    ip_dst="10.0.0.1",
+                    ip_ttl=64,
+                )
+                send_packet(dataplane, 8, pkt)
+                verify_packet(dataplane, pkt, 26)
 
-            pkt = simple_tcp_packet(
-                eth_dst=mac8b,
-                eth_src=mac9,
-                dl_vlan_enable=True,
-                vlan_vid=40,
-                ip_dst="10.0.0.1",
-                ip_ttl=64,
-            )
-            send_packet(dataplane, 8, pkt)
-            verify_no_other_packets(dataplane, timeout=1)
+                pkt = simple_tcp_packet(
+                    eth_dst=mac8b,
+                    eth_src=mac9,
+                    dl_vlan_enable=True,
+                    vlan_vid=40,
+                    ip_dst="10.0.0.1",
+                    ip_ttl=64,
+                )
+                send_packet(dataplane, 8, pkt)
+                verify_no_other_packets(dataplane, timeout=1)
 
-            pkt = simple_tcp_packet(
-                eth_dst=mac8b,
-                eth_src=mac9,
-                dl_vlan_enable=True,
-                vlan_vid=50,
-                ip_dst="10.0.0.1",
-                ip_ttl=64,
-            )
-            send_packet(dataplane, 7, pkt)
-            verify_no_other_packets(dataplane, timeout=1)
+                pkt = simple_tcp_packet(
+                    eth_dst=mac8b,
+                    eth_src=mac9,
+                    dl_vlan_enable=True,
+                    vlan_vid=50,
+                    ip_dst="10.0.0.1",
+                    ip_ttl=64,
+                )
+                send_packet(dataplane, 7, pkt)
+                verify_no_other_packets(dataplane, timeout=1)
 
         finally:
             self.npu.remove_fdb(self.topo.vlan20, mac7) 
@@ -936,6 +937,8 @@ class TestL2Vlan:
 
     def _basic_vlan_flood(self, dataplane, vlan_data, pkt_u, tag_req, arp_u, arp_t):
         npu = self.npu
+        if not npu.run_traffic:
+            return
         for vlan_key in vlan_data.keys():
             try:
                 vlan = vlan_data[vlan_key]
@@ -976,9 +979,6 @@ class TestL2Vlan:
         2. Remove four VLAN members, repeat flood with reduced port sets, then recreate members with the same tagging as setUp.
         3. Flood again with full membership; in finally restore fixture members if still removed and reset port/LAG PVIDs.
         """
-        if not npu.run_traffic:
-            pytest.skip("Traffic generation disabled")
-
         vm44_n = vm52_n = vm63_n = vm71_n = None
         members_removed = False
 
@@ -1110,9 +1110,6 @@ class TestL2Vlan:
         2. Add temporary LAG members on ports 24/25, verify tagged flood on VLAN 100, remove and re-add them.
         3. Remove a VLAN 100 member, verify pruning, then add VLAN 200 membership on port30 and verify flood.
         """
-        if not npu.run_traffic:
-            pytest.skip("Traffic generation disabled")
-
         vlan100 = None
         vlan200 = None
         vm101 = vm102 = vm103 = vm104 = vm105 = None
@@ -1196,30 +1193,31 @@ class TestL2Vlan:
 
             lag1_ports = [28, 24]
             lag2_ports = [29, 25]
-            send_packet(dataplane, 26, pkt100)
-            verify_each_packet_on_multiple_port_lists(
-                dataplane,
-                [pkt100] * 4,
-                [lag1_ports, lag2_ports, [27], [30]],
-            )
-            send_packet(dataplane, 28, pkt100)
-            verify_each_packet_on_multiple_port_lists(
-                dataplane,
-                [pkt100] * 4,
-                [[26], lag2_ports, [27], [30]],
-            )
-            send_packet(dataplane, 29, pkt100)
-            verify_each_packet_on_multiple_port_lists(
-                dataplane,
-                [pkt100] * 4,
-                [[26], lag1_ports, [27], [30]],
-            )
-            send_packet(dataplane, 30, pkt100)
-            verify_each_packet_on_multiple_port_lists(
-                dataplane,
-                [pkt100] * 4,
-                [[26], lag1_ports, lag2_ports, [27]],
-            )
+            if npu.run_traffic:
+                send_packet(dataplane, 26, pkt100)
+                verify_each_packet_on_multiple_port_lists(
+                    dataplane,
+                    [pkt100] * 4,
+                    [lag1_ports, lag2_ports, [27], [30]],
+                )
+                send_packet(dataplane, 28, pkt100)
+                verify_each_packet_on_multiple_port_lists(
+                    dataplane,
+                    [pkt100] * 4,
+                    [[26], lag2_ports, [27], [30]],
+                )
+                send_packet(dataplane, 29, pkt100)
+                verify_each_packet_on_multiple_port_lists(
+                    dataplane,
+                    [pkt100] * 4,
+                    [[26], lag1_ports, [27], [30]],
+                )
+                send_packet(dataplane, 30, pkt100)
+                verify_each_packet_on_multiple_port_lists(
+                    dataplane,
+                    [pkt100] * 4,
+                    [[26], lag1_ports, lag2_ports, [27]],
+                )
 
             self.npu.remove(lag_mbr32)
             self.npu.remove(lag_mbr42)
@@ -1228,100 +1226,103 @@ class TestL2Vlan:
 
             lag1_ports = [28]
             lag2_ports = [29]
-            send_packet(dataplane, 26, pkt100)
-            verify_each_packet_on_multiple_port_lists(
-                dataplane,
-                [pkt100] * 4,
-                [lag1_ports, lag2_ports, [27], [30]],
-            )
-            send_packet(dataplane, 28, pkt100)
-            verify_each_packet_on_multiple_port_lists(
-                dataplane,
-                [pkt100] * 4,
-                [[26], lag2_ports, [27], [30]],
-            )
-            send_packet(dataplane, 29, pkt100)
-            verify_each_packet_on_multiple_port_lists(
-                dataplane,
-                [pkt100] * 4,
-                [[26], lag1_ports, [27], [30]],
-            )
-            send_packet(dataplane, 30, pkt100)
-            verify_each_packet_on_multiple_port_lists(
-                dataplane,
-                [pkt100] * 4,
-                [[26], lag1_ports, lag2_ports, [27]],
-            )
+            if npu.run_traffic:
+                send_packet(dataplane, 26, pkt100)
+                verify_each_packet_on_multiple_port_lists(
+                    dataplane,
+                    [pkt100] * 4,
+                    [lag1_ports, lag2_ports, [27], [30]],
+                )
+                send_packet(dataplane, 28, pkt100)
+                verify_each_packet_on_multiple_port_lists(
+                    dataplane,
+                    [pkt100] * 4,
+                    [[26], lag2_ports, [27], [30]],
+                )
+                send_packet(dataplane, 29, pkt100)
+                verify_each_packet_on_multiple_port_lists(
+                    dataplane,
+                    [pkt100] * 4,
+                    [[26], lag1_ports, [27], [30]],
+                )
+                send_packet(dataplane, 30, pkt100)
+                verify_each_packet_on_multiple_port_lists(
+                    dataplane,
+                    [pkt100] * 4,
+                    [[26], lag1_ports, lag2_ports, [27]],
+                )
 
             lag_mbr32 = self.npu.create(SaiObjType.LAG_MEMBER, ["SAI_LAG_MEMBER_ATTR_LAG_ID", self.lag10, "SAI_LAG_MEMBER_ATTR_PORT_ID", self.npu.port_oids[24]])
             lag_mbr42 = self.npu.create(SaiObjType.LAG_MEMBER, ["SAI_LAG_MEMBER_ATTR_LAG_ID", self.lag11, "SAI_LAG_MEMBER_ATTR_PORT_ID", self.npu.port_oids[25]])
 
             lag1_ports = [28, 24]
             lag2_ports = [29, 25]
-            send_packet(dataplane, 26, pkt100)
-            verify_each_packet_on_multiple_port_lists(
-                dataplane,
-                [pkt100] * 4,
-                [lag1_ports, lag2_ports, [27], [30]],
-            )
-            send_packet(dataplane, 28, pkt100)
-            verify_each_packet_on_multiple_port_lists(
-                dataplane,
-                [pkt100] * 4,
-                [[26], lag2_ports, [27], [30]],
-            )
-            send_packet(dataplane, 29, pkt100)
-            verify_each_packet_on_multiple_port_lists(
-                dataplane,
-                [pkt100] * 4,
-                [[26], lag1_ports, [27], [30]],
-            )
-            send_packet(dataplane, 30, pkt100)
-            verify_each_packet_on_multiple_port_lists(
-                dataplane,
-                [pkt100] * 4,
-                [[26], lag1_ports, lag2_ports, [27]],
-            )
+            if npu.run_traffic:
+                send_packet(dataplane, 26, pkt100)
+                verify_each_packet_on_multiple_port_lists(
+                    dataplane,
+                    [pkt100] * 4,
+                    [lag1_ports, lag2_ports, [27], [30]],
+                )
+                send_packet(dataplane, 28, pkt100)
+                verify_each_packet_on_multiple_port_lists(
+                    dataplane,
+                    [pkt100] * 4,
+                    [[26], lag2_ports, [27], [30]],
+                )
+                send_packet(dataplane, 29, pkt100)
+                verify_each_packet_on_multiple_port_lists(
+                    dataplane,
+                    [pkt100] * 4,
+                    [[26], lag1_ports, [27], [30]],
+                )
+                send_packet(dataplane, 30, pkt100)
+                verify_each_packet_on_multiple_port_lists(
+                    dataplane,
+                    [pkt100] * 4,
+                    [[26], lag1_ports, lag2_ports, [27]],
+                )
 
             self.npu.remove(vm105)
             vm105_removed = True
-            send_packet(dataplane, 26, pkt100)
-            verify_each_packet_on_multiple_port_lists(
-                dataplane,
-                [pkt100] * 3,
-                [lag1_ports, lag2_ports, [27]],
-            )
-            send_packet(dataplane, 28, pkt100)
-            verify_each_packet_on_multiple_port_lists(
-                dataplane,
-                [pkt100] * 3,
-                [[26], lag2_ports, [27]],
-            )
-            send_packet(dataplane, 29, pkt100)
-            verify_each_packet_on_multiple_port_lists(
-                dataplane,
-                [pkt100] * 3,
-                [[26], lag1_ports, [27]],
-            )
+            if npu.run_traffic:
+                send_packet(dataplane, 26, pkt100)
+                verify_each_packet_on_multiple_port_lists(
+                    dataplane,
+                    [pkt100] * 3,
+                    [lag1_ports, lag2_ports, [27]],
+                )
+                send_packet(dataplane, 28, pkt100)
+                verify_each_packet_on_multiple_port_lists(
+                    dataplane,
+                    [pkt100] * 3,
+                    [[26], lag2_ports, [27]],
+                )
+                send_packet(dataplane, 29, pkt100)
+                verify_each_packet_on_multiple_port_lists(
+                    dataplane,
+                    [pkt100] * 3,
+                    [[26], lag1_ports, [27]],
+                )
 
-            send_packet(dataplane, 27, pkt200)
-            verify_each_packet_on_multiple_port_lists(
-                dataplane,
-                [pkt200] * 3,
-                [lag1_ports, lag2_ports, [26]],
-            )
-            send_packet(dataplane, 24, pkt200)
-            verify_each_packet_on_multiple_port_lists(
-                dataplane,
-                [pkt200] * 3,
-                [[26], lag2_ports, [27]],
-            )
-            send_packet(dataplane, 25, pkt200)
-            verify_each_packet_on_multiple_port_lists(
-                dataplane,
-                [pkt200] * 3,
-                [[26], lag1_ports, [27]],
-            )
+                send_packet(dataplane, 27, pkt200)
+                verify_each_packet_on_multiple_port_lists(
+                    dataplane,
+                    [pkt200] * 3,
+                    [lag1_ports, lag2_ports, [26]],
+                )
+                send_packet(dataplane, 24, pkt200)
+                verify_each_packet_on_multiple_port_lists(
+                    dataplane,
+                    [pkt200] * 3,
+                    [[26], lag2_ports, [27]],
+                )
+                send_packet(dataplane, 25, pkt200)
+                verify_each_packet_on_multiple_port_lists(
+                    dataplane,
+                    [pkt200] * 3,
+                    [[26], lag1_ports, [27]],
+                )
 
             vm205 = self.npu.create_vlan_member(
                 vlan200,
@@ -1330,30 +1331,31 @@ class TestL2Vlan:
             )
             self.npu.set(self.npu.port_oids[30], ["SAI_PORT_ATTR_PORT_VLAN_ID", "200"])
             port30_pvid_200 = True
-            send_packet(dataplane, 27, pkt200)
-            verify_each_packet_on_multiple_port_lists(
-                dataplane,
-                [pkt200] * 4,
-                [lag1_ports, lag2_ports, [26], [30]],
-            )
-            send_packet(dataplane, 24, pkt200)
-            verify_each_packet_on_multiple_port_lists(
-                dataplane,
-                [pkt200] * 4,
-                [[26], lag2_ports, [27], [30]],
-            )
-            send_packet(dataplane, 25, pkt200)
-            verify_each_packet_on_multiple_port_lists(
-                dataplane,
-                [pkt200] * 4,
-                [[26], lag1_ports, [27], [30]],
-            )
-            send_packet(dataplane, 30, pkt200)
-            verify_each_packet_on_multiple_port_lists(
-                dataplane,
-                [pkt200] * 4,
-                [[26], lag1_ports, lag2_ports, [27]],
-            )
+            if npu.run_traffic:
+                send_packet(dataplane, 27, pkt200)
+                verify_each_packet_on_multiple_port_lists(
+                    dataplane,
+                    [pkt200] * 4,
+                    [lag1_ports, lag2_ports, [26], [30]],
+                )
+                send_packet(dataplane, 24, pkt200)
+                verify_each_packet_on_multiple_port_lists(
+                    dataplane,
+                    [pkt200] * 4,
+                    [[26], lag2_ports, [27], [30]],
+                )
+                send_packet(dataplane, 25, pkt200)
+                verify_each_packet_on_multiple_port_lists(
+                    dataplane,
+                    [pkt200] * 4,
+                    [[26], lag1_ports, [27], [30]],
+                )
+                send_packet(dataplane, 30, pkt200)
+                verify_each_packet_on_multiple_port_lists(
+                    dataplane,
+                    [pkt200] * 4,
+                    [[26], lag1_ports, lag2_ports, [27]],
+                )
 
             self.npu.remove(vm205)
             vm205 = None
@@ -1407,9 +1409,6 @@ class TestL2Vlan:
         2. Verify unknown unicast, multicast, and broadcast replicate to peers, then set each flood type to NONE.
         3. Confirm each traffic class is isolated after its control is disabled, then restore ports and delete VLAN 100.
         """
-        if not npu.run_traffic:
-            pytest.skip("Traffic generation disabled")
-
         flood_none = "SAI_VLAN_FLOOD_CONTROL_TYPE_NONE"
         vlan100 = self.npu.create(SaiObjType.VLAN, ["SAI_VLAN_ATTR_VLAN_ID", "100"])
         vm101 = self.npu.create_vlan_member(vlan100, self.topo.port24_bp, "SAI_VLAN_TAGGING_MODE_UNTAGGED")
@@ -1446,24 +1445,28 @@ class TestL2Vlan:
         )
 
         try:
-            send_packet(dataplane, 26, ucast_pkt)
-            verify_packets(dataplane, ucast_pkt, [24, 25, 27])
-            send_packet(dataplane, 26, mcast_pkt)
-            verify_packets(dataplane, mcast_pkt, [24, 25, 27])
-            send_packet(dataplane, 26, bcast_pkt)
-            verify_packets(dataplane, bcast_pkt, [24, 25, 27])
+            if npu.run_traffic:
+                send_packet(dataplane, 26, ucast_pkt)
+                verify_packets(dataplane, ucast_pkt, [24, 25, 27])
+                send_packet(dataplane, 26, mcast_pkt)
+                verify_packets(dataplane, mcast_pkt, [24, 25, 27])
+                send_packet(dataplane, 26, bcast_pkt)
+                verify_packets(dataplane, bcast_pkt, [24, 25, 27])
 
             self.npu.set(vlan100, ["SAI_VLAN_ATTR_UNKNOWN_UNICAST_FLOOD_CONTROL_TYPE", flood_none])
-            send_packet(dataplane, 26, ucast_pkt)
-            verify_no_other_packets(dataplane, timeout=1)
+            if npu.run_traffic:
+                send_packet(dataplane, 26, ucast_pkt)
+                verify_no_other_packets(dataplane, timeout=1)
 
             self.npu.set(vlan100, ["SAI_VLAN_ATTR_UNKNOWN_MULTICAST_FLOOD_CONTROL_TYPE", flood_none])
-            send_packet(dataplane, 26, mcast_pkt)
-            verify_no_other_packets(dataplane, timeout=1)
+            if npu.run_traffic:
+                send_packet(dataplane, 26, mcast_pkt)
+                verify_no_other_packets(dataplane, timeout=1)
 
             self.npu.set(vlan100, ["SAI_VLAN_ATTR_BROADCAST_FLOOD_CONTROL_TYPE", flood_none])
-            send_packet(dataplane, 26, bcast_pkt)
-            verify_no_other_packets(dataplane, timeout=1)
+            if npu.run_traffic:
+                send_packet(dataplane, 26, bcast_pkt)
+                verify_no_other_packets(dataplane, timeout=1)
 
         finally:
             self.npu.set(self.npu.port_oids[24], ["SAI_PORT_ATTR_PORT_VLAN_ID", "1"])
@@ -1483,7 +1486,7 @@ class TestL2Vlan:
         Verify VLAN 10 statistics match traffic-driven Python counters from earlier tests.
 
         Test scenario:
-        1. Skip when traffic generation is disabled.
+        1. Skip packet-count asserts when traffic generation is disabled.
         2. Read VLAN 10 stats from the NPU and assert in/out packet and octet counters match expectations.
         """
         if not npu.run_traffic:
@@ -1514,9 +1517,6 @@ class TestL2Vlan:
         2. Grow and shrink a second LAG on VLAN 10, then attach port31 via a dedicated bridge port.
         3. Restore VLAN learn mode and tear down temporary objects; always reset port31 PVID and remove the local bridge port in finally.
         """
-        if not npu.run_traffic:
-            pytest.skip("Traffic generation disabled")
-
         self.npu.set(self.topo.vlan10, ["SAI_VLAN_ATTR_LEARN_DISABLE", "true"])
 
         prune_lag = self.npu.create(SaiObjType.LAG, [])
@@ -1562,12 +1562,13 @@ class TestL2Vlan:
         try:
             lag0_ports = [4, 5, 6]
             lag1_ports = [26, 27]
-            send_packet(dataplane, 0, pkt)
-            verify_each_packet_on_multiple_port_lists(
-                dataplane,
-                [exp_pkt] * 3 + [exp_pkt_tag] * 2,
-                [lag0_ports, lag1_ports, [24], [1], [25]],
-            )
+            if npu.run_traffic:
+                send_packet(dataplane, 0, pkt)
+                verify_each_packet_on_multiple_port_lists(
+                    dataplane,
+                    [exp_pkt] * 3 + [exp_pkt_tag] * 2,
+                    [lag0_ports, lag1_ports, [24], [1], [25]],
+                )
 
             prune_lag2 = self.npu.create(SaiObjType.LAG, [])
             prune_lag2_bp = self.npu.create(SaiObjType.BRIDGE_PORT, ["SAI_BRIDGE_PORT_ATTR_TYPE", "SAI_BRIDGE_PORT_TYPE_PORT", 
@@ -1578,52 +1579,56 @@ class TestL2Vlan:
                 "SAI_VLAN_TAGGING_MODE_UNTAGGED",
             )
             self.npu.set(prune_lag2, ["SAI_LAG_ATTR_PORT_VLAN_ID", "10"])
-            send_packet(dataplane, 0, pkt)
-            verify_each_packet_on_multiple_port_lists(
-                dataplane,
-                [exp_pkt] * 3 + [exp_pkt_tag] * 2,
-                [lag0_ports, lag1_ports, [24], [1], [25]],
-            )
+            if npu.run_traffic:
+                send_packet(dataplane, 0, pkt)
+                verify_each_packet_on_multiple_port_lists(
+                    dataplane,
+                    [exp_pkt] * 3 + [exp_pkt_tag] * 2,
+                    [lag0_ports, lag1_ports, [24], [1], [25]],
+                )
 
             prune_lag_mbr3 = self.npu.create(SaiObjType.LAG_MEMBER, ["SAI_LAG_MEMBER_ATTR_LAG_ID", prune_lag2, "SAI_LAG_MEMBER_ATTR_PORT_ID", self.npu.port_oids[30]])
             lag2_ports = [30]
-            send_packet(dataplane, 0, pkt)
-            verify_each_packet_on_multiple_port_lists(
-                dataplane,
-                [exp_pkt] * 4 + [exp_pkt_tag] * 2,
-                [lag0_ports, lag1_ports, lag2_ports, [24], [1], [25]],
-            )
-            send_packet(dataplane, 30, pkt)
-            verify_each_packet_on_multiple_port_lists(
-                dataplane,
-                [exp_pkt] * 4 + [exp_pkt_tag] * 2,
-                [lag0_ports, lag1_ports, [0], [24], [1], [25]],
-            )
+            if npu.run_traffic:
+                send_packet(dataplane, 0, pkt)
+                verify_each_packet_on_multiple_port_lists(
+                    dataplane,
+                    [exp_pkt] * 4 + [exp_pkt_tag] * 2,
+                    [lag0_ports, lag1_ports, lag2_ports, [24], [1], [25]],
+                )
+                send_packet(dataplane, 30, pkt)
+                verify_each_packet_on_multiple_port_lists(
+                    dataplane,
+                    [exp_pkt] * 4 + [exp_pkt_tag] * 2,
+                    [lag0_ports, lag1_ports, [0], [24], [1], [25]],
+                )
 
             prune_lag_mbr4 = self.npu.create(SaiObjType.LAG_MEMBER, ["SAI_LAG_MEMBER_ATTR_LAG_ID", prune_lag2, "SAI_LAG_MEMBER_ATTR_PORT_ID", self.npu.port_oids[31]])
             lag2_ports = [30, 31]
-            send_packet(dataplane, 0, pkt)
-            verify_each_packet_on_multiple_port_lists(
-                dataplane,
-                [exp_pkt] * 4 + [exp_pkt_tag] * 2,
-                [lag0_ports, lag1_ports, lag2_ports, [24], [1], [25]],
-            )
-            send_packet(dataplane, 31, pkt)
-            verify_each_packet_on_multiple_port_lists(
-                dataplane,
-                [exp_pkt] * 4 + [exp_pkt_tag] * 2,
-                [lag0_ports, lag1_ports, [0], [24], [1], [25]],
-            )
+            if npu.run_traffic:
+                send_packet(dataplane, 0, pkt)
+                verify_each_packet_on_multiple_port_lists(
+                    dataplane,
+                    [exp_pkt] * 4 + [exp_pkt_tag] * 2,
+                    [lag0_ports, lag1_ports, lag2_ports, [24], [1], [25]],
+                )
+                send_packet(dataplane, 31, pkt)
+                verify_each_packet_on_multiple_port_lists(
+                    dataplane,
+                    [exp_pkt] * 4 + [exp_pkt_tag] * 2,
+                    [lag0_ports, lag1_ports, [0], [24], [1], [25]],
+                )
 
             self.npu.remove(prune_lag_mbr4)
             prune_lag_mbr4 = None
             lag2_ports = [30]
-            send_packet(dataplane, 0, pkt)
-            verify_each_packet_on_multiple_port_lists(
-                dataplane,
-                [exp_pkt] * 4 + [exp_pkt_tag] * 2,
-                [lag0_ports, lag1_ports, lag2_ports, [24], [1], [25]],
-            )
+            if npu.run_traffic:
+                send_packet(dataplane, 0, pkt)
+                verify_each_packet_on_multiple_port_lists(
+                    dataplane,
+                    [exp_pkt] * 4 + [exp_pkt_tag] * 2,
+                    [lag0_ports, lag1_ports, lag2_ports, [24], [1], [25]],
+                )
 
             port31_bp_local = self.npu.create(SaiObjType.BRIDGE_PORT, ["SAI_BRIDGE_PORT_ATTR_TYPE", "SAI_BRIDGE_PORT_TYPE_PORT", 
                                                                        "SAI_BRIDGE_PORT_ATTR_PORT_ID", self.npu.port_oids[31], "SAI_BRIDGE_PORT_ATTR_ADMIN_STATE", "true"]) 
@@ -1633,18 +1638,19 @@ class TestL2Vlan:
                 "SAI_VLAN_TAGGING_MODE_UNTAGGED",
             )
             self.npu.set(self.npu.port_oids[31], ["SAI_PORT_ATTR_PORT_VLAN_ID", "10"])
-            send_packet(dataplane, 0, pkt)
-            verify_each_packet_on_multiple_port_lists(
-                dataplane,
-                [exp_pkt] * 5 + [exp_pkt_tag] * 2,
-                [lag0_ports, lag1_ports, lag2_ports, [24], [31], [1], [25]],
-            )
-            send_packet(dataplane, 31, pkt)
-            verify_each_packet_on_multiple_port_lists(
-                dataplane,
-                [exp_pkt] * 5 + [exp_pkt_tag] * 2,
-                [lag0_ports, lag1_ports, lag2_ports, [0], [24], [1], [25]],
-            )
+            if npu.run_traffic:
+                send_packet(dataplane, 0, pkt)
+                verify_each_packet_on_multiple_port_lists(
+                    dataplane,
+                    [exp_pkt] * 5 + [exp_pkt_tag] * 2,
+                    [lag0_ports, lag1_ports, lag2_ports, [24], [31], [1], [25]],
+                )
+                send_packet(dataplane, 31, pkt)
+                verify_each_packet_on_multiple_port_lists(
+                    dataplane,
+                    [exp_pkt] * 5 + [exp_pkt_tag] * 2,
+                    [lag0_ports, lag1_ports, lag2_ports, [0], [24], [1], [25]],
+                )
 
             self.npu.set(self.npu.port_oids[31], ["SAI_PORT_ATTR_PORT_VLAN_ID", "1"])
             self.npu.remove(vlan_member3)
@@ -1654,12 +1660,13 @@ class TestL2Vlan:
             self.npu.remove(prune_lag_mbr3)
             prune_lag_mbr3 = None
 
-            send_packet(dataplane, 0, pkt)
-            verify_each_packet_on_multiple_port_lists(
-                dataplane,
-                [exp_pkt] * 3 + [exp_pkt_tag] * 2,
-                [lag0_ports, lag1_ports, [24], [1], [25]],
-            )
+            if npu.run_traffic:
+                send_packet(dataplane, 0, pkt)
+                verify_each_packet_on_multiple_port_lists(
+                    dataplane,
+                    [exp_pkt] * 3 + [exp_pkt_tag] * 2,
+                    [lag0_ports, lag1_ports, [24], [1], [25]],
+                )
 
         finally:
             self.npu.set(self.npu.port_oids[31], ["SAI_PORT_ATTR_PORT_VLAN_ID", "1"])
@@ -1853,9 +1860,6 @@ class TestL2Vlan:
         2. Replace the member with a LAG bridge port and repeat the isolation check from the LAG side.
         3. Remove the VLAN member and VLAN object in finally.
         """
-        if not npu.run_traffic:
-            pytest.skip("Traffic generation disabled")
-
         vlan100 = self.npu.create(SaiObjType.VLAN, ["SAI_VLAN_ATTR_VLAN_ID", "100"])
         vlan_member = self.npu.create_vlan_member(
             vlan100,
@@ -1872,8 +1876,9 @@ class TestL2Vlan:
                 ip_id=102,
                 ip_ttl=64,
             )
-            send_packet(dataplane, 0, pkt)
-            verify_no_other_packets(dataplane, timeout=1)
+            if npu.run_traffic:
+                send_packet(dataplane, 0, pkt)
+                verify_no_other_packets(dataplane, timeout=1)
 
             self.npu.remove(vlan_member)
             vlan_member = self.npu.create_vlan_member(
@@ -1890,8 +1895,9 @@ class TestL2Vlan:
                 ip_id=102,
                 ip_ttl=64,
             )
-            send_packet(dataplane, 4, pkt)
-            verify_no_other_packets(dataplane, timeout=1)
+            if npu.run_traffic:
+                send_packet(dataplane, 4, pkt)
+                verify_no_other_packets(dataplane, timeout=1)
 
         finally:
             self.npu.remove(vlan_member)
@@ -1924,9 +1930,6 @@ class TestL2Vlan:
         2. Create an ACL table/entry bound to VLAN ingress that drops dst IP 10.0.0.1 and assert the binding.
         3. Resend the same traffic and expect no forwarding; remove ACL objects and clear the VLAN bind in finally.
         """
-        if not npu.run_traffic:
-            pytest.skip("Traffic generation disabled")
-
         v10_pkt = simple_tcp_packet(
             eth_dst=self.mac1,
             eth_src=self.mac0,
@@ -1943,8 +1946,9 @@ class TestL2Vlan:
             vlan_vid=10,
             ip_ttl=64,
         )
-        send_packet(dataplane, 0, v10_pkt)
-        verify_packet(dataplane, exp_at_pkt, 1)
+        if npu.run_traffic:
+            send_packet(dataplane, 0, v10_pkt)
+            verify_packet(dataplane, exp_at_pkt, 1)
 
         acl_table = None
         acl_entry = None
@@ -1958,12 +1962,13 @@ class TestL2Vlan:
                 self._acl_drop_entry_attrs(acl_table, "10"),
             )
             self.npu.set(self.topo.vlan10, ["SAI_VLAN_ATTR_INGRESS_ACL", acl_table])
-            st, data = self.npu.get(self.topo.vlan10, ["SAI_VLAN_ATTR_INGRESS_ACL", ""], False)
+            st, data = self.npu.get(self.topo.vlan10, ["SAI_VLAN_ATTR_INGRESS_ACL"], False)
             assert st == "SAI_STATUS_SUCCESS"
             assert data.oid() == acl_table
 
-            send_packet(dataplane, 0, v10_pkt)
-            verify_no_other_packets(dataplane, timeout=2)
+            if npu.run_traffic:
+                send_packet(dataplane, 0, v10_pkt)
+                verify_no_other_packets(dataplane, timeout=2)
 
         finally:
             if acl_table is not None:
@@ -1983,9 +1988,6 @@ class TestL2Vlan:
         2. Create an ACL table/entry bound to VLAN egress that drops dst IP 10.0.0.1 and assert the binding.
         3. Resend the same traffic and expect no forwarding; remove ACL objects and clear the VLAN bind in finally.
         """
-        if not npu.run_traffic:
-            pytest.skip("Traffic generation disabled")
-
         v10_pkt = simple_tcp_packet(
             eth_dst=self.mac1,
             eth_src=self.mac0,
@@ -2002,8 +2004,9 @@ class TestL2Vlan:
             vlan_vid=10,
             ip_ttl=64,
         )
-        send_packet(dataplane, 0, v10_pkt)
-        verify_packet(dataplane, exp_at_pkt, 1)
+        if npu.run_traffic:
+            send_packet(dataplane, 0, v10_pkt)
+            verify_packet(dataplane, exp_at_pkt, 1)
 
         acl_table = None
         acl_entry = None
@@ -2017,12 +2020,13 @@ class TestL2Vlan:
                 self._acl_drop_entry_attrs(acl_table, "10"),
             )
             self.npu.set(self.topo.vlan10, ["SAI_VLAN_ATTR_EGRESS_ACL", acl_table])
-            st, data = self.npu.get(self.topo.vlan10, ["SAI_VLAN_ATTR_EGRESS_ACL", ""], False)
+            st, data = self.npu.get(self.topo.vlan10, ["SAI_VLAN_ATTR_EGRESS_ACL"], False)
             assert st == "SAI_STATUS_SUCCESS"
             assert data.oid() == acl_table
 
-            send_packet(dataplane, 0, v10_pkt)
-            verify_no_other_packets(dataplane, timeout=2)
+            if npu.run_traffic:
+                send_packet(dataplane, 0, v10_pkt)
+                verify_no_other_packets(dataplane, timeout=2)
 
         finally:
             if acl_table is not None:
@@ -2042,9 +2046,6 @@ class TestL2Vlan:
         2. Send ARP requests and responses across VLAN 200 members and read learn_disable.
         3. Enable learning on both VLANs, re-read learn_disable, then tear down with FDB flush.
         """
-        if not npu.run_traffic:
-            pytest.skip("Traffic generation disabled")
-
         vlan100 = self.npu.create(SaiObjType.VLAN, ["SAI_VLAN_ATTR_VLAN_ID", "100", "SAI_VLAN_ATTR_LEARN_DISABLE", "true"])
         vm101 = self.npu.create_vlan_member(vlan100, self.topo.port26_bp, "SAI_VLAN_TAGGING_MODE_TAGGED",)
         vm102 = self.npu.create_vlan_member(vlan100, self.topo.port27_bp, "SAI_VLAN_TAGGING_MODE_TAGGED",)
@@ -2072,20 +2073,21 @@ class TestL2Vlan:
         )
 
         try:
-            send_packet(dataplane, 26, pkt)
-            verify_packets(dataplane, pkt, [27, 30])
+            if npu.run_traffic:
+                send_packet(dataplane, 26, pkt)
+                verify_packets(dataplane, pkt, [27, 30])
 
-            send_packet(dataplane, 27, arp_resp)
-            verify_packets(dataplane, arp_resp, [26, 30])
+                send_packet(dataplane, 27, arp_resp)
+                verify_packets(dataplane, arp_resp, [26, 30])
 
-            st, data = self.npu.get(vlan100, ["SAI_VLAN_ATTR_LEARN_DISABLE", ""], False)
+            st, data = self.npu.get(vlan100, ["SAI_VLAN_ATTR_LEARN_DISABLE"], False)
             assert st == "SAI_STATUS_SUCCESS"
             assert data.value() == "true"
 
             self.npu.set(vlan100, ["SAI_VLAN_ATTR_LEARN_DISABLE", "false"])
             self.npu.set(vlan200, ["SAI_VLAN_ATTR_LEARN_DISABLE", "false"])
 
-            st, data = self.npu.get(vlan100, ["SAI_VLAN_ATTR_LEARN_DISABLE", ""], False)
+            st, data = self.npu.get(vlan100, ["SAI_VLAN_ATTR_LEARN_DISABLE"], False)
             assert st == "SAI_STATUS_SUCCESS"
             assert data.value() == "false"
 
@@ -2109,9 +2111,6 @@ class TestL2Vlan:
         2. Learn two dynamic entries, add a static FDB entry, then clear the max limit and verify forwarding.
         3. Flush dynamic FDB, remove the static entry by OID, restore port PVIDs, and delete VLAN objects.
         """
-        if not npu.run_traffic:
-            pytest.skip("Traffic generation disabled")
-
         vlan100 = None
         vlan200 = None
         vm101 = vm102 = vm103 = None
@@ -2173,34 +2172,37 @@ class TestL2Vlan:
                 pktlen=100,
             )
 
-            send_packet(dataplane, 26, pkt)
-            verify_packets(dataplane, pkt, [27, 30])
+            if npu.run_traffic:
+                send_packet(dataplane, 26, pkt)
+                verify_packets(dataplane, pkt, [27, 30])
 
-            send_packet(dataplane, 27, arp_resp)
-            verify_packet(dataplane, arp_resp, 26)
+                send_packet(dataplane, 27, arp_resp)
+                verify_packet(dataplane, arp_resp, 26)
 
-            send_packet(dataplane, 26, pkt_2)
-            verify_packets(dataplane, pkt_2, [27, 30])
+                send_packet(dataplane, 26, pkt_2)
+                verify_packets(dataplane, pkt_2, [27, 30])
 
-            send_packet(dataplane, 27, arp_resp_2)
-            verify_packet(dataplane, arp_resp_2, 26)
+                send_packet(dataplane, 27, arp_resp_2)
+                verify_packet(dataplane, arp_resp_2, 26)
 
             fdb_entry28 = self.npu.create_fdb(vlan200, mac_static, self.topo.port26_bp)
 
-            send_packet(dataplane, 26, pkt_3)
-            verify_packets(dataplane, pkt_3, [27, 30])
+            if npu.run_traffic:
+                send_packet(dataplane, 26, pkt_3)
+                verify_packets(dataplane, pkt_3, [27, 30])
 
-            send_packet(dataplane, 27, arp_resp_3)
-            verify_packets(dataplane, arp_resp_3, [26, 30])
+                send_packet(dataplane, 27, arp_resp_3)
+                verify_packets(dataplane, arp_resp_3, [26, 30])
 
             self.npu.set(vlan100, ["SAI_VLAN_ATTR_MAX_LEARNED_ADDRESSES", "0"])
             self.npu.set(vlan200, ["SAI_VLAN_ATTR_MAX_LEARNED_ADDRESSES", "0"])
 
-            send_packet(dataplane, 26, pkt_3)
-            verify_packets(dataplane, pkt_3, [27, 30])
+            if npu.run_traffic:
+                send_packet(dataplane, 26, pkt_3)
+                verify_packets(dataplane, pkt_3, [27, 30])
 
-            send_packet(dataplane, 27, arp_resp_3)
-            verify_packet(dataplane, arp_resp_3, 26)
+                send_packet(dataplane, 27, arp_resp_3)
+                verify_packet(dataplane, arp_resp_3, 26)
 
         finally:
             _flush_dyn_fdb(self.npu, vlan100)
