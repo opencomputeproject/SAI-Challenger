@@ -1,0 +1,45 @@
+name: sc-standalone-vpp-deb13-publish
+
+on:
+  push:
+    branches:
+      - 'main'
+    paths:
+      - '.github/workflows/sc-standalone-vpp-deb13-publish.yml'
+      - 'dockerfiles/trixie/Dockerfile'
+      - 'npu/vpp/saivpp/Dockerfile'
+      - 'npu/vpp/saivpp/configs/**'
+      - 'common/**'
+      - 'cli/**'
+      - 'scripts/**'
+      - 'configs/**'
+      - 'setup.py'
+      - 'build.sh'
+      - '.dockerignore'
+      - 'sai.env'
+
+jobs:
+  build-sc-standalone-vpp:
+    name: Build and publish SAI Challenger VPP image
+    runs-on: ubuntu-24.04
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Update submodules
+      run: git submodule update --init
+
+    - name: Build VPP standalone Docker image
+      run: ./build.sh -a vpp -t saivpp -o trixie
+
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: plvisiondevs
+        password: ${{ secrets.DOCKER_TOKEN }}
+
+    - name: Create a tag for Docker Hub
+      run: docker tag sc-vpp-saivpp:trixie plvisiondevs/sc-vpp-saivpp:trixie-latest
+
+    - name: Push sc-vpp-saivpp
+      run: docker push plvisiondevs/sc-vpp-saivpp:trixie-latest
