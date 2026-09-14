@@ -144,28 +144,26 @@ class TestFdbStaticMac:
         3. Send UDP traffic between the ports and verify forwarding to expected destinations
         4. Clean up configuration
         """
-        if not npu.run_traffic:
-            pytest.skip("Traffic generation disabled")
+        if npu.run_traffic:
+            for dst_ports, dst_mac in zip(self.dst_port_groups, self.macs):
+                for src_port, src_mac in zip((self.dev_port0, self.dev_port1), self.macs[:1]):
+                    if [src_port] == dst_ports:
+                        continue
 
-        for dst_ports, dst_mac in zip(self.dst_port_groups, self.macs):
-            for src_port, src_mac in zip((self.dev_port0, self.dev_port1), self.macs[:1]):
-                if [src_port] == dst_ports:
-                    continue
+                    pkt = simple_udp_packet(eth_dst=dst_mac, eth_src=src_mac, pktlen=100)
+                    tag_pkt = simple_udp_packet(
+                        eth_dst=dst_mac,
+                        eth_src=src_mac,
+                        dl_vlan_enable=True,
+                        vlan_vid=self.vlan_id_int,
+                        pktlen=104,
+                    )
 
-                pkt = simple_udp_packet(eth_dst=dst_mac, eth_src=src_mac, pktlen=100)
-                tag_pkt = simple_udp_packet(
-                    eth_dst=dst_mac,
-                    eth_src=src_mac,
-                    dl_vlan_enable=True,
-                    vlan_vid=self.vlan_id_int,
-                    pktlen=104,
-                )
+                    send_pkt = tag_pkt if src_port == self.dev_port1 else pkt
+                    rcv_pkt = tag_pkt if dst_ports == [self.dev_port1] else pkt
 
-                send_pkt = tag_pkt if src_port == self.dev_port1 else pkt
-                rcv_pkt = tag_pkt if dst_ports == [self.dev_port1] else pkt
-
-                send_packet(dataplane, src_port, send_pkt)
-                verify_packet_any_port(dataplane, rcv_pkt, dst_ports)
+                    send_packet(dataplane, src_port, send_pkt)
+                    verify_packet_any_port(dataplane, rcv_pkt, dst_ports)
 
     def test_fdb_self_forwarding_drop(self, npu, dataplane):
         """
@@ -180,12 +178,10 @@ class TestFdbStaticMac:
         4. Verify the self-forwarding packet is dropped
         5. Clean up configuration
         """
-        if not npu.run_traffic:
-            pytest.skip("Traffic generation disabled")
-
-        pkt = simple_udp_packet(eth_dst=self.macs[0])
-        send_packet(dataplane, self.dev_port0, pkt)
-        verify_no_other_packets(dataplane)
+        if npu.run_traffic:
+            pkt = simple_udp_packet(eth_dst=self.macs[0])
+            send_packet(dataplane, self.dev_port0, pkt)
+            verify_no_other_packets(dataplane)
 
 
 class TestFdbAttribute:
@@ -311,17 +307,16 @@ class TestFdbNoLearn:
         1. Disable VLAN learning for VLAN 10 and send traffic from access/trunk paths.
         2. Verify flooding behavior and then restore learning mode.
         """
-        if not npu.run_traffic:
-            pytest.skip("Traffic generation disabled")
         pkt, tag_pkt = self._flood_from_port0_pkt()
         chck_pkt, tag_chck_pkt = self._reverse_pkt()
         try:
             npu.set(self.vlan_oid, ["SAI_VLAN_ATTR_LEARN_DISABLE", "true"])
-            send_packet(dataplane, self.dev_port0, pkt)
-            verify_each_packet_on_multiple_port_lists(dataplane, [tag_pkt, pkt], [[self.dev_port1], self.lag_ports])
+            if npu.run_traffic:
+                send_packet(dataplane, self.dev_port0, pkt)
+                verify_each_packet_on_multiple_port_lists(dataplane, [tag_pkt, pkt], [[self.dev_port1], self.lag_ports])
 
-            send_packet(dataplane, self.dev_port1, tag_chck_pkt)
-            verify_each_packet_on_multiple_port_lists(dataplane, [chck_pkt, chck_pkt], [[self.dev_port0], self.lag_ports])
+                send_packet(dataplane, self.dev_port1, tag_chck_pkt)
+                verify_each_packet_on_multiple_port_lists(dataplane, [chck_pkt, chck_pkt], [[self.dev_port0], self.lag_ports])
         finally:
             npu.flush_fdb_entries(
                 npu.switch_oid,
@@ -341,17 +336,16 @@ class TestFdbNoLearn:
         1. Disable VLAN learning on VLAN 10 and send traffic from a LAG member.
         2. Verify flooding behavior for return traffic and restore learning mode.
         """
-        if not npu.run_traffic:
-            pytest.skip("Traffic generation disabled")
         pkt, tag_pkt = self._flood_from_port0_pkt()
         chck_pkt, tag_chck_pkt = self._reverse_pkt()
         try:
             npu.set(self.vlan_oid, ["SAI_VLAN_ATTR_LEARN_DISABLE", "true"])
-            send_packet(dataplane, self.lag_ports[1], pkt)
-            verify_each_packet_on_multiple_port_lists(dataplane, [pkt, tag_pkt], [[self.dev_port0], [self.dev_port1]])
+            if npu.run_traffic:
+                send_packet(dataplane, self.lag_ports[1], pkt)
+                verify_each_packet_on_multiple_port_lists(dataplane, [pkt, tag_pkt], [[self.dev_port0], [self.dev_port1]])
 
-            send_packet(dataplane, self.dev_port1, tag_chck_pkt)
-            verify_each_packet_on_multiple_port_lists(dataplane, [chck_pkt, chck_pkt], [[self.dev_port0], self.lag_ports])
+                send_packet(dataplane, self.dev_port1, tag_chck_pkt)
+                verify_each_packet_on_multiple_port_lists(dataplane, [chck_pkt, chck_pkt], [[self.dev_port0], self.lag_ports])
         finally:
             npu.flush_fdb_entries(
                 npu.switch_oid,
@@ -371,17 +365,16 @@ class TestFdbNoLearn:
         1. Disable FDB learning on port0 bridge port and send unknown traffic.
         2. Verify flooding behavior and restore bridge-port learning mode.
         """
-        if not npu.run_traffic:
-            pytest.skip("Traffic generation disabled")
         pkt, tag_pkt = self._flood_from_port0_pkt()
         chck_pkt, tag_chck_pkt = self._reverse_pkt()
         try:
             npu.set(self.port0_bp, ["SAI_BRIDGE_PORT_ATTR_FDB_LEARNING_MODE", "SAI_BRIDGE_PORT_FDB_LEARNING_MODE_DISABLE"])
-            send_packet(dataplane, self.dev_port0, pkt)
-            verify_each_packet_on_multiple_port_lists(dataplane, [tag_pkt, pkt], [[self.dev_port1], self.lag_ports])
+            if npu.run_traffic:
+                send_packet(dataplane, self.dev_port0, pkt)
+                verify_each_packet_on_multiple_port_lists(dataplane, [tag_pkt, pkt], [[self.dev_port1], self.lag_ports])
 
-            send_packet(dataplane, self.dev_port1, tag_chck_pkt)
-            verify_each_packet_on_multiple_port_lists(dataplane, [chck_pkt, chck_pkt], [[self.dev_port0], self.lag_ports])
+                send_packet(dataplane, self.dev_port1, tag_chck_pkt)
+                verify_each_packet_on_multiple_port_lists(dataplane, [chck_pkt, chck_pkt], [[self.dev_port0], self.lag_ports])
         finally:
             npu.flush_fdb_entries(
                 npu.switch_oid,
@@ -401,17 +394,16 @@ class TestFdbNoLearn:
         1. Disable FDB learning on lag1 bridge port and send unknown traffic.
         2. Verify flooding behavior and restore bridge-port learning mode.
         """
-        if not npu.run_traffic:
-            pytest.skip("Traffic generation disabled")
         pkt, tag_pkt = self._flood_from_port0_pkt()
         chck_pkt, tag_chck_pkt = self._reverse_pkt()
         try:
             npu.set(self.lag1_bp, ["SAI_BRIDGE_PORT_ATTR_FDB_LEARNING_MODE", "SAI_BRIDGE_PORT_FDB_LEARNING_MODE_DISABLE"])
-            send_packet(dataplane, self.lag_ports[1], pkt)
-            verify_each_packet_on_multiple_port_lists(dataplane, [pkt, tag_pkt], [[self.dev_port0], [self.dev_port1]])
+            if npu.run_traffic:
+                send_packet(dataplane, self.lag_ports[1], pkt)
+                verify_each_packet_on_multiple_port_lists(dataplane, [pkt, tag_pkt], [[self.dev_port0], [self.dev_port1]])
 
-            send_packet(dataplane, self.dev_port1, tag_chck_pkt)
-            verify_each_packet_on_multiple_port_lists(dataplane, [chck_pkt, chck_pkt], [[self.dev_port0], self.lag_ports])
+                send_packet(dataplane, self.dev_port1, tag_chck_pkt)
+                verify_each_packet_on_multiple_port_lists(dataplane, [chck_pkt, chck_pkt], [[self.dev_port0], self.lag_ports])
         finally:
             npu.flush_fdb_entries(
                 npu.switch_oid,
@@ -439,20 +431,19 @@ class TestFdbNoLearn:
         1. Remove port0 bridge port and send unknown traffic in VLAN 10.
         2. Verify flooding behavior, then recreate bridge/VLAN membership state.
         """
-        if not npu.run_traffic:
-            pytest.skip("Traffic generation disabled")
         pkt, tag_pkt = self._flood_from_port0_pkt()
         chck_pkt, tag_chck_pkt = self._reverse_pkt()
         port0_bp = self.port0_bp
         try:
             npu.remove_bridge_port(port0_bp)
-            send_packet(dataplane, self.dev_port0, pkt)
-            verify_packets(dataplane, tag_pkt, [self.dev_port1])
-            verify_packet_any_port(dataplane, pkt, self.lag_ports)
+            if npu.run_traffic:
+                send_packet(dataplane, self.dev_port0, pkt)
+                verify_packets(dataplane, tag_pkt, [self.dev_port1])
+                verify_packet_any_port(dataplane, pkt, self.lag_ports)
 
-            send_packet(dataplane, self.dev_port1, tag_chck_pkt)
-            verify_packets(dataplane, chck_pkt, [self.dev_port0])
-            verify_packet_any_port(dataplane, chck_pkt, self.lag_ports)
+                send_packet(dataplane, self.dev_port1, tag_chck_pkt)
+                verify_packets(dataplane, chck_pkt, [self.dev_port0])
+                verify_packet_any_port(dataplane, chck_pkt, self.lag_ports)
         finally:
             npu.flush_fdb_entries(
                 npu.switch_oid,
@@ -494,8 +485,6 @@ class TestFdbNoLearn:
         1. Configure PVID on physical port index 24 (no bridge port on that port).
         2. Verify flood reaches port0, port1, and LAG; verify return flood misses port24.
         """
-        if not npu.run_traffic:
-            pytest.skip("Traffic generation disabled")
         if len(npu.port_oids) <= 24:
             pytest.skip("noBpNoLearnTest requires physical port index 24 (at least 25 ports)")
 
@@ -503,18 +492,19 @@ class TestFdbNoLearn:
         chck_pkt, tag_chck_pkt = self._reverse_pkt()
         try:
             npu.set(npu.port_oids[24], ["SAI_PORT_ATTR_PORT_VLAN_ID", str(self.vlan_id_int)])
-            send_packet(dataplane, 24, pkt)
-            verify_each_packet_on_multiple_port_lists(
-                dataplane,
-                [pkt, tag_pkt, pkt],
-                [[self.dev_port0], [self.dev_port1], self.lag_ports],
-            )
-            send_packet(dataplane, self.dev_port0, chck_pkt)
-            verify_each_packet_on_multiple_port_lists(
-                dataplane,
-                [tag_chck_pkt, chck_pkt],
-                [[self.dev_port1], self.lag_ports],
-            )
+            if npu.run_traffic:
+                send_packet(dataplane, 24, pkt)
+                verify_each_packet_on_multiple_port_lists(
+                    dataplane,
+                    [pkt, tag_pkt, pkt],
+                    [[self.dev_port0], [self.dev_port1], self.lag_ports],
+                )
+                send_packet(dataplane, self.dev_port0, chck_pkt)
+                verify_each_packet_on_multiple_port_lists(
+                    dataplane,
+                    [tag_chck_pkt, chck_pkt],
+                    [[self.dev_port1], self.lag_ports],
+                )
         finally:
             npu.flush_fdb_entries(
                 npu.switch_oid,
@@ -589,68 +579,67 @@ class TestFdbLearn:
         2. Forwarding matrix from port0 and port1 only (PTF).
         3. Optionally add port24 to VLAN10 and port25 to LAG1 when hardware exposes enough ports.
         """
-        if not npu.run_traffic:
-            pytest.skip("Traffic generation disabled")
         dst_mac = "00:11:22:33:44:55"
         try:
-            # learning phase — full per-source flood packet-list verification
-            for src_port, src_mac in zip(self.src_ports, self.macs):
-                pkt = simple_udp_packet(eth_dst=dst_mac, eth_src=src_mac, pktlen=100)
-                tag_pkt = simple_udp_packet(
-                    eth_dst=dst_mac,
-                    eth_src=src_mac,
-                    dl_vlan_enable=True,
-                    vlan_vid=self.vlan_id_int,
-                    pktlen=104,
-                )
-                send_pkt = tag_pkt if src_port in (self.dev_port1, *self.tg_lag_ports) else pkt
-                flood_port_list = [
-                    self.dst_port_groups[p]
-                    for p in range(len(self.dst_port_groups))
-                    if src_port not in self.dst_port_groups[p]
-                ]
-                flood_pkt_list = []
-                tg_lag_set = False
-                utg_lag_set = False
-                for dst_group in self.dst_port_groups:
-                    if src_port in dst_group:
-                        continue
-                    if dst_group == [self.dev_port0]:
-                        flood_pkt_list.append(pkt)
-                    elif dst_group == [self.dev_port1]:
-                        flood_pkt_list.append(tag_pkt)
-                    elif dst_group == self.utg_lag_ports and not utg_lag_set:
-                        flood_pkt_list.append(pkt)
-                        utg_lag_set = True
-                    elif dst_group == self.tg_lag_ports and not tg_lag_set:
-                        flood_pkt_list.append(tag_pkt)
-                        tg_lag_set = True
-                send_packet(dataplane, src_port, send_pkt)
-                verify_each_packet_on_multiple_port_lists(dataplane, flood_pkt_list, flood_port_list)
-
-            # verification phase — nested forwarding from both source paths (port0 and port1)
-            for dst_port, dst_mac_l in zip(self.src_ports, self.macs):
-                for src_port, src_mac in zip((self.dev_port0, self.dev_port1), (self.macs[0], self.macs[1])):
-                    if src_port == dst_port:
-                        continue
-                    pkt = simple_udp_packet(eth_dst=dst_mac_l, eth_src=src_mac, pktlen=100)
+            if npu.run_traffic:
+                # learning phase — full per-source flood packet-list verification
+                for src_port, src_mac in zip(self.src_ports, self.macs):
+                    pkt = simple_udp_packet(eth_dst=dst_mac, eth_src=src_mac, pktlen=100)
                     tag_pkt = simple_udp_packet(
-                        eth_dst=dst_mac_l,
+                        eth_dst=dst_mac,
                         eth_src=src_mac,
                         dl_vlan_enable=True,
                         vlan_vid=self.vlan_id_int,
                         pktlen=104,
                     )
                     send_pkt = tag_pkt if src_port in (self.dev_port1, *self.tg_lag_ports) else pkt
-                    rcv_pkt = tag_pkt if dst_port in (self.dev_port1, *self.tg_lag_ports) else pkt
-                    if dst_port in self.utg_lag_ports:
-                        rcv_port = self.utg_lag_ports
-                    elif dst_port in self.tg_lag_ports:
-                        rcv_port = self.tg_lag_ports
-                    else:
-                        rcv_port = [dst_port]
+                    flood_port_list = [
+                        self.dst_port_groups[p]
+                        for p in range(len(self.dst_port_groups))
+                        if src_port not in self.dst_port_groups[p]
+                    ]
+                    flood_pkt_list = []
+                    tg_lag_set = False
+                    utg_lag_set = False
+                    for dst_group in self.dst_port_groups:
+                        if src_port in dst_group:
+                            continue
+                        if dst_group == [self.dev_port0]:
+                            flood_pkt_list.append(pkt)
+                        elif dst_group == [self.dev_port1]:
+                            flood_pkt_list.append(tag_pkt)
+                        elif dst_group == self.utg_lag_ports and not utg_lag_set:
+                            flood_pkt_list.append(pkt)
+                            utg_lag_set = True
+                        elif dst_group == self.tg_lag_ports and not tg_lag_set:
+                            flood_pkt_list.append(tag_pkt)
+                            tg_lag_set = True
                     send_packet(dataplane, src_port, send_pkt)
-                    verify_packet_any_port(dataplane, rcv_pkt, rcv_port)
+                    verify_each_packet_on_multiple_port_lists(dataplane, flood_pkt_list, flood_port_list)
+
+                # verification phase — nested forwarding from both source paths (port0 and port1)
+                for dst_port, dst_mac_l in zip(self.src_ports, self.macs):
+                    for src_port, src_mac in zip((self.dev_port0, self.dev_port1), (self.macs[0], self.macs[1])):
+                        if src_port == dst_port:
+                            continue
+                        pkt = simple_udp_packet(eth_dst=dst_mac_l, eth_src=src_mac, pktlen=100)
+                        tag_pkt = simple_udp_packet(
+                            eth_dst=dst_mac_l,
+                            eth_src=src_mac,
+                            dl_vlan_enable=True,
+                            vlan_vid=self.vlan_id_int,
+                            pktlen=104,
+                        )
+                        send_pkt = tag_pkt if src_port in (self.dev_port1, *self.tg_lag_ports) else pkt
+                        rcv_pkt = tag_pkt if dst_port in (self.dev_port1, *self.tg_lag_ports) else pkt
+                        if dst_port in self.utg_lag_ports:
+                            rcv_port = self.utg_lag_ports
+                        elif dst_port in self.tg_lag_ports:
+                            rcv_port = self.tg_lag_ports
+                        else:
+                            rcv_port = [dst_port]
+                        send_packet(dataplane, src_port, send_pkt)
+                        verify_packet_any_port(dataplane, rcv_pkt, rcv_port)
 
             new_vlan_member_oid = None
             new_vlan_bp = None
@@ -670,39 +659,40 @@ class TestFdbLearn:
                     self.vlan_oid, new_vlan_bp, "SAI_VLAN_TAGGING_MODE_UNTAGGED"
                 )
                 npu.set(port24_oid, ["SAI_PORT_ATTR_PORT_VLAN_ID", str(self.vlan_id_int)])
-                new_vlan_member_mac = "00:12:34:56:78:90"
-                pkt_nv = simple_udp_packet(eth_dst=new_vlan_member_mac, eth_src=self.macs[0], pktlen=100)
-                tag_nv = simple_udp_packet(
-                    eth_dst=new_vlan_member_mac,
-                    eth_src=self.macs[0],
-                    dl_vlan_enable=True,
-                    vlan_vid=self.vlan_id_int,
-                    pktlen=104,
-                )
-                send_packet(dataplane, self.dev_port0, pkt_nv)
-                verify_each_packet_on_multiple_port_lists(
-                    dataplane,
-                    [tag_nv, pkt_nv, tag_nv, pkt_nv],
-                    [[self.dev_port1], self.utg_lag_ports, self.tg_lag_ports, [24]],
-                )
-                pkt_f = simple_udp_packet(eth_dst=dst_mac, eth_src=new_vlan_member_mac, pktlen=100)
-                tag_f = simple_udp_packet(
-                    eth_dst=dst_mac,
-                    eth_src=new_vlan_member_mac,
-                    dl_vlan_enable=True,
-                    vlan_vid=self.vlan_id_int,
-                    pktlen=104,
-                )
-                send_packet(dataplane, 24, pkt_f)
-                verify_each_packet_on_multiple_port_lists(
-                    dataplane,
-                    [pkt_f, tag_f, pkt_f, tag_f],
-                    self.dst_port_groups,
-                )
-                time.sleep(2)
-                pkt_chk = simple_udp_packet(eth_dst=new_vlan_member_mac, eth_src=self.macs[0], pktlen=100)
-                send_packet(dataplane, self.dev_port0, pkt_chk)
-                verify_packets(dataplane, pkt_chk, [24])
+                if npu.run_traffic:
+                    new_vlan_member_mac = "00:12:34:56:78:90"
+                    pkt_nv = simple_udp_packet(eth_dst=new_vlan_member_mac, eth_src=self.macs[0], pktlen=100)
+                    tag_nv = simple_udp_packet(
+                        eth_dst=new_vlan_member_mac,
+                        eth_src=self.macs[0],
+                        dl_vlan_enable=True,
+                        vlan_vid=self.vlan_id_int,
+                        pktlen=104,
+                    )
+                    send_packet(dataplane, self.dev_port0, pkt_nv)
+                    verify_each_packet_on_multiple_port_lists(
+                        dataplane,
+                        [tag_nv, pkt_nv, tag_nv, pkt_nv],
+                        [[self.dev_port1], self.utg_lag_ports, self.tg_lag_ports, [24]],
+                    )
+                    pkt_f = simple_udp_packet(eth_dst=dst_mac, eth_src=new_vlan_member_mac, pktlen=100)
+                    tag_f = simple_udp_packet(
+                        eth_dst=dst_mac,
+                        eth_src=new_vlan_member_mac,
+                        dl_vlan_enable=True,
+                        vlan_vid=self.vlan_id_int,
+                        pktlen=104,
+                    )
+                    send_packet(dataplane, 24, pkt_f)
+                    verify_each_packet_on_multiple_port_lists(
+                        dataplane,
+                        [pkt_f, tag_f, pkt_f, tag_f],
+                        self.dst_port_groups,
+                    )
+                    time.sleep(2)
+                    pkt_chk = simple_udp_packet(eth_dst=new_vlan_member_mac, eth_src=self.macs[0], pktlen=100)
+                    send_packet(dataplane, self.dev_port0, pkt_chk)
+                    verify_packets(dataplane, pkt_chk, [24])
 
             utg_for_lag = list(self.utg_lag_ports)
             if len(npu.port_oids) > 25:
@@ -718,27 +708,28 @@ class TestFdbLearn:
                     ],
                 )
                 utg_for_lag.append(25)
-                pkt_l = simple_udp_packet(eth_dst=dst_mac, eth_src=new_lag_mac, pktlen=100)
-                tag_l = simple_udp_packet(
-                    eth_dst=dst_mac,
-                    eth_src=new_lag_mac,
-                    dl_vlan_enable=True,
-                    vlan_vid=self.vlan_id_int,
-                    pktlen=104,
-                )
-                send_packet(dataplane, 25, pkt_l)
-                verify_each_packet_on_multiple_port_lists(
-                    dataplane,
-                    [pkt_l, tag_l, tag_l, pkt_l],
-                    [
-                        [self.dev_port0], [self.dev_port1],
-                        self.tg_lag_ports, [24],
-                    ],
-                )
-                time.sleep(2)
-                pkt_tl = simple_udp_packet(eth_dst=new_lag_mac, eth_src=self.macs[0], pktlen=100)
-                send_packet(dataplane, self.dev_port0, pkt_tl)
-                verify_packet_any_port(dataplane, pkt_tl, utg_for_lag)
+                if npu.run_traffic:
+                    pkt_l = simple_udp_packet(eth_dst=dst_mac, eth_src=new_lag_mac, pktlen=100)
+                    tag_l = simple_udp_packet(
+                        eth_dst=dst_mac,
+                        eth_src=new_lag_mac,
+                        dl_vlan_enable=True,
+                        vlan_vid=self.vlan_id_int,
+                        pktlen=104,
+                    )
+                    send_packet(dataplane, 25, pkt_l)
+                    verify_each_packet_on_multiple_port_lists(
+                        dataplane,
+                        [pkt_l, tag_l, tag_l, pkt_l],
+                        [
+                            [self.dev_port0], [self.dev_port1],
+                            self.tg_lag_ports, [24],
+                        ],
+                    )
+                    time.sleep(2)
+                    pkt_tl = simple_udp_packet(eth_dst=new_lag_mac, eth_src=self.macs[0], pktlen=100)
+                    send_packet(dataplane, self.dev_port0, pkt_tl)
+                    verify_packet_any_port(dataplane, pkt_tl, utg_for_lag)
 
         finally:
             npu.flush_fdb_entries(
@@ -762,8 +753,6 @@ class TestFdbLearn:
         Test scenario:
         1. Install static FDB for access and trunk ports; run six negative/flood cases; restore topology.
         """
-        if not npu.run_traffic:
-            pytest.skip("Traffic generation disabled")
         access_port = self.dev_port0
         trunk_port = self.dev_port1
         ap_mac = self.macs[0]
@@ -775,76 +764,76 @@ class TestFdbLearn:
         vlan_removed = False
         lag_removed = False
         try:
-            # Case 1 — invalid VLAN tag
-            lrn_mac = self.macs[2]
-            inv_vlan_tag_pkt = simple_udp_packet(
-                eth_dst=ap_mac, eth_src=lrn_mac, dl_vlan_enable=True, vlan_vid=100, pktlen=104
-            )
-            chck_inv_vlan_pkt = simple_udp_packet(eth_dst=lrn_mac, eth_src=ap_mac, pktlen=100)
-            chck_inv_vlan_tag_pkt = simple_udp_packet(
-                eth_dst=lrn_mac, eth_src=ap_mac, dl_vlan_enable=True, vlan_vid=self.vlan_id_int, pktlen=104
-            )
-            send_packet(dataplane, trunk_port, inv_vlan_tag_pkt)
-            verify_no_other_packets(dataplane)
-            send_packet(dataplane, access_port, chck_inv_vlan_pkt)
-            verify_each_packet_on_multiple_port_lists(
-                dataplane,
-                [chck_inv_vlan_tag_pkt, chck_inv_vlan_pkt, chck_inv_vlan_tag_pkt],
-                flood_port_list,
-            )
-
-            # Case 2 — broadcast src
-            bcast_mac = "ff:ff:ff:ff:ff:ff"
-            bcast_src_tag_pkt = simple_udp_packet(
-                eth_dst=ap_mac, eth_src=bcast_mac, dl_vlan_enable=True, vlan_vid=self.vlan_id_int, pktlen=104
-            )
-            chck_bcast_src_pkt = simple_udp_packet(eth_dst=bcast_mac, eth_src=ap_mac, pktlen=100)
-            chck_bcast_src_tag_pkt = simple_udp_packet(
-                eth_dst=bcast_mac, eth_src=ap_mac, dl_vlan_enable=True, vlan_vid=self.vlan_id_int, pktlen=104
-            )
-            send_packet(dataplane, trunk_port, bcast_src_tag_pkt)
-            verify_no_other_packets(dataplane)
-            send_packet(dataplane, access_port, chck_bcast_src_pkt)
-            verify_each_packet_on_multiple_port_lists(
-                dataplane,
-                [chck_bcast_src_tag_pkt, chck_bcast_src_pkt, chck_bcast_src_tag_pkt],
-                flood_port_list,
-            )
-
-            # Case 3 — multicast src
-            mcast_mac = "01:00:5e:11:22:33"
-            mcast_src_tag_pkt = simple_udp_packet(
-                eth_dst=ap_mac, eth_src=mcast_mac, dl_vlan_enable=True, vlan_vid=self.vlan_id_int, pktlen=104
-            )
-            chck_mcast_src_pkt = simple_udp_packet(eth_dst=mcast_mac, eth_src=ap_mac, pktlen=100)
-            chck_mcast_src_tag_pkt = simple_udp_packet(
-                eth_dst=mcast_mac, eth_src=ap_mac, dl_vlan_enable=True, vlan_vid=self.vlan_id_int, pktlen=104
-            )
-            send_packet(dataplane, trunk_port, mcast_src_tag_pkt)
-            verify_no_other_packets(dataplane)
-            send_packet(dataplane, access_port, chck_mcast_src_pkt)
-            verify_each_packet_on_multiple_port_lists(
-                dataplane,
-                [chck_mcast_src_tag_pkt, chck_mcast_src_pkt, chck_mcast_src_tag_pkt],
-                flood_port_list,
-            )
-
-            # Case 4 — src_mac statically added (ap_mac); learning conflict with lrn_mac on LAG
             lrn_mac = self.macs[2]
             bcast_dst = "ff:ff:ff:ff:ff:ff"
-            static_src_tag_pkt = simple_udp_packet(
-                eth_dst=bcast_dst, eth_src=ap_mac, dl_vlan_enable=True, vlan_vid=self.vlan_id_int, pktlen=104
-            )
-            static_src_pkt = simple_udp_packet(eth_dst=bcast_dst, eth_src=ap_mac, pktlen=100)
-            chck_static_src_pkt = simple_udp_packet(eth_dst=ap_mac, eth_src=lrn_mac, pktlen=100)
-            send_packet(dataplane, trunk_port, static_src_tag_pkt)
-            verify_each_packet_on_multiple_port_lists(
-                dataplane,
-                [static_src_pkt, static_src_pkt, static_src_tag_pkt],
-                [[access_port], self.utg_lag_ports, self.tg_lag_ports],
-            )
-            send_packet(dataplane, self.utg_lag_ports[1], chck_static_src_pkt)
-            verify_packets(dataplane, chck_static_src_pkt, [access_port])
+            if npu.run_traffic:
+                # Case 1 — invalid VLAN tag
+                inv_vlan_tag_pkt = simple_udp_packet(
+                    eth_dst=ap_mac, eth_src=lrn_mac, dl_vlan_enable=True, vlan_vid=100, pktlen=104
+                )
+                chck_inv_vlan_pkt = simple_udp_packet(eth_dst=lrn_mac, eth_src=ap_mac, pktlen=100)
+                chck_inv_vlan_tag_pkt = simple_udp_packet(
+                    eth_dst=lrn_mac, eth_src=ap_mac, dl_vlan_enable=True, vlan_vid=self.vlan_id_int, pktlen=104
+                )
+                send_packet(dataplane, trunk_port, inv_vlan_tag_pkt)
+                verify_no_other_packets(dataplane)
+                send_packet(dataplane, access_port, chck_inv_vlan_pkt)
+                verify_each_packet_on_multiple_port_lists(
+                    dataplane,
+                    [chck_inv_vlan_tag_pkt, chck_inv_vlan_pkt, chck_inv_vlan_tag_pkt],
+                    flood_port_list,
+                )
+
+                # Case 2 — broadcast src
+                bcast_mac = "ff:ff:ff:ff:ff:ff"
+                bcast_src_tag_pkt = simple_udp_packet(
+                    eth_dst=ap_mac, eth_src=bcast_mac, dl_vlan_enable=True, vlan_vid=self.vlan_id_int, pktlen=104
+                )
+                chck_bcast_src_pkt = simple_udp_packet(eth_dst=bcast_mac, eth_src=ap_mac, pktlen=100)
+                chck_bcast_src_tag_pkt = simple_udp_packet(
+                    eth_dst=bcast_mac, eth_src=ap_mac, dl_vlan_enable=True, vlan_vid=self.vlan_id_int, pktlen=104
+                )
+                send_packet(dataplane, trunk_port, bcast_src_tag_pkt)
+                verify_no_other_packets(dataplane)
+                send_packet(dataplane, access_port, chck_bcast_src_pkt)
+                verify_each_packet_on_multiple_port_lists(
+                    dataplane,
+                    [chck_bcast_src_tag_pkt, chck_bcast_src_pkt, chck_bcast_src_tag_pkt],
+                    flood_port_list,
+                )
+
+                # Case 3 — multicast src
+                mcast_mac = "01:00:5e:11:22:33"
+                mcast_src_tag_pkt = simple_udp_packet(
+                    eth_dst=ap_mac, eth_src=mcast_mac, dl_vlan_enable=True, vlan_vid=self.vlan_id_int, pktlen=104
+                )
+                chck_mcast_src_pkt = simple_udp_packet(eth_dst=mcast_mac, eth_src=ap_mac, pktlen=100)
+                chck_mcast_src_tag_pkt = simple_udp_packet(
+                    eth_dst=mcast_mac, eth_src=ap_mac, dl_vlan_enable=True, vlan_vid=self.vlan_id_int, pktlen=104
+                )
+                send_packet(dataplane, trunk_port, mcast_src_tag_pkt)
+                verify_no_other_packets(dataplane)
+                send_packet(dataplane, access_port, chck_mcast_src_pkt)
+                verify_each_packet_on_multiple_port_lists(
+                    dataplane,
+                    [chck_mcast_src_tag_pkt, chck_mcast_src_pkt, chck_mcast_src_tag_pkt],
+                    flood_port_list,
+                )
+
+                # Case 4 — src_mac statically added (ap_mac); learning conflict with lrn_mac on LAG
+                static_src_tag_pkt = simple_udp_packet(
+                    eth_dst=bcast_dst, eth_src=ap_mac, dl_vlan_enable=True, vlan_vid=self.vlan_id_int, pktlen=104
+                )
+                static_src_pkt = simple_udp_packet(eth_dst=bcast_dst, eth_src=ap_mac, pktlen=100)
+                chck_static_src_pkt = simple_udp_packet(eth_dst=ap_mac, eth_src=lrn_mac, pktlen=100)
+                send_packet(dataplane, trunk_port, static_src_tag_pkt)
+                verify_each_packet_on_multiple_port_lists(
+                    dataplane,
+                    [static_src_pkt, static_src_pkt, static_src_tag_pkt],
+                    [[access_port], self.utg_lag_ports, self.tg_lag_ports],
+                )
+                send_packet(dataplane, self.utg_lag_ports[1], chck_static_src_pkt)
+                verify_packets(dataplane, chck_static_src_pkt, [access_port])
 
             # Case 5 — removed VLAN member (port1 from VLAN10)
             rm_vlan_member = self.vlan10_member1
@@ -852,36 +841,37 @@ class TestFdbLearn:
             rm_vlan_member_mac = "00:12:34:56:78:90"
             npu.remove(rm_vlan_member)
             vlan_removed = True
-            pkt = simple_udp_packet(eth_dst=bcast_dst, eth_src=self.macs[0], pktlen=100)
-            tag_pkt = simple_udp_packet(
-                eth_dst=bcast_dst,
-                eth_src=self.macs[0],
-                dl_vlan_enable=True,
-                vlan_vid=self.vlan_id_int,
-                pktlen=104,
-            )
-            flood_port_list5 = [self.utg_lag_ports, self.tg_lag_ports]
-            send_packet(dataplane, self.dev_port0, pkt)
-            verify_each_packet_on_multiple_port_lists(dataplane, [pkt, tag_pkt], flood_port_list5)
-            tag_rm = simple_udp_packet(
-                eth_dst=bcast_dst,
-                eth_src=rm_vlan_member_mac,
-                dl_vlan_enable=True,
-                vlan_vid=self.vlan_id_int,
-                pktlen=104,
-            )
-            send_packet(dataplane, rm_vlan_member_dev, tag_rm)
-            verify_no_other_packets(dataplane)
-            pkt_nv = simple_udp_packet(eth_dst=rm_vlan_member_mac, eth_src=self.macs[0], pktlen=100)
-            tag_nv = simple_udp_packet(
-                eth_dst=rm_vlan_member_mac,
-                eth_src=self.macs[0],
-                dl_vlan_enable=True,
-                vlan_vid=self.vlan_id_int,
-                pktlen=104,
-            )
-            send_packet(dataplane, self.dev_port0, pkt_nv)
-            verify_each_packet_on_multiple_port_lists(dataplane, [pkt_nv, tag_nv], flood_port_list5)
+            if npu.run_traffic:
+                pkt = simple_udp_packet(eth_dst=bcast_dst, eth_src=self.macs[0], pktlen=100)
+                tag_pkt = simple_udp_packet(
+                    eth_dst=bcast_dst,
+                    eth_src=self.macs[0],
+                    dl_vlan_enable=True,
+                    vlan_vid=self.vlan_id_int,
+                    pktlen=104,
+                )
+                flood_port_list5 = [self.utg_lag_ports, self.tg_lag_ports]
+                send_packet(dataplane, self.dev_port0, pkt)
+                verify_each_packet_on_multiple_port_lists(dataplane, [pkt, tag_pkt], flood_port_list5)
+                tag_rm = simple_udp_packet(
+                    eth_dst=bcast_dst,
+                    eth_src=rm_vlan_member_mac,
+                    dl_vlan_enable=True,
+                    vlan_vid=self.vlan_id_int,
+                    pktlen=104,
+                )
+                send_packet(dataplane, rm_vlan_member_dev, tag_rm)
+                verify_no_other_packets(dataplane)
+                pkt_nv = simple_udp_packet(eth_dst=rm_vlan_member_mac, eth_src=self.macs[0], pktlen=100)
+                tag_nv = simple_udp_packet(
+                    eth_dst=rm_vlan_member_mac,
+                    eth_src=self.macs[0],
+                    dl_vlan_enable=True,
+                    vlan_vid=self.vlan_id_int,
+                    pktlen=104,
+                )
+                send_packet(dataplane, self.dev_port0, pkt_nv)
+                verify_each_packet_on_multiple_port_lists(dataplane, [pkt_nv, tag_nv], flood_port_list5)
 
             # Case 6 — removed LAG member (port5)
             rm_lag_member = self.lag1_member5
@@ -889,24 +879,25 @@ class TestFdbLearn:
             rm_lag_member_mac = "00:09:87:65:43:21"
             npu.remove(rm_lag_member)
             lag_removed = True
-            utg_rm = [p for p in self.utg_lag_ports if p != rm_lag_member_dev]
-            pkt_l = simple_udp_packet(eth_dst=bcast_dst, eth_src=rm_lag_member_mac, pktlen=100)
-            send_packet(dataplane, rm_lag_member_dev, pkt_l)
-            verify_no_other_packets(dataplane)
-            pkt_chk = simple_udp_packet(eth_dst=rm_lag_member_mac, eth_src=self.macs[0], pktlen=100)
-            tag_chk = simple_udp_packet(
-                eth_dst=rm_lag_member_mac,
-                eth_src=self.macs[0],
-                dl_vlan_enable=True,
-                vlan_vid=self.vlan_id_int,
-                pktlen=104,
-            )
-            send_packet(dataplane, self.dev_port0, pkt_chk)
-            verify_each_packet_on_multiple_port_lists(
-                dataplane,
-                [pkt_chk, tag_chk],
-                [[trunk_port], utg_rm, self.tg_lag_ports],
-            )
+            if npu.run_traffic:
+                utg_rm = [p for p in self.utg_lag_ports if p != rm_lag_member_dev]
+                pkt_l = simple_udp_packet(eth_dst=bcast_dst, eth_src=rm_lag_member_mac, pktlen=100)
+                send_packet(dataplane, rm_lag_member_dev, pkt_l)
+                verify_no_other_packets(dataplane)
+                pkt_chk = simple_udp_packet(eth_dst=rm_lag_member_mac, eth_src=self.macs[0], pktlen=100)
+                tag_chk = simple_udp_packet(
+                    eth_dst=rm_lag_member_mac,
+                    eth_src=self.macs[0],
+                    dl_vlan_enable=True,
+                    vlan_vid=self.vlan_id_int,
+                    pktlen=104,
+                )
+                send_packet(dataplane, self.dev_port0, pkt_chk)
+                verify_each_packet_on_multiple_port_lists(
+                    dataplane,
+                    [pkt_chk, tag_chk],
+                    [[trunk_port], utg_rm, self.tg_lag_ports],
+                )
 
         finally:
             npu.flush_fdb_entries(
@@ -1051,23 +1042,22 @@ class TestFdbMacMove:
         1. For each ingress in the move chain, learn toward chck_mac and verify return path.
         2. Flush dynamic FDB entries (static chck_mac on port24 remains).
         """
-        if not npu.run_traffic:
-            pytest.skip("Traffic generation disabled")
         pkt = simple_udp_packet(eth_dst=self.chck_mac, eth_src=self.moving_mac)
         chck_pkt = simple_udp_packet(eth_dst=self.moving_mac, eth_src=self.chck_mac)
         port_chain = [self.dev_port0, self.dev_port1, self.dev_port5, self.dev_port27, self.dev_port1]
         chck_port = self.dev_port24
         try:
-            for src_port in port_chain:
-                send_packet(dataplane, src_port, pkt)
-                verify_packets(dataplane, pkt, [chck_port])
-                send_packet(dataplane, chck_port, chck_pkt)
-                if src_port in self.lag1_ports:
-                    verify_packet_any_port(dataplane, chck_pkt, self.lag1_ports)
-                elif src_port in self.lag3_ports:
-                    verify_packet_any_port(dataplane, chck_pkt, self.lag3_ports)
-                else:
-                    verify_packets(dataplane, chck_pkt, [src_port])
+            if npu.run_traffic:
+                for src_port in port_chain:
+                    send_packet(dataplane, src_port, pkt)
+                    verify_packets(dataplane, pkt, [chck_port])
+                    send_packet(dataplane, chck_port, chck_pkt)
+                    if src_port in self.lag1_ports:
+                        verify_packet_any_port(dataplane, chck_pkt, self.lag1_ports)
+                    elif src_port in self.lag3_ports:
+                        verify_packet_any_port(dataplane, chck_pkt, self.lag3_ports)
+                    else:
+                        verify_packets(dataplane, chck_pkt, [src_port])
         finally:
             npu.flush_fdb_entries(
                 npu.switch_oid,
@@ -1084,8 +1074,6 @@ class TestFdbMacMove:
         2. Run the same ingress chain and verification as dynamicMacMoveTest(static_entry=True).
         3. Remove the moving static FDB entry in teardown of the test body.
         """
-        if not npu.run_traffic:
-            pytest.skip("Traffic generation disabled")
         moving_key = npu.fdb_entry_key(self.vlan_oid, self.moving_mac)
         pkt = simple_udp_packet(eth_dst=self.chck_mac, eth_src=self.moving_mac)
         chck_pkt = simple_udp_packet(eth_dst=self.moving_mac, eth_src=self.chck_mac)
@@ -1101,16 +1089,17 @@ class TestFdbMacMove:
                     "SAI_FDB_ENTRY_ATTR_ALLOW_MAC_MOVE", "true",
                 ],
             )
-            for src_port in port_chain:
-                send_packet(dataplane, src_port, pkt)
-                verify_packets(dataplane, pkt, [chck_port])
-                send_packet(dataplane, chck_port, chck_pkt)
-                if src_port in self.lag1_ports:
-                    verify_packet_any_port(dataplane, chck_pkt, self.lag1_ports)
-                elif src_port in self.lag3_ports:
-                    verify_packet_any_port(dataplane, chck_pkt, self.lag3_ports)
-                else:
-                    verify_packets(dataplane, chck_pkt, [src_port])
+            if npu.run_traffic:
+                for src_port in port_chain:
+                    send_packet(dataplane, src_port, pkt)
+                    verify_packets(dataplane, pkt, [chck_port])
+                    send_packet(dataplane, chck_port, chck_pkt)
+                    if src_port in self.lag1_ports:
+                        verify_packet_any_port(dataplane, chck_pkt, self.lag1_ports)
+                    elif src_port in self.lag3_ports:
+                        verify_packet_any_port(dataplane, chck_pkt, self.lag3_ports)
+                    else:
+                        verify_packets(dataplane, chck_pkt, [src_port])
         finally:
             npu.remove(moving_key)
 
@@ -1124,9 +1113,7 @@ class TestFdbMacMove:
         2. Send from port24 and verify delivery on port, LAG1, or LAG3 as programmed.
         3. Remove the moving static FDB entry when done.
         """
-        if not npu.run_traffic:
-            pytest.skip("Traffic generation disabled")
-        fdb_key = npu.fdb_entry_key(npu, self.vlan_oid, self.moving_mac)
+        fdb_key = npu.fdb_entry_key(self.vlan_oid, self.moving_mac)
         port_chain = [self.dev_port0, self.dev_port1, self.dev_port5, self.dev_port27, self.dev_port1]
         bport_chain = [self.port0_bp, self.port1_bp, self.lag1_bp, self.lag10_bp, self.port1_bp]
         chck_pkt = simple_udp_packet(eth_dst=self.moving_mac, eth_src=self.chck_mac)
@@ -1134,13 +1121,14 @@ class TestFdbMacMove:
             npu.create_fdb(self.vlan_oid, self.moving_mac, self.port0_bp, entry_type="SAI_FDB_ENTRY_TYPE_STATIC")
             for port, bport in zip(port_chain, bport_chain):
                 npu.set(fdb_key, ["SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID", bport])
-                send_packet(dataplane, self.dev_port24, chck_pkt)
-                if port in self.lag1_ports:
-                    verify_packet_any_port(dataplane, chck_pkt, self.lag1_ports)
-                elif port in self.lag3_ports:
-                    verify_packet_any_port(dataplane, chck_pkt, self.lag3_ports)
-                else:
-                    verify_packets(dataplane, chck_pkt, [port])
+                if npu.run_traffic:
+                    send_packet(dataplane, self.dev_port24, chck_pkt)
+                    if port in self.lag1_ports:
+                        verify_packet_any_port(dataplane, chck_pkt, self.lag1_ports)
+                    elif port in self.lag3_ports:
+                        verify_packet_any_port(dataplane, chck_pkt, self.lag3_ports)
+                    else:
+                        verify_packets(dataplane, chck_pkt, [port])
         finally:
             npu.remove(fdb_key)
 
@@ -1302,15 +1290,18 @@ class TestFdbFlush:
         for mac, bp in zip(self.vlan20_stat_macs, self.vlan20_bps):
             npu.create_fdb(self.vlan20, mac, bp, entry_type="SAI_FDB_ENTRY_TYPE_STATIC")
 
-        for mac, port in zip(self.vlan10_dyn_macs, self.vlan10_ports):
-            send_packet(dataplane, port, simple_udp_packet(eth_dst="ff:ff:ff:ff:ff:ff", eth_src=mac))
-        for mac, port in zip(self.vlan20_dyn_macs, self.vlan20_ports):
-            send_packet(dataplane, port, simple_udp_packet(eth_dst="ff:ff:ff:ff:ff:ff", eth_src=mac))
-        time.sleep(2)
-        dataplane.flush()
+        if npu.run_traffic:
+            for mac, port in zip(self.vlan10_dyn_macs, self.vlan10_ports):
+                send_packet(dataplane, port, simple_udp_packet(eth_dst="ff:ff:ff:ff:ff:ff", eth_src=mac))
+            for mac, port in zip(self.vlan20_dyn_macs, self.vlan20_ports):
+                send_packet(dataplane, port, simple_udp_packet(eth_dst="ff:ff:ff:ff:ff:ff", eth_src=mac))
+            time.sleep(2)
+            dataplane.flush()
 
-    def _verify_fwd(self, dataplane, dst_macs, dst_ports, src_macs, src_ports, lag_ports,
+    def _verify_fwd(self, npu, dataplane, dst_macs, dst_ports, src_macs, src_ports, lag_ports,
                     trunk_port=None, vlan_id=None):
+        if not npu.run_traffic:
+            return
         for dst_mac, dst_port in zip(dst_macs, dst_ports):
             for src_mac, src_port in zip(src_macs, src_ports):
                 if src_port == dst_port:
@@ -1330,8 +1321,10 @@ class TestFdbFlush:
                 verify_packet_any_port(dataplane, rcv_pkt, rcv_port)
                 break
 
-    def _verify_flood(self, dataplane, dst_macs, dst_ports, src_macs, src_ports, lag_ports,
+    def _verify_flood(self, npu, dataplane, dst_macs, dst_ports, src_macs, src_ports, lag_ports,
                       trunk_port=None, vlan_id=None):
+        if not npu.run_traffic:
+            return
         for dst_mac in dst_macs:
             for src_mac, src_port in zip(src_macs, src_ports):
                 if src_mac == dst_mac:
@@ -1382,48 +1375,49 @@ class TestFdbFlush:
         npu.create_fdb(self.vlan10, self.tp10_stat_mac, self.trunk_port_bp)
         npu.create_fdb(self.vlan20, self.tp20_stat_mac, self.trunk_port_bp)
 
-        tag_vlan10_pkt = simple_udp_packet(
-            eth_dst="ff:ff:ff:ff:ff:ff",
-            eth_src=self.tp10_dyn_mac,
-            dl_vlan_enable=True,
-            vlan_vid=self.vlan10_id,
-            pktlen=104,
-        )
-        tag_vlan20_pkt = simple_udp_packet(
-            eth_dst="ff:ff:ff:ff:ff:ff",
-            eth_src=self.tp20_dyn_mac,
-            dl_vlan_enable=True,
-            vlan_vid=self.vlan20_id,
-            pktlen=104,
-        )
-        send_packet(dataplane, self.trunk_dev_port, tag_vlan10_pkt)
-        send_packet(dataplane, self.trunk_dev_port, tag_vlan20_pkt)
-        time.sleep(2)
-        dataplane.flush()
-
-        for mac in (self.tp10_stat_mac, self.tp10_dyn_mac):
-            chck_vlan10_pkt = simple_udp_packet(eth_dst=mac, eth_src=chck_vlan10_mac, pktlen=100)
-            chck_vlan10_tag_pkt = simple_udp_packet(
-                eth_dst=mac,
-                eth_src=chck_vlan10_mac,
+        if npu.run_traffic:
+            tag_vlan10_pkt = simple_udp_packet(
+                eth_dst="ff:ff:ff:ff:ff:ff",
+                eth_src=self.tp10_dyn_mac,
                 dl_vlan_enable=True,
                 vlan_vid=self.vlan10_id,
                 pktlen=104,
             )
-            send_packet(dataplane, self.dev_port0, chck_vlan10_pkt)
-            verify_packets(dataplane, chck_vlan10_tag_pkt, [self.trunk_dev_port])
-
-        for mac in (self.tp20_stat_mac, self.tp20_dyn_mac):
-            chck_vlan20_pkt = simple_udp_packet(eth_dst=mac, eth_src=chck_vlan20_mac, pktlen=100)
-            chck_vlan20_tag_pkt = simple_udp_packet(
-                eth_dst=mac,
-                eth_src=chck_vlan20_mac,
+            tag_vlan20_pkt = simple_udp_packet(
+                eth_dst="ff:ff:ff:ff:ff:ff",
+                eth_src=self.tp20_dyn_mac,
                 dl_vlan_enable=True,
                 vlan_vid=self.vlan20_id,
                 pktlen=104,
             )
-            send_packet(dataplane, self.dev_port2, chck_vlan20_pkt)
-            verify_packets(dataplane, chck_vlan20_tag_pkt, [self.trunk_dev_port])
+            send_packet(dataplane, self.trunk_dev_port, tag_vlan10_pkt)
+            send_packet(dataplane, self.trunk_dev_port, tag_vlan20_pkt)
+            time.sleep(2)
+            dataplane.flush()
+
+            for mac in (self.tp10_stat_mac, self.tp10_dyn_mac):
+                chck_vlan10_pkt = simple_udp_packet(eth_dst=mac, eth_src=chck_vlan10_mac, pktlen=100)
+                chck_vlan10_tag_pkt = simple_udp_packet(
+                    eth_dst=mac,
+                    eth_src=chck_vlan10_mac,
+                    dl_vlan_enable=True,
+                    vlan_vid=self.vlan10_id,
+                    pktlen=104,
+                )
+                send_packet(dataplane, self.dev_port0, chck_vlan10_pkt)
+                verify_packets(dataplane, chck_vlan10_tag_pkt, [self.trunk_dev_port])
+
+            for mac in (self.tp20_stat_mac, self.tp20_dyn_mac):
+                chck_vlan20_pkt = simple_udp_packet(eth_dst=mac, eth_src=chck_vlan20_mac, pktlen=100)
+                chck_vlan20_tag_pkt = simple_udp_packet(
+                    eth_dst=mac,
+                    eth_src=chck_vlan20_mac,
+                    dl_vlan_enable=True,
+                    vlan_vid=self.vlan20_id,
+                    pktlen=104,
+                )
+                send_packet(dataplane, self.dev_port2, chck_vlan20_pkt)
+                verify_packets(dataplane, chck_vlan20_tag_pkt, [self.trunk_dev_port])
 
     def _tear_down_trunk_port(self, npu):
         npu.flush_fdb_entries(
@@ -1449,14 +1443,13 @@ class TestFdbFlush:
         1. Prepare mixed static and dynamic FDB entries on VLAN 10 and VLAN 20.
         2. Flush static entries on VLAN 10; verify VLAN10 static MACs flood and other entries forward.
         """
-        if not npu.run_traffic:
-            pytest.skip("Traffic generation disabled")
         self._prepare_fdb(npu, dataplane)
         npu.flush_fdb_entries(
             npu.switch_oid,
             ["SAI_FDB_FLUSH_ATTR_BV_ID", self.vlan10, "SAI_FDB_FLUSH_ATTR_ENTRY_TYPE", "SAI_FDB_FLUSH_ENTRY_TYPE_STATIC"],
         )
         self._verify_flood(
+            npu,
             dataplane,
             self.vlan10_stat_macs,
             self.vlan10_ports,
@@ -1465,6 +1458,7 @@ class TestFdbFlush:
             self.vlan10_lag_ports,
         )
         self._verify_fwd(
+            npu,
             dataplane,
             self.vlan20_stat_macs,
             self.vlan20_ports,
@@ -1473,6 +1467,7 @@ class TestFdbFlush:
             self.vlan20_lag_ports,
         )
         self._verify_fwd(
+            npu,
             dataplane,
             self.vlan10_dyn_macs,
             self.vlan10_ports,
@@ -1481,6 +1476,7 @@ class TestFdbFlush:
             self.vlan10_lag_ports,
         )
         self._verify_fwd(
+            npu,
             dataplane,
             self.vlan20_dyn_macs,
             self.vlan20_ports,
@@ -1498,14 +1494,13 @@ class TestFdbFlush:
         1. Prepare mixed static and dynamic FDB entries on VLAN 10 and VLAN 20.
         2. Flush dynamic entries on VLAN 10 and verify flooding plus surviving forwards.
         """
-        if not npu.run_traffic:
-            pytest.skip("Traffic generation disabled")
         self._prepare_fdb(npu, dataplane)
         npu.flush_fdb_entries(
             npu.switch_oid,
             ["SAI_FDB_FLUSH_ATTR_BV_ID", self.vlan10, "SAI_FDB_FLUSH_ATTR_ENTRY_TYPE", "SAI_FDB_FLUSH_ENTRY_TYPE_DYNAMIC"],
         )
         self._verify_flood(
+            npu,
             dataplane,
             self.vlan10_dyn_macs,
             self.vlan10_ports,
@@ -1514,6 +1509,7 @@ class TestFdbFlush:
             self.vlan10_lag_ports,
         )
         self._verify_fwd(
+            npu,
             dataplane,
             self.vlan10_stat_macs,
             self.vlan10_ports,
@@ -1522,6 +1518,7 @@ class TestFdbFlush:
             self.vlan10_lag_ports,
         )
         self._verify_fwd(
+            npu,
             dataplane,
             self.vlan20_stat_macs,
             self.vlan20_ports,
@@ -1530,6 +1527,7 @@ class TestFdbFlush:
             self.vlan20_lag_ports,
         )
         self._verify_fwd(
+            npu,
             dataplane,
             self.vlan20_dyn_macs,
             self.vlan20_ports,
@@ -1547,8 +1545,6 @@ class TestFdbFlush:
         1. Prepare mixed static and dynamic FDB entries on VLAN 10 and VLAN 20.
         2. Flush all VLAN10 entries; verify stat/dyn floods then VLAN20 forwarding.
         """
-        if not npu.run_traffic:
-            pytest.skip("Traffic generation disabled")
         self._prepare_fdb(npu, dataplane)
         npu.flush_fdb_entries(
             npu.switch_oid,
@@ -1557,6 +1553,7 @@ class TestFdbFlush:
         chck_mac1 = "00:10:aa:11:11:11"
         chck_mac2 = "00:10:aa:22:22:22"
         self._verify_flood(
+            npu,
             dataplane,
             self.vlan10_stat_macs,
             self.vlan10_ports,
@@ -1565,6 +1562,7 @@ class TestFdbFlush:
             self.vlan10_lag_ports,
         )
         self._verify_flood(
+            npu,
             dataplane,
             self.vlan10_dyn_macs,
             self.vlan10_ports,
@@ -1573,6 +1571,7 @@ class TestFdbFlush:
             self.vlan10_lag_ports,
         )
         self._verify_fwd(
+            npu,
             dataplane,
             self.vlan20_stat_macs,
             self.vlan20_ports,
@@ -1581,6 +1580,7 @@ class TestFdbFlush:
             self.vlan20_lag_ports,
         )
         self._verify_fwd(
+            npu,
             dataplane,
             self.vlan20_dyn_macs,
             self.vlan20_ports,
@@ -1598,8 +1598,6 @@ class TestFdbFlush:
         1. Prepare mixed static and dynamic FDB entries on VLAN 10 and VLAN 20.
         2. Flush port0 static MAC and verify flood plus non-flushed forwarding matrix.
         """
-        if not npu.run_traffic:
-            pytest.skip("Traffic generation disabled")
         self._prepare_fdb(npu, dataplane)
         flushed_dev_port = self.vlan10_ports[0]
         flushed_mac = self.vlan10_stat_macs[0]
@@ -1608,6 +1606,7 @@ class TestFdbFlush:
             ["SAI_FDB_FLUSH_ATTR_BRIDGE_PORT_ID", self.vlan10_bps[0], "SAI_FDB_FLUSH_ATTR_ENTRY_TYPE", "SAI_FDB_FLUSH_ENTRY_TYPE_STATIC"],
         )
         self._verify_flood(
+            npu,
             dataplane,
             [flushed_mac],
             self.vlan10_ports,
@@ -1618,6 +1617,7 @@ class TestFdbFlush:
         not_flushed_ports = [p for p in self.vlan10_ports if p != flushed_dev_port]
         not_flushed_macs = [m for m in self.vlan10_stat_macs if m != flushed_mac]
         self._verify_fwd(
+            npu,
             dataplane,
             not_flushed_macs,
             not_flushed_ports,
@@ -1626,6 +1626,7 @@ class TestFdbFlush:
             self.vlan10_lag_ports,
         )
         self._verify_fwd(
+            npu,
             dataplane,
             self.vlan20_stat_macs,
             self.vlan20_ports,
@@ -1634,6 +1635,7 @@ class TestFdbFlush:
             self.vlan20_lag_ports,
         )
         self._verify_fwd(
+            npu,
             dataplane,
             self.vlan10_dyn_macs,
             self.vlan10_ports,
@@ -1642,6 +1644,7 @@ class TestFdbFlush:
             self.vlan10_lag_ports,
         )
         self._verify_fwd(
+            npu,
             dataplane,
             self.vlan20_dyn_macs,
             self.vlan20_ports,
@@ -1659,8 +1662,6 @@ class TestFdbFlush:
         1. Prepare mixed static and dynamic FDB entries on VLAN 10 and VLAN 20.
         2. Flush port0 dynamic MAC and verify flood plus surviving forwards.
         """
-        if not npu.run_traffic:
-            pytest.skip("Traffic generation disabled")
         self._prepare_fdb(npu, dataplane)
         flushed_dev_port = self.vlan10_ports[0]
         flushed_mac = self.vlan10_dyn_macs[0]
@@ -1669,6 +1670,7 @@ class TestFdbFlush:
             ["SAI_FDB_FLUSH_ATTR_BRIDGE_PORT_ID", self.vlan10_bps[0], "SAI_FDB_FLUSH_ATTR_ENTRY_TYPE", "SAI_FDB_FLUSH_ENTRY_TYPE_DYNAMIC"],
         )
         self._verify_flood(
+            npu,
             dataplane,
             [flushed_mac],
             self.vlan10_ports,
@@ -1679,6 +1681,7 @@ class TestFdbFlush:
         not_flushed_ports = [p for p in self.vlan10_ports if p != flushed_dev_port]
         not_flushed_macs = [m for m in self.vlan10_dyn_macs if m != flushed_mac]
         self._verify_fwd(
+            npu,
             dataplane,
             self.vlan10_stat_macs,
             self.vlan10_ports,
@@ -1687,6 +1690,7 @@ class TestFdbFlush:
             self.vlan10_lag_ports,
         )
         self._verify_fwd(
+            npu,
             dataplane,
             self.vlan20_stat_macs,
             self.vlan20_ports,
@@ -1695,6 +1699,7 @@ class TestFdbFlush:
             self.vlan20_lag_ports,
         )
         self._verify_fwd(
+            npu,
             dataplane,
             not_flushed_macs,
             not_flushed_ports,
@@ -1703,6 +1708,7 @@ class TestFdbFlush:
             self.vlan10_lag_ports,
         )
         self._verify_fwd(
+            npu,
             dataplane,
             self.vlan20_dyn_macs,
             self.vlan20_ports,
@@ -1720,8 +1726,6 @@ class TestFdbFlush:
         1. Prepare mixed static and dynamic FDB entries on VLAN 10 and VLAN 20.
         2. Flush all MACs on port0 and verify both stat/dyn floods and other entries forward.
         """
-        if not npu.run_traffic:
-            pytest.skip("Traffic generation disabled")
         self._prepare_fdb(npu, dataplane)
         flushed_dev_port = self.vlan10_ports[0]
         flushed_stat_mac = self.vlan10_stat_macs[0]
@@ -1731,6 +1735,7 @@ class TestFdbFlush:
             ["SAI_FDB_FLUSH_ATTR_BRIDGE_PORT_ID", self.vlan10_bps[0], "SAI_FDB_FLUSH_ATTR_ENTRY_TYPE", "SAI_FDB_FLUSH_ENTRY_TYPE_ALL"],
         )
         self._verify_flood(
+            npu,
             dataplane,
             [flushed_stat_mac],
             self.vlan10_ports,
@@ -1739,6 +1744,7 @@ class TestFdbFlush:
             self.vlan10_lag_ports,
         )
         self._verify_flood(
+            npu,
             dataplane,
             [flushed_dyn_mac],
             self.vlan10_ports,
@@ -1750,6 +1756,7 @@ class TestFdbFlush:
         not_flushed_stat_macs = [m for m in self.vlan10_stat_macs if m != flushed_stat_mac]
         not_flushed_dyn_macs = [m for m in self.vlan10_dyn_macs if m != flushed_dyn_mac]
         self._verify_fwd(
+            npu,
             dataplane,
             not_flushed_stat_macs,
             not_flushed_ports,
@@ -1758,6 +1765,7 @@ class TestFdbFlush:
             self.vlan10_lag_ports,
         )
         self._verify_fwd(
+            npu,
             dataplane,
             self.vlan20_stat_macs,
             self.vlan20_ports,
@@ -1766,6 +1774,7 @@ class TestFdbFlush:
             self.vlan20_lag_ports,
         )
         self._verify_fwd(
+            npu,
             dataplane,
             not_flushed_dyn_macs,
             not_flushed_ports,
@@ -1774,6 +1783,7 @@ class TestFdbFlush:
             self.vlan10_lag_ports,
         )
         self._verify_fwd(
+            npu,
             dataplane,
             self.vlan20_dyn_macs,
             self.vlan20_ports,
@@ -1791,8 +1801,6 @@ class TestFdbFlush:
         1. Prepare mixed static and dynamic FDB entries on VLAN 10 and VLAN 20.
         2. Flush LAG1 static MACs and verify flooding plus surviving forwards.
         """
-        if not npu.run_traffic:
-            pytest.skip("Traffic generation disabled")
         self._prepare_fdb(npu, dataplane)
         flushed_dev_ports = self.vlan10_lag_ports
         flushed_macs = [self.vlan10_stat_macs[2], self.vlan10_stat_macs[3], self.vlan10_stat_macs[4]]
@@ -1801,6 +1809,7 @@ class TestFdbFlush:
             ["SAI_FDB_FLUSH_ATTR_BRIDGE_PORT_ID", self.vlan10_bps[2], "SAI_FDB_FLUSH_ATTR_ENTRY_TYPE", "SAI_FDB_FLUSH_ENTRY_TYPE_STATIC"],
         )
         self._verify_flood(
+            npu,
             dataplane,
             flushed_macs,
             self.vlan10_ports,
@@ -1811,6 +1820,7 @@ class TestFdbFlush:
         not_flushed_ports = [p for p in self.vlan10_ports if p not in flushed_dev_ports]
         not_flushed_macs = [m for m in self.vlan10_stat_macs if m not in flushed_macs]
         self._verify_fwd(
+            npu,
             dataplane,
             not_flushed_macs,
             not_flushed_ports,
@@ -1819,6 +1829,7 @@ class TestFdbFlush:
             self.vlan10_lag_ports,
         )
         self._verify_fwd(
+            npu,
             dataplane,
             self.vlan20_stat_macs,
             self.vlan20_ports,
@@ -1827,6 +1838,7 @@ class TestFdbFlush:
             self.vlan20_lag_ports,
         )
         self._verify_fwd(
+            npu,
             dataplane,
             self.vlan10_dyn_macs,
             self.vlan10_ports,
@@ -1835,6 +1847,7 @@ class TestFdbFlush:
             self.vlan10_lag_ports,
         )
         self._verify_fwd(
+            npu,
             dataplane,
             self.vlan20_dyn_macs,
             self.vlan20_ports,
@@ -1852,8 +1865,6 @@ class TestFdbFlush:
         1. Prepare mixed static and dynamic FDB entries on VLAN 10 and VLAN 20.
         2. Flush LAG1 dynamic MACs and verify flooding plus surviving forwards.
         """
-        if not npu.run_traffic:
-            pytest.skip("Traffic generation disabled")
         self._prepare_fdb(npu, dataplane)
         flushed_dev_ports = self.vlan10_lag_ports
         flushed_macs = [self.vlan10_dyn_macs[2], self.vlan10_dyn_macs[3], self.vlan10_dyn_macs[4]]
@@ -1862,6 +1873,7 @@ class TestFdbFlush:
             ["SAI_FDB_FLUSH_ATTR_BRIDGE_PORT_ID", self.vlan10_bps[2], "SAI_FDB_FLUSH_ATTR_ENTRY_TYPE", "SAI_FDB_FLUSH_ENTRY_TYPE_DYNAMIC"],
         )
         self._verify_flood(
+            npu,
             dataplane,
             flushed_macs,
             self.vlan10_ports,
@@ -1872,6 +1884,7 @@ class TestFdbFlush:
         not_flushed_ports = [p for p in self.vlan10_ports if p not in flushed_dev_ports]
         not_flushed_macs = [m for m in self.vlan10_dyn_macs if m not in flushed_macs]
         self._verify_fwd(
+            npu,
             dataplane,
             self.vlan10_stat_macs,
             self.vlan10_ports,
@@ -1880,6 +1893,7 @@ class TestFdbFlush:
             self.vlan10_lag_ports,
         )
         self._verify_fwd(
+            npu,
             dataplane,
             self.vlan20_stat_macs,
             self.vlan20_ports,
@@ -1888,6 +1902,7 @@ class TestFdbFlush:
             self.vlan20_lag_ports,
         )
         self._verify_fwd(
+            npu,
             dataplane,
             not_flushed_macs,
             not_flushed_ports,
@@ -1896,6 +1911,7 @@ class TestFdbFlush:
             self.vlan10_lag_ports,
         )
         self._verify_fwd(
+            npu,
             dataplane,
             self.vlan20_dyn_macs,
             self.vlan20_ports,
@@ -1913,8 +1929,6 @@ class TestFdbFlush:
         1. Prepare mixed static and dynamic FDB entries on VLAN 10 and VLAN 20.
         2. Flush dynamic MACs on LAG1; verify forwarding for entries not flushed.
         """
-        if not npu.run_traffic:
-            pytest.skip("Traffic generation disabled")
         self._prepare_fdb(npu, dataplane)
         flushed_dev_ports = self.vlan10_lag_ports
         flushed_stat_macs = [self.vlan10_stat_macs[2], self.vlan10_stat_macs[3], self.vlan10_stat_macs[4]]
@@ -1927,6 +1941,7 @@ class TestFdbFlush:
         not_flushed_stat_macs = [m for m in self.vlan10_stat_macs if m not in flushed_stat_macs]
         not_flushed_dyn_macs = [m for m in self.vlan10_dyn_macs if m not in flushed_dyn_macs]
         self._verify_fwd(
+            npu,
             dataplane,
             not_flushed_stat_macs,
             not_flushed_ports,
@@ -1935,6 +1950,7 @@ class TestFdbFlush:
             self.vlan10_lag_ports,
         )
         self._verify_fwd(
+            npu,
             dataplane,
             self.vlan20_stat_macs,
             self.vlan20_ports,
@@ -1943,6 +1959,7 @@ class TestFdbFlush:
             self.vlan20_lag_ports,
         )
         self._verify_fwd(
+            npu,
             dataplane,
             not_flushed_dyn_macs,
             not_flushed_ports,
@@ -1951,6 +1968,7 @@ class TestFdbFlush:
             self.vlan10_lag_ports,
         )
         self._verify_fwd(
+            npu,
             dataplane,
             self.vlan20_dyn_macs,
             self.vlan20_ports,
@@ -1968,8 +1986,6 @@ class TestFdbFlush:
         1. Prepare FDB, configure dual-VLAN trunk on port24, flush static tp10 on trunk.
         2. Verify flood toward trunk and forward checks including tagged trunk paths.
         """
-        if not npu.run_traffic:
-            pytest.skip("Traffic generation disabled")
         self._prepare_fdb(npu, dataplane)
         try:
             self._set_up_trunk_port(npu, dataplane)
@@ -1982,6 +1998,7 @@ class TestFdbFlush:
                 ],
             )
             self._verify_flood(
+                npu,
                 dataplane,
                 [self.tp10_stat_mac],
                 self.vlan10_ports,
@@ -1997,6 +2014,7 @@ class TestFdbFlush:
             self.vlan10_dyn_macs.append(self.tp10_dyn_mac)
             self.vlan20_dyn_macs.append(self.tp20_dyn_mac)
             self._verify_fwd(
+                npu,
                 dataplane,
                 self.vlan10_stat_macs,
                 self.vlan10_ports,
@@ -2007,6 +2025,7 @@ class TestFdbFlush:
                 self.vlan10_id,
             )
             self._verify_fwd(
+                npu,
                 dataplane,
                 self.vlan20_stat_macs,
                 self.vlan20_ports,
@@ -2017,6 +2036,7 @@ class TestFdbFlush:
                 self.vlan20_id,
             )
             self._verify_fwd(
+                npu,
                 dataplane,
                 self.vlan10_dyn_macs,
                 self.vlan10_ports,
@@ -2027,6 +2047,7 @@ class TestFdbFlush:
                 self.vlan10_id,
             )
             self._verify_fwd(
+                npu,
                 dataplane,
                 self.vlan20_dyn_macs,
                 self.vlan20_ports,
@@ -2052,8 +2073,6 @@ class TestFdbFlush:
         Test scenario:
         1. Trunk setup on port24, flush dynamic tp10 on trunk; verify flood and forwards.
         """
-        if not npu.run_traffic:
-            pytest.skip("Traffic generation disabled")
         self._prepare_fdb(npu, dataplane)
         try:
             self._set_up_trunk_port(npu, dataplane)
@@ -2066,6 +2085,7 @@ class TestFdbFlush:
                 ],
             )
             self._verify_flood(
+                npu,
                 dataplane,
                 [self.tp10_dyn_mac],
                 self.vlan10_ports,
@@ -2081,6 +2101,7 @@ class TestFdbFlush:
             self.vlan20_stat_macs.append(self.tp20_stat_mac)
             self.vlan20_dyn_macs.append(self.tp20_dyn_mac)
             self._verify_fwd(
+                npu,
                 dataplane,
                 self.vlan10_stat_macs,
                 self.vlan10_ports,
@@ -2091,6 +2112,7 @@ class TestFdbFlush:
                 self.vlan10_id,
             )
             self._verify_fwd(
+                npu,
                 dataplane,
                 self.vlan20_stat_macs,
                 self.vlan20_ports,
@@ -2101,6 +2123,7 @@ class TestFdbFlush:
                 self.vlan20_id,
             )
             self._verify_fwd(
+                npu,
                 dataplane,
                 self.vlan10_dyn_macs,
                 self.vlan10_ports,
@@ -2111,6 +2134,7 @@ class TestFdbFlush:
                 self.vlan10_id,
             )
             self._verify_fwd(
+                npu,
                 dataplane,
                 self.vlan20_dyn_macs,
                 self.vlan20_ports,
@@ -2136,8 +2160,6 @@ class TestFdbFlush:
         Test scenario:
         1. Trunk on port24; flush all MACs for VLAN10 on trunk; verify stat/dyn floods and forwards.
         """
-        if not npu.run_traffic:
-            pytest.skip("Traffic generation disabled")
         chck_vlan10_mac = self.vlan10_stat_macs[0]
         chck_vlan10_port = self.dev_port0
         self._prepare_fdb(npu, dataplane)
@@ -2152,6 +2174,7 @@ class TestFdbFlush:
                 ],
             )
             self._verify_flood(
+                npu,
                 dataplane,
                 [self.tp10_stat_mac],
                 self.vlan10_ports,
@@ -2162,6 +2185,7 @@ class TestFdbFlush:
                 self.vlan10_id,
             )
             self._verify_flood(
+                npu,
                 dataplane,
                 [self.tp10_dyn_mac],
                 self.vlan10_ports,
@@ -2176,6 +2200,7 @@ class TestFdbFlush:
             self.vlan20_stat_macs.append(self.tp20_stat_mac)
             self.vlan20_dyn_macs.append(self.tp20_dyn_mac)
             self._verify_fwd(
+                npu,
                 dataplane,
                 self.vlan10_stat_macs,
                 self.vlan10_ports,
@@ -2186,6 +2211,7 @@ class TestFdbFlush:
                 self.vlan10_id,
             )
             self._verify_fwd(
+                npu,
                 dataplane,
                 self.vlan20_stat_macs,
                 self.vlan20_ports,
@@ -2196,6 +2222,7 @@ class TestFdbFlush:
                 self.vlan20_id,
             )
             self._verify_fwd(
+                npu,
                 dataplane,
                 self.vlan10_dyn_macs,
                 self.vlan10_ports,
@@ -2206,6 +2233,7 @@ class TestFdbFlush:
                 self.vlan10_id,
             )
             self._verify_fwd(
+                npu,
                 dataplane,
                 self.vlan20_dyn_macs,
                 self.vlan20_ports,
@@ -2230,11 +2258,10 @@ class TestFdbFlush:
         Test scenario:
         1. Flush all static MACs in FDB; verify stat floods then remaining dynamic forwards.
         """
-        if not npu.run_traffic:
-            pytest.skip("Traffic generation disabled")
         self._prepare_fdb(npu, dataplane)
         npu.flush_fdb_entries(npu.switch_oid, ["SAI_FDB_FLUSH_ATTR_ENTRY_TYPE", "SAI_FDB_FLUSH_ENTRY_TYPE_STATIC"])
         self._verify_flood(
+            npu,
             dataplane,
             self.vlan10_stat_macs,
             self.vlan10_ports,
@@ -2243,6 +2270,7 @@ class TestFdbFlush:
             self.vlan10_lag_ports,
         )
         self._verify_flood(
+            npu,
             dataplane,
             self.vlan20_stat_macs,
             self.vlan20_ports,
@@ -2251,6 +2279,7 @@ class TestFdbFlush:
             self.vlan20_lag_ports,
         )
         self._verify_fwd(
+            npu,
             dataplane,
             self.vlan10_dyn_macs,
             self.vlan10_ports,
@@ -2259,6 +2288,7 @@ class TestFdbFlush:
             self.vlan10_lag_ports,
         )
         self._verify_fwd(
+            npu,
             dataplane,
             self.vlan20_dyn_macs,
             self.vlan20_ports,
@@ -2275,11 +2305,10 @@ class TestFdbFlush:
         Test scenario:
         1. Flush all dynamic MACs; verify dynamic floods then static entry forwarding.
         """
-        if not npu.run_traffic:
-            pytest.skip("Traffic generation disabled")
         self._prepare_fdb(npu, dataplane)
         npu.flush_fdb_entries(npu.switch_oid, ["SAI_FDB_FLUSH_ATTR_ENTRY_TYPE", "SAI_FDB_FLUSH_ENTRY_TYPE_DYNAMIC"])
         self._verify_flood(
+            npu,
             dataplane,
             self.vlan10_dyn_macs,
             self.vlan10_ports,
@@ -2288,6 +2317,7 @@ class TestFdbFlush:
             self.vlan10_lag_ports,
         )
         self._verify_flood(
+            npu,
             dataplane,
             self.vlan20_dyn_macs,
             self.vlan20_ports,
@@ -2296,6 +2326,7 @@ class TestFdbFlush:
             self.vlan20_lag_ports,
         )
         self._verify_fwd(
+            npu,
             dataplane,
             self.vlan10_stat_macs,
             self.vlan10_ports,
@@ -2304,6 +2335,7 @@ class TestFdbFlush:
             self.vlan10_lag_ports,
         )
         self._verify_fwd(
+            npu,
             dataplane,
             self.vlan20_stat_macs,
             self.vlan20_ports,
@@ -2320,8 +2352,6 @@ class TestFdbFlush:
         Test scenario:
         1. Flush entire FDB; verify unknown-destination flooding on VLAN10 and VLAN20.
         """
-        if not npu.run_traffic:
-            pytest.skip("Traffic generation disabled")
         self._prepare_fdb(npu, dataplane)
         chck_vlan10_mac1 = "00:10:aa:11:11:11"
         chck_vlan10_mac2 = "00:10:aa:22:22:22"
@@ -2329,6 +2359,7 @@ class TestFdbFlush:
         chck_vlan20_mac2 = "00:20:aa:22:22:22"
         npu.flush_fdb_entries(npu.switch_oid, ["SAI_FDB_FLUSH_ATTR_ENTRY_TYPE", "SAI_FDB_FLUSH_ENTRY_TYPE_ALL"])
         self._verify_flood(
+            npu,
             dataplane,
             self.vlan10_stat_macs,
             self.vlan10_ports,
@@ -2337,6 +2368,7 @@ class TestFdbFlush:
             self.vlan10_lag_ports,
         )
         self._verify_flood(
+            npu,
             dataplane,
             self.vlan10_dyn_macs,
             self.vlan10_ports,
@@ -2345,6 +2377,7 @@ class TestFdbFlush:
             self.vlan10_lag_ports,
         )
         self._verify_flood(
+            npu,
             dataplane,
             self.vlan20_stat_macs,
             self.vlan20_ports,
@@ -2353,6 +2386,7 @@ class TestFdbFlush:
             self.vlan20_lag_ports,
         )
         self._verify_flood(
+            npu,
             dataplane,
             self.vlan20_dyn_macs,
             self.vlan20_ports,
@@ -2428,8 +2462,6 @@ class TestFdbAge:
         1. Learn with tagged traffic from port1; verify untagged delivery on vrf port24.
         2. Verify tagged return to port1; wait age interval then verify VLAN flood.
         """
-        if not npu.run_traffic:
-            pytest.skip("Traffic generation disabled")
         lrn_mac = "00:01:01:01:01:01"
         lrn_port = 1
         vrf = self.vrf_port_dev
@@ -2438,24 +2470,25 @@ class TestFdbAge:
             eth_dst=self.vrf_mac, eth_src=lrn_mac, dl_vlan_enable=True, vlan_vid=self.vlan_id_int, pktlen=104
         )
         try:
-            send_packet(dataplane, lrn_port, tag_learn)
-            verify_packets(dataplane, lrn_pkt, [vrf])
-            time.sleep(2)
+            if npu.run_traffic:
+                send_packet(dataplane, lrn_port, tag_learn)
+                verify_packets(dataplane, lrn_pkt, [vrf])
+                time.sleep(2)
 
-            pkt = simple_udp_packet(eth_dst=lrn_mac, eth_src=self.vrf_mac, pktlen=100)
-            tag_pkt = simple_udp_packet(
-                eth_dst=lrn_mac, eth_src=self.vrf_mac, dl_vlan_enable=True, vlan_vid=self.vlan_id_int, pktlen=104
-            )
-            send_packet(dataplane, vrf, pkt)
-            verify_packets(dataplane, tag_pkt, [lrn_port])
+                pkt = simple_udp_packet(eth_dst=lrn_mac, eth_src=self.vrf_mac, pktlen=100)
+                tag_pkt = simple_udp_packet(
+                    eth_dst=lrn_mac, eth_src=self.vrf_mac, dl_vlan_enable=True, vlan_vid=self.vlan_id_int, pktlen=104
+                )
+                send_packet(dataplane, vrf, pkt)
+                verify_packets(dataplane, tag_pkt, [lrn_port])
 
-            _sai_wait_fdb_age(self.age_time)
-            send_packet(dataplane, vrf, pkt)
-            verify_each_packet_on_multiple_port_lists(
-                dataplane,
-                [pkt, tag_pkt, pkt],
-                [[0], [1], [4, 5, 6]],
-            )
+                _sai_wait_fdb_age(self.age_time)
+                send_packet(dataplane, vrf, pkt)
+                verify_each_packet_on_multiple_port_lists(
+                    dataplane,
+                    [pkt, tag_pkt, pkt],
+                    [[0], [1], [4, 5, 6]],
+                )
         finally:
             npu.flush_fdb_entries(
                 npu.switch_oid,
@@ -2471,32 +2504,31 @@ class TestFdbAge:
         1. Learn from LAG member port5; verify return toward LAG from vrf port24.
         2. After aging, verify flood pattern matches PTF.
         """
-        if not npu.run_traffic:
-            pytest.skip("Traffic generation disabled")
         lrn_mac = "00:01:01:01:01:01"
         lrn_port = 5
         lag_ports = [4, 5, 6]
         vrf = self.vrf_port_dev
         pkt = simple_udp_packet(eth_dst=self.vrf_mac, eth_src=lrn_mac, pktlen=100)
         try:
-            send_packet(dataplane, lrn_port, pkt)
-            verify_packets(dataplane, pkt, [vrf])
-            time.sleep(2)
+            if npu.run_traffic:
+                send_packet(dataplane, lrn_port, pkt)
+                verify_packets(dataplane, pkt, [vrf])
+                time.sleep(2)
 
-            pkt = simple_udp_packet(eth_dst=lrn_mac, eth_src=self.vrf_mac, pktlen=100)
-            tag_pkt = simple_udp_packet(
-                eth_dst=lrn_mac, eth_src=self.vrf_mac, dl_vlan_enable=True, vlan_vid=self.vlan_id_int, pktlen=104
-            )
-            send_packet(dataplane, vrf, pkt)
-            verify_packet_any_port(dataplane, pkt, lag_ports)
+                pkt = simple_udp_packet(eth_dst=lrn_mac, eth_src=self.vrf_mac, pktlen=100)
+                tag_pkt = simple_udp_packet(
+                    eth_dst=lrn_mac, eth_src=self.vrf_mac, dl_vlan_enable=True, vlan_vid=self.vlan_id_int, pktlen=104
+                )
+                send_packet(dataplane, vrf, pkt)
+                verify_packet_any_port(dataplane, pkt, lag_ports)
 
-            _sai_wait_fdb_age(self.age_time)
-            send_packet(dataplane, vrf, pkt)
-            verify_each_packet_on_multiple_port_lists(
-                dataplane,
-                [pkt, tag_pkt, pkt],
-                [[0], [1], [4, 5, 6]],
-            )
+                _sai_wait_fdb_age(self.age_time)
+                send_packet(dataplane, vrf, pkt)
+                verify_each_packet_on_multiple_port_lists(
+                    dataplane,
+                    [pkt, tag_pkt, pkt],
+                    [[0], [1], [4, 5, 6]],
+                )
         finally:
             npu.flush_fdb_entries(
                 npu.switch_oid,
@@ -2512,8 +2544,6 @@ class TestFdbAge:
         1. Learn on port1, verify; wait 15s; move to port0; verify move.
         2. Wait remainder of old window then verify forward; wait new window then flood.
         """
-        if not npu.run_traffic:
-            pytest.skip("Traffic generation disabled")
         age_time = 25
         old_age_out = age_time - 15
         lrn_mac = "00:01:01:01:01:01"
@@ -2527,43 +2557,44 @@ class TestFdbAge:
         try:
             npu.set(npu.switch_oid, ["SAI_SWITCH_ATTR_FDB_AGING_TIME", str(age_time)])
 
-            send_packet(dataplane, lrn_port, lrn_tag_pkt)
-            verify_packets(dataplane, lrn_pkt, [vrf])
-            time.sleep(2)
+            if npu.run_traffic:
+                send_packet(dataplane, lrn_port, lrn_tag_pkt)
+                verify_packets(dataplane, lrn_pkt, [vrf])
+                time.sleep(2)
 
-            timer_start = time.time()
-            pkt = simple_udp_packet(eth_dst=lrn_mac, eth_src=self.vrf_mac, pktlen=100)
-            tag_pkt = simple_udp_packet(
-                eth_dst=lrn_mac, eth_src=self.vrf_mac, dl_vlan_enable=True, vlan_vid=self.vlan_id_int, pktlen=104
-            )
-            send_packet(dataplane, vrf, pkt)
-            verify_packets(dataplane, tag_pkt, [lrn_port])
+                timer_start = time.time()
+                pkt = simple_udp_packet(eth_dst=lrn_mac, eth_src=self.vrf_mac, pktlen=100)
+                tag_pkt = simple_udp_packet(
+                    eth_dst=lrn_mac, eth_src=self.vrf_mac, dl_vlan_enable=True, vlan_vid=self.vlan_id_int, pktlen=104
+                )
+                send_packet(dataplane, vrf, pkt)
+                verify_packets(dataplane, tag_pkt, [lrn_port])
 
-            while time.time() - timer_start < 15:
+                while time.time() - timer_start < 15:
+                    time.sleep(1)
+
+                send_packet(dataplane, mv_port, lrn_pkt)
+                verify_packets(dataplane, lrn_pkt, [vrf])
                 time.sleep(1)
+                timer_start = time.time()
 
-            send_packet(dataplane, mv_port, lrn_pkt)
-            verify_packets(dataplane, lrn_pkt, [vrf])
-            time.sleep(1)
-            timer_start = time.time()
+                send_packet(dataplane, vrf, pkt)
+                verify_packets(dataplane, pkt, [mv_port])
 
-            send_packet(dataplane, vrf, pkt)
-            verify_packets(dataplane, pkt, [mv_port])
+                old_learn_timeout = old_age_out - (time.time() - timer_start)
+                _sai_wait_fdb_age(old_learn_timeout)
+                send_packet(dataplane, vrf, pkt)
+                verify_packets(dataplane, pkt, [mv_port])
 
-            old_learn_timeout = old_age_out - (time.time() - timer_start)
-            _sai_wait_fdb_age(old_learn_timeout)
-            send_packet(dataplane, vrf, pkt)
-            verify_packets(dataplane, pkt, [mv_port])
+                new_learn_timeout = age_time - (time.time() - timer_start)
+                _sai_wait_fdb_age(new_learn_timeout)
 
-            new_learn_timeout = age_time - (time.time() - timer_start)
-            _sai_wait_fdb_age(new_learn_timeout)
-
-            send_packet(dataplane, vrf, pkt)
-            verify_each_packet_on_multiple_port_lists(
-                dataplane,
-                [pkt, tag_pkt, pkt],
-                [[0], [1], [4, 5, 6]],
-            )
+                send_packet(dataplane, vrf, pkt)
+                verify_each_packet_on_multiple_port_lists(
+                    dataplane,
+                    [pkt, tag_pkt, pkt],
+                    [[0], [1], [4, 5, 6]],
+                )
         finally:
             npu.flush_fdb_entries(
                 npu.switch_oid,
@@ -2580,8 +2611,6 @@ class TestFdbAge:
         1. Learn on port1; wait full age interval; move to port0 and verify.
         2. Wait another age interval and verify flood when dynamic entry is gone.
         """
-        if not npu.run_traffic:
-            pytest.skip("Traffic generation disabled")
         lrn_mac = "00:01:01:01:01:01"
         lrn_port = 1
         mv_port = 0
@@ -2591,31 +2620,32 @@ class TestFdbAge:
             eth_dst=self.vrf_mac, eth_src=lrn_mac, dl_vlan_enable=True, vlan_vid=self.vlan_id_int, pktlen=104
         )
         try:
-            send_packet(dataplane, lrn_port, lrn_tag_pkt)
-            verify_packets(dataplane, lrn_pkt, [vrf])
-            time.sleep(2)
+            if npu.run_traffic:
+                send_packet(dataplane, lrn_port, lrn_tag_pkt)
+                verify_packets(dataplane, lrn_pkt, [vrf])
+                time.sleep(2)
 
-            _sai_wait_fdb_age(self.age_time)
+                _sai_wait_fdb_age(self.age_time)
 
-            send_packet(dataplane, mv_port, lrn_pkt)
-            verify_packets(dataplane, lrn_pkt, [vrf])
-            time.sleep(1)
+                send_packet(dataplane, mv_port, lrn_pkt)
+                verify_packets(dataplane, lrn_pkt, [vrf])
+                time.sleep(1)
 
-            pkt = simple_udp_packet(eth_dst=lrn_mac, eth_src=self.vrf_mac, pktlen=100)
-            tag_pkt = simple_udp_packet(
-                eth_dst=lrn_mac, eth_src=self.vrf_mac, dl_vlan_enable=True, vlan_vid=self.vlan_id_int, pktlen=104
-            )
-            send_packet(dataplane, vrf, pkt)
-            verify_packets(dataplane, pkt, [mv_port])
+                pkt = simple_udp_packet(eth_dst=lrn_mac, eth_src=self.vrf_mac, pktlen=100)
+                tag_pkt = simple_udp_packet(
+                    eth_dst=lrn_mac, eth_src=self.vrf_mac, dl_vlan_enable=True, vlan_vid=self.vlan_id_int, pktlen=104
+                )
+                send_packet(dataplane, vrf, pkt)
+                verify_packets(dataplane, pkt, [mv_port])
 
-            _sai_wait_fdb_age(self.age_time)
+                _sai_wait_fdb_age(self.age_time)
 
-            send_packet(dataplane, vrf, pkt)
-            verify_each_packet_on_multiple_port_lists(
-                dataplane,
-                [pkt, tag_pkt, pkt],
-                [[0], [1], [4, 5, 6]],
-            )
+                send_packet(dataplane, vrf, pkt)
+                verify_each_packet_on_multiple_port_lists(
+                    dataplane,
+                    [pkt, tag_pkt, pkt],
+                    [[0], [1], [4, 5, 6]],
+                )
         finally:
             npu.flush_fdb_entries(
                 npu.switch_oid,
@@ -2775,17 +2805,17 @@ class TestFdbMiss:
         Test scenario:
         1. Verify default flood; set DROP; verify no packets; restore FORWARD.
         """
-        if not npu.run_traffic:
-            pytest.skip("Traffic generation disabled")
         try:
-            send_packet(dataplane, self.send_port, self.ucast_pkt)
-            verify_packets(dataplane, self.ucast_pkt, self.flood_ports)
+            if npu.run_traffic:
+                send_packet(dataplane, self.send_port, self.ucast_pkt)
+                verify_packets(dataplane, self.ucast_pkt, self.flood_ports)
             npu.set(npu.switch_oid, ["SAI_SWITCH_ATTR_FDB_UNICAST_MISS_PACKET_ACTION", "SAI_PACKET_ACTION_DROP"])
             st, data = npu.get(npu.switch_oid, ["SAI_SWITCH_ATTR_FDB_UNICAST_MISS_PACKET_ACTION", ""], False)
             assert st == "SAI_STATUS_SUCCESS"
             assert data.value() == "SAI_PACKET_ACTION_DROP"
-            send_packet(dataplane, self.send_port, self.ucast_pkt)
-            verify_no_other_packets(dataplane)
+            if npu.run_traffic:
+                send_packet(dataplane, self.send_port, self.ucast_pkt)
+                verify_no_other_packets(dataplane)
         finally:
             self._restore_unicast_fwd(npu)
 
@@ -2797,24 +2827,24 @@ class TestFdbMiss:
         Test scenario:
         1. Baseline flood; set COPY; sleep; measure queue0 delta with flood verification.
         """
-        if not npu.run_traffic:
-            pytest.skip("Traffic generation disabled")
         try:
-            send_packet(dataplane, self.send_port, self.ucast_pkt)
-            verify_packets(dataplane, self.ucast_pkt, self.flood_ports)
+            if npu.run_traffic:
+                send_packet(dataplane, self.send_port, self.ucast_pkt)
+                verify_packets(dataplane, self.ucast_pkt, self.flood_ports)
             npu.set(npu.switch_oid, ["SAI_SWITCH_ATTR_FDB_UNICAST_MISS_PACKET_ACTION", "SAI_PACKET_ACTION_COPY"])
             st, data = npu.get(npu.switch_oid, ["SAI_SWITCH_ATTR_FDB_UNICAST_MISS_PACKET_ACTION", ""], False)
             assert st == "SAI_STATUS_SUCCESS"
             assert data.value() == "SAI_PACKET_ACTION_COPY"
-            time.sleep(4)
-            q0 = self.topo._cpu_queue(0)
-            pre_stats = self.topo.get_counter(q0, "SAI_QUEUE_STAT_PACKETS")
-            send_packet(dataplane, self.send_port, self.ucast_pkt)
-            verify_packets(dataplane, self.ucast_pkt, self.flood_ports)
-            time.sleep(4)
-            post_stats = self.topo.get_counter(q0, "SAI_QUEUE_STAT_PACKETS")
-            assert post_stats - pre_stats >= 1
-            dataplane.flush()
+            if npu.run_traffic:
+                time.sleep(4)
+                q0 = self.topo._cpu_queue(0)
+                pre_stats = self.topo.get_counter(q0, "SAI_QUEUE_STAT_PACKETS")
+                send_packet(dataplane, self.send_port, self.ucast_pkt)
+                verify_packets(dataplane, self.ucast_pkt, self.flood_ports)
+                time.sleep(4)
+                post_stats = self.topo.get_counter(q0, "SAI_QUEUE_STAT_PACKETS")
+                assert post_stats - pre_stats >= 1
+                dataplane.flush()
         finally:
             self._restore_unicast_fwd(npu)
 
@@ -2826,23 +2856,23 @@ class TestFdbMiss:
         Test scenario:
         1. Baseline flood; set TRAP; verify queue0 increments without requiring dataplane flood copy.
         """
-        if not npu.run_traffic:
-            pytest.skip("Traffic generation disabled")
         try:
-            send_packet(dataplane, self.send_port, self.ucast_pkt)
-            verify_packets(dataplane, self.ucast_pkt, self.flood_ports)
+            if npu.run_traffic:
+                send_packet(dataplane, self.send_port, self.ucast_pkt)
+                verify_packets(dataplane, self.ucast_pkt, self.flood_ports)
             npu.set(npu.switch_oid, ["SAI_SWITCH_ATTR_FDB_UNICAST_MISS_PACKET_ACTION", "SAI_PACKET_ACTION_TRAP"])
             st, data = npu.get(npu.switch_oid, ["SAI_SWITCH_ATTR_FDB_UNICAST_MISS_PACKET_ACTION", ""], False)
             assert st == "SAI_STATUS_SUCCESS"
             assert data.value() == "SAI_PACKET_ACTION_TRAP"
-            time.sleep(4)
-            q0 = self.topo._cpu_queue(0)
-            pre_stats = self.topo.get_counter(q0, "SAI_QUEUE_STAT_PACKETS")
-            send_packet(dataplane, self.send_port, self.ucast_pkt)
-            time.sleep(4)
-            post_stats = self.topo.get_counter(q0, "SAI_QUEUE_STAT_PACKETS")
-            assert post_stats - pre_stats >= 1
-            dataplane.flush()
+            if npu.run_traffic:
+                time.sleep(4)
+                q0 = self.topo._cpu_queue(0)
+                pre_stats = self.topo.get_counter(q0, "SAI_QUEUE_STAT_PACKETS")
+                send_packet(dataplane, self.send_port, self.ucast_pkt)
+                time.sleep(4)
+                post_stats = self.topo.get_counter(q0, "SAI_QUEUE_STAT_PACKETS")
+                assert post_stats - pre_stats >= 1
+                dataplane.flush()
         finally:
             self._restore_unicast_fwd(npu)
 
@@ -2854,26 +2884,27 @@ class TestFdbMiss:
         Test scenario:
         1. Flood baseline; DROP mcast miss; verify LLDP still increments queue 4.
         """
-        if not npu.run_traffic:
-            pytest.skip("Traffic generation disabled")
         try:
-            send_packet(dataplane, self.send_port, self.mcast_pkt)
-            verify_packets(dataplane, self.mcast_pkt, self.flood_ports)
+            if npu.run_traffic:
+                send_packet(dataplane, self.send_port, self.mcast_pkt)
+                verify_packets(dataplane, self.mcast_pkt, self.flood_ports)
             npu.set(npu.switch_oid, ["SAI_SWITCH_ATTR_FDB_MULTICAST_MISS_PACKET_ACTION", "SAI_PACKET_ACTION_DROP"])
             st, data = npu.get(npu.switch_oid, ["SAI_SWITCH_ATTR_FDB_MULTICAST_MISS_PACKET_ACTION", ""], False)
             assert st == "SAI_STATUS_SUCCESS"
             assert data.value() == "SAI_PACKET_ACTION_DROP"
-            send_packet(dataplane, self.send_port, self.mcast_pkt)
-            verify_no_other_packets(dataplane)
-            time.sleep(4)
-            q4 = self.topo._cpu_queue(4)
-            pre_stats = self.topo.get_counter(q4, "SAI_QUEUE_STAT_PACKETS")
-            send_packet(dataplane, self.send_port, self.lldp_pkt)
-            time.sleep(4)
-            post_stats = self.topo.get_counter(q4, "SAI_QUEUE_STAT_PACKETS")
-            assert post_stats - pre_stats >= 1
+            if npu.run_traffic:
+                send_packet(dataplane, self.send_port, self.mcast_pkt)
+                verify_no_other_packets(dataplane)
+                time.sleep(4)
+                q4 = self.topo._cpu_queue(4)
+                pre_stats = self.topo.get_counter(q4, "SAI_QUEUE_STAT_PACKETS")
+                send_packet(dataplane, self.send_port, self.lldp_pkt)
+                time.sleep(4)
+                post_stats = self.topo.get_counter(q4, "SAI_QUEUE_STAT_PACKETS")
+                assert post_stats - pre_stats >= 1
         finally:
-            dataplane.flush()
+            if npu.run_traffic:
+                dataplane.flush()
             self._restore_mcast_fwd(npu)
 
     def test_multicast_miss_copy_action(self, npu, dataplane):
@@ -2884,32 +2915,33 @@ class TestFdbMiss:
         Test scenario:
         1. Baseline flood; COPY; verify mcast flood and CPU copy; then LLDP on queue4.
         """
-        if not npu.run_traffic:
-            pytest.skip("Traffic generation disabled")
         try:
-            send_packet(dataplane, self.send_port, self.mcast_pkt)
-            verify_packets(dataplane, self.mcast_pkt, self.flood_ports)
+            if npu.run_traffic:
+                send_packet(dataplane, self.send_port, self.mcast_pkt)
+                verify_packets(dataplane, self.mcast_pkt, self.flood_ports)
             npu.set(npu.switch_oid, ["SAI_SWITCH_ATTR_FDB_MULTICAST_MISS_PACKET_ACTION", "SAI_PACKET_ACTION_COPY"])
             st, data = npu.get(npu.switch_oid, ["SAI_SWITCH_ATTR_FDB_MULTICAST_MISS_PACKET_ACTION", ""], False)
             assert st == "SAI_STATUS_SUCCESS"
             assert data.value() == "SAI_PACKET_ACTION_COPY"
-            time.sleep(4)
-            q0 = self.topo._cpu_queue(0)
-            pre0 = self.topo.get_counter(q0, "SAI_QUEUE_STAT_PACKETS")
-            send_packet(dataplane, self.send_port, self.mcast_pkt)
-            verify_packets(dataplane, self.mcast_pkt, self.flood_ports)
-            time.sleep(4)
-            post0 = self.topo.get_counter(q0, "SAI_QUEUE_STAT_PACKETS")
-            assert post0 - pre0 >= 1
-            time.sleep(4)
-            q4 = self.topo._cpu_queue(4)
-            pre4 = self.topo.get_counter(q4, "SAI_QUEUE_STAT_PACKETS")
-            send_packet(dataplane, self.send_port, self.lldp_pkt)
-            time.sleep(4)
-            post4 = self.topo.get_counter(q4, "SAI_QUEUE_STAT_PACKETS")
-            assert post4 - pre4 >= 1
+            if npu.run_traffic:
+                time.sleep(4)
+                q0 = self.topo._cpu_queue(0)
+                pre0 = self.topo.get_counter(q0, "SAI_QUEUE_STAT_PACKETS")
+                send_packet(dataplane, self.send_port, self.mcast_pkt)
+                verify_packets(dataplane, self.mcast_pkt, self.flood_ports)
+                time.sleep(4)
+                post0 = self.topo.get_counter(q0, "SAI_QUEUE_STAT_PACKETS")
+                assert post0 - pre0 >= 1
+                time.sleep(4)
+                q4 = self.topo._cpu_queue(4)
+                pre4 = self.topo.get_counter(q4, "SAI_QUEUE_STAT_PACKETS")
+                send_packet(dataplane, self.send_port, self.lldp_pkt)
+                time.sleep(4)
+                post4 = self.topo.get_counter(q4, "SAI_QUEUE_STAT_PACKETS")
+                assert post4 - pre4 >= 1
         finally:
-            dataplane.flush()
+            if npu.run_traffic:
+                dataplane.flush()
             self._restore_mcast_fwd(npu)
 
     def test_multicast_miss_trap_action(self, npu, dataplane):
@@ -2920,31 +2952,32 @@ class TestFdbMiss:
         Test scenario:
         1. Baseline flood; TRAP; verify both counters.
         """
-        if not npu.run_traffic:
-            pytest.skip("Traffic generation disabled")
         try:
-            send_packet(dataplane, self.send_port, self.mcast_pkt)
-            verify_packets(dataplane, self.mcast_pkt, self.flood_ports)
+            if npu.run_traffic:
+                send_packet(dataplane, self.send_port, self.mcast_pkt)
+                verify_packets(dataplane, self.mcast_pkt, self.flood_ports)
             npu.set(npu.switch_oid, ["SAI_SWITCH_ATTR_FDB_MULTICAST_MISS_PACKET_ACTION", "SAI_PACKET_ACTION_TRAP"])
             st, data = npu.get(npu.switch_oid, ["SAI_SWITCH_ATTR_FDB_MULTICAST_MISS_PACKET_ACTION", ""], False)
             assert st == "SAI_STATUS_SUCCESS"
             assert data.value() == "SAI_PACKET_ACTION_TRAP"
-            time.sleep(4)
-            q0 = self.topo._cpu_queue(0)
-            pre0 = self.topo.get_counter(q0, "SAI_QUEUE_STAT_PACKETS")
-            send_packet(dataplane, self.send_port, self.mcast_pkt)
-            time.sleep(4)
-            post0 = self.topo.get_counter(q0, "SAI_QUEUE_STAT_PACKETS")
-            assert post0 - pre0 >= 1
-            time.sleep(4)
-            q4 = self.topo._cpu_queue(4)
-            pre4 = self.topo.get_counter(q4, "SAI_QUEUE_STAT_PACKETS")
-            send_packet(dataplane, self.send_port, self.lldp_pkt)
-            time.sleep(4)
-            post4 = self.topo.get_counter(q4, "SAI_QUEUE_STAT_PACKETS")
-            assert post4 - pre4 >= 1
+            if npu.run_traffic:
+                time.sleep(4)
+                q0 = self.topo._cpu_queue(0)
+                pre0 = self.topo.get_counter(q0, "SAI_QUEUE_STAT_PACKETS")
+                send_packet(dataplane, self.send_port, self.mcast_pkt)
+                time.sleep(4)
+                post0 = self.topo.get_counter(q0, "SAI_QUEUE_STAT_PACKETS")
+                assert post0 - pre0 >= 1
+                time.sleep(4)
+                q4 = self.topo._cpu_queue(4)
+                pre4 = self.topo.get_counter(q4, "SAI_QUEUE_STAT_PACKETS")
+                send_packet(dataplane, self.send_port, self.lldp_pkt)
+                time.sleep(4)
+                post4 = self.topo.get_counter(q4, "SAI_QUEUE_STAT_PACKETS")
+                assert post4 - pre4 >= 1
         finally:
-            dataplane.flush()
+            if npu.run_traffic:
+                dataplane.flush()
             self._restore_mcast_fwd(npu)
 
     def test_broadcast_miss_drop_action(self, npu, dataplane):
@@ -2955,26 +2988,27 @@ class TestFdbMiss:
         Test scenario:
         1. Baseline bcast flood; DROP; verify ARP still reaches CPU queue 4.
         """
-        if not npu.run_traffic:
-            pytest.skip("Traffic generation disabled")
         try:
-            send_packet(dataplane, self.send_port, self.bcast_pkt)
-            verify_packets(dataplane, self.bcast_pkt, self.flood_ports)
+            if npu.run_traffic:
+                send_packet(dataplane, self.send_port, self.bcast_pkt)
+                verify_packets(dataplane, self.bcast_pkt, self.flood_ports)
             npu.set(npu.switch_oid, ["SAI_SWITCH_ATTR_FDB_BROADCAST_MISS_PACKET_ACTION", "SAI_PACKET_ACTION_DROP"])
             st, data = npu.get(npu.switch_oid, ["SAI_SWITCH_ATTR_FDB_BROADCAST_MISS_PACKET_ACTION", ""], False)
             assert st == "SAI_STATUS_SUCCESS"
             assert data.value() == "SAI_PACKET_ACTION_DROP"
-            send_packet(dataplane, self.send_port, self.bcast_pkt)
-            verify_no_other_packets(dataplane)
-            time.sleep(4)
-            q4 = self.topo._cpu_queue(4)
-            pre_stats = self.topo.get_counter(q4, "SAI_QUEUE_STAT_PACKETS")
-            send_packet(dataplane, self.send_port, self.arp_pkt)
-            time.sleep(4)
-            post_stats = self.topo.get_counter(q4, "SAI_QUEUE_STAT_PACKETS")
-            assert post_stats - pre_stats >= 1
+            if npu.run_traffic:
+                send_packet(dataplane, self.send_port, self.bcast_pkt)
+                verify_no_other_packets(dataplane)
+                time.sleep(4)
+                q4 = self.topo._cpu_queue(4)
+                pre_stats = self.topo.get_counter(q4, "SAI_QUEUE_STAT_PACKETS")
+                send_packet(dataplane, self.send_port, self.arp_pkt)
+                time.sleep(4)
+                post_stats = self.topo.get_counter(q4, "SAI_QUEUE_STAT_PACKETS")
+                assert post_stats - pre_stats >= 1
         finally:
-            dataplane.flush()
+            if npu.run_traffic:
+                dataplane.flush()
             self._restore_bcast_fwd(npu)
 
     def test_broadcast_miss_copy_action(self, npu, dataplane):
@@ -2985,32 +3019,33 @@ class TestFdbMiss:
         Test scenario:
         1. Baseline flood; COPY bcast miss; verify both stages.
         """
-        if not npu.run_traffic:
-            pytest.skip("Traffic generation disabled")
         try:
-            send_packet(dataplane, self.send_port, self.bcast_pkt)
-            verify_packets(dataplane, self.bcast_pkt, self.flood_ports)
+            if npu.run_traffic:
+                send_packet(dataplane, self.send_port, self.bcast_pkt)
+                verify_packets(dataplane, self.bcast_pkt, self.flood_ports)
             npu.set(npu.switch_oid, ["SAI_SWITCH_ATTR_FDB_BROADCAST_MISS_PACKET_ACTION", "SAI_PACKET_ACTION_COPY"])
             st, data = npu.get(npu.switch_oid, ["SAI_SWITCH_ATTR_FDB_BROADCAST_MISS_PACKET_ACTION", ""], False)
             assert st == "SAI_STATUS_SUCCESS"
             assert data.value() == "SAI_PACKET_ACTION_COPY"
-            time.sleep(4)
-            q0 = self.topo._cpu_queue(0)
-            pre0 = self.topo.get_counter(q0, "SAI_QUEUE_STAT_PACKETS")
-            send_packet(dataplane, self.send_port, self.bcast_pkt)
-            verify_packets(dataplane, self.bcast_pkt, self.flood_ports)
-            time.sleep(4)
-            post0 = self.topo.get_counter(q0, "SAI_QUEUE_STAT_PACKETS")
-            assert post0 - pre0 >= 1
-            time.sleep(4)
-            q4 = self.topo._cpu_queue(4)
-            pre4 = self.topo.get_counter(q4, "SAI_QUEUE_STAT_PACKETS")
-            send_packet(dataplane, self.send_port, self.arp_pkt)
-            time.sleep(4)
-            post4 = self.topo.get_counter(q4, "SAI_QUEUE_STAT_PACKETS")
-            assert post4 - pre4 >= 1
+            if npu.run_traffic:
+                time.sleep(4)
+                q0 = self.topo._cpu_queue(0)
+                pre0 = self.topo.get_counter(q0, "SAI_QUEUE_STAT_PACKETS")
+                send_packet(dataplane, self.send_port, self.bcast_pkt)
+                verify_packets(dataplane, self.bcast_pkt, self.flood_ports)
+                time.sleep(4)
+                post0 = self.topo.get_counter(q0, "SAI_QUEUE_STAT_PACKETS")
+                assert post0 - pre0 >= 1
+                time.sleep(4)
+                q4 = self.topo._cpu_queue(4)
+                pre4 = self.topo.get_counter(q4, "SAI_QUEUE_STAT_PACKETS")
+                send_packet(dataplane, self.send_port, self.arp_pkt)
+                time.sleep(4)
+                post4 = self.topo.get_counter(q4, "SAI_QUEUE_STAT_PACKETS")
+                assert post4 - pre4 >= 1
         finally:
-            dataplane.flush()
+            if npu.run_traffic:
+                dataplane.flush()
             self._restore_bcast_fwd(npu)
 
     def test_broadcast_miss_trap_action(self, npu, dataplane):
@@ -3021,31 +3056,32 @@ class TestFdbMiss:
         Test scenario:
         1. Baseline flood; TRAP; verify queue deltas.
         """
-        if not npu.run_traffic:
-            pytest.skip("Traffic generation disabled")
         try:
-            send_packet(dataplane, self.send_port, self.bcast_pkt)
-            verify_packets(dataplane, self.bcast_pkt, self.flood_ports)
+            if npu.run_traffic:
+                send_packet(dataplane, self.send_port, self.bcast_pkt)
+                verify_packets(dataplane, self.bcast_pkt, self.flood_ports)
             npu.set(npu.switch_oid, ["SAI_SWITCH_ATTR_FDB_BROADCAST_MISS_PACKET_ACTION", "SAI_PACKET_ACTION_TRAP"])
             st, data = npu.get(npu.switch_oid, ["SAI_SWITCH_ATTR_FDB_BROADCAST_MISS_PACKET_ACTION", ""], False)
             assert st == "SAI_STATUS_SUCCESS"
             assert data.value() == "SAI_PACKET_ACTION_TRAP"
-            time.sleep(4)
-            q0 = self.topo._cpu_queue(0)
-            pre0 = self.topo.get_counter(q0, "SAI_QUEUE_STAT_PACKETS")
-            send_packet(dataplane, self.send_port, self.bcast_pkt)
-            time.sleep(4)
-            post0 = self.topo.get_counter(q0, "SAI_QUEUE_STAT_PACKETS")
-            assert post0 - pre0 >= 1
-            time.sleep(4)
-            q4 = self.topo._cpu_queue(4)
-            pre4 = self.topo.get_counter(q4, "SAI_QUEUE_STAT_PACKETS")
-            send_packet(dataplane, self.send_port, self.arp_pkt)
-            time.sleep(4)
-            post4 = self.topo.get_counter(q4, "SAI_QUEUE_STAT_PACKETS")
-            assert post4 - pre4 >= 1
+            if npu.run_traffic:
+                time.sleep(4)
+                q0 = self.topo._cpu_queue(0)
+                pre0 = self.topo.get_counter(q0, "SAI_QUEUE_STAT_PACKETS")
+                send_packet(dataplane, self.send_port, self.bcast_pkt)
+                time.sleep(4)
+                post0 = self.topo.get_counter(q0, "SAI_QUEUE_STAT_PACKETS")
+                assert post0 - pre0 >= 1
+                time.sleep(4)
+                q4 = self.topo._cpu_queue(4)
+                pre4 = self.topo.get_counter(q4, "SAI_QUEUE_STAT_PACKETS")
+                send_packet(dataplane, self.send_port, self.arp_pkt)
+                time.sleep(4)
+                post4 = self.topo.get_counter(q4, "SAI_QUEUE_STAT_PACKETS")
+                assert post4 - pre4 >= 1
         finally:
-            dataplane.flush()
+            if npu.run_traffic:
+                dataplane.flush()
             self._restore_bcast_fwd(npu)
 
 
@@ -3085,24 +3121,23 @@ class TestFdbEvent:
         1. Send unknown source traffic to trigger learning on port0.
         2. Verify multi-port flood then read bridge port, packet action, and entry type attributes.
         """
-        if not npu.run_traffic:
-            pytest.skip("Traffic generation disabled")
         pkt = simple_udp_packet(eth_dst=self.dst_mac, eth_src=self.src_mac)
         tag_pkt = simple_udp_packet(eth_dst=self.dst_mac, eth_src=self.src_mac, dl_vlan_enable=True, vlan_vid=self.vlan_id_int, pktlen=104)
         try:
-            send_packet(dataplane, 0, pkt)
-            verify_each_packet_on_multiple_port_lists(dataplane, [tag_pkt, pkt], [[1], [4, 5, 6]])
-            time.sleep(2)
-            fdb_key = npu.fdb_entry_key(self.vlan_oid, self.src_mac)
-            status, data = npu.get(fdb_key, ["SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID", "oid:0x0"], False)
-            assert status == "SAI_STATUS_SUCCESS"
-            assert data.oid() == self.port0_bp
-            status, data = npu.get(fdb_key, ["SAI_FDB_ENTRY_ATTR_PACKET_ACTION", ""], False)
-            assert status == "SAI_STATUS_SUCCESS"
-            assert data.value() == "SAI_PACKET_ACTION_FORWARD"
-            status, data = npu.get(fdb_key, ["SAI_FDB_ENTRY_ATTR_TYPE", ""], False)
-            assert status == "SAI_STATUS_SUCCESS"
-            assert data.value() == "SAI_FDB_ENTRY_TYPE_DYNAMIC"
+            if npu.run_traffic:
+                send_packet(dataplane, 0, pkt)
+                verify_each_packet_on_multiple_port_lists(dataplane, [tag_pkt, pkt], [[1], [4, 5, 6]])
+                time.sleep(2)
+                fdb_key = npu.fdb_entry_key(self.vlan_oid, self.src_mac)
+                status, data = npu.get(fdb_key, ["SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID", "oid:0x0"], False)
+                assert status == "SAI_STATUS_SUCCESS"
+                assert data.oid() == self.port0_bp
+                status, data = npu.get(fdb_key, ["SAI_FDB_ENTRY_ATTR_PACKET_ACTION", ""], False)
+                assert status == "SAI_STATUS_SUCCESS"
+                assert data.value() == "SAI_PACKET_ACTION_FORWARD"
+                status, data = npu.get(fdb_key, ["SAI_FDB_ENTRY_ATTR_TYPE", ""], False)
+                assert status == "SAI_STATUS_SUCCESS"
+                assert data.value() == "SAI_FDB_ENTRY_TYPE_DYNAMIC"
         finally:
             npu.flush_fdb_entries(
                 npu.switch_oid,
@@ -3118,30 +3153,29 @@ class TestFdbEvent:
         1. Configure aging time, learn MAC with flood verification, assert attributes before aging.
         2. Wait for expiry and verify FDB get returns item-not-found for the aged entry.
         """
-        if not npu.run_traffic:
-            pytest.skip("Traffic generation disabled")
         age_time = 10
         pkt = simple_udp_packet(eth_dst=self.dst_mac, eth_src=self.src_mac)
         tag_pkt = simple_udp_packet(eth_dst=self.dst_mac, eth_src=self.src_mac, dl_vlan_enable=True, vlan_vid=self.vlan_id_int, pktlen=104)
         try:
             npu.set(npu.switch_oid, ["SAI_SWITCH_ATTR_FDB_AGING_TIME", str(age_time)])
-            send_packet(dataplane, 0, pkt)
-            verify_each_packet_on_multiple_port_lists(dataplane, [tag_pkt, pkt], [[1], [4, 5, 6]])
-            time.sleep(2)
-            fdb_key = npu.fdb_entry_key(self.vlan_oid, self.src_mac)
-            status, data = npu.get(fdb_key, ["SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID", "oid:0x0"], False)
-            assert status == "SAI_STATUS_SUCCESS"
-            assert data.oid() == self.port0_bp
-            status, data = npu.get(fdb_key, ["SAI_FDB_ENTRY_ATTR_PACKET_ACTION", ""], False)
-            assert status == "SAI_STATUS_SUCCESS"
-            assert data.value() == "SAI_PACKET_ACTION_FORWARD"
-            status, data = npu.get(fdb_key, ["SAI_FDB_ENTRY_ATTR_TYPE", ""], False)
-            assert status == "SAI_STATUS_SUCCESS"
-            assert data.value() == "SAI_FDB_ENTRY_TYPE_DYNAMIC"
+            if npu.run_traffic:
+                send_packet(dataplane, 0, pkt)
+                verify_each_packet_on_multiple_port_lists(dataplane, [tag_pkt, pkt], [[1], [4, 5, 6]])
+                time.sleep(2)
+                fdb_key = npu.fdb_entry_key(self.vlan_oid, self.src_mac)
+                status, data = npu.get(fdb_key, ["SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID", "oid:0x0"], False)
+                assert status == "SAI_STATUS_SUCCESS"
+                assert data.oid() == self.port0_bp
+                status, data = npu.get(fdb_key, ["SAI_FDB_ENTRY_ATTR_PACKET_ACTION", ""], False)
+                assert status == "SAI_STATUS_SUCCESS"
+                assert data.value() == "SAI_PACKET_ACTION_FORWARD"
+                status, data = npu.get(fdb_key, ["SAI_FDB_ENTRY_ATTR_TYPE", ""], False)
+                assert status == "SAI_STATUS_SUCCESS"
+                assert data.value() == "SAI_FDB_ENTRY_TYPE_DYNAMIC"
 
-            time.sleep(age_time * 2 + 2)
-            status, _ = npu.get(fdb_key, ["SAI_FDB_ENTRY_ATTR_TYPE", ""], False)
-            assert status == "SAI_STATUS_ITEM_NOT_FOUND"
+                time.sleep(age_time * 2 + 2)
+                status, _ = npu.get(fdb_key, ["SAI_FDB_ENTRY_ATTR_TYPE", ""], False)
+                assert status == "SAI_STATUS_ITEM_NOT_FOUND"
         finally:
             npu.flush_fdb_entries(
                 npu.switch_oid,
@@ -3158,38 +3192,37 @@ class TestFdbEvent:
         1. Learn MAC on port0 (flood verify and attribute check), move from lag1 member port4.
         2. Verify intermediate move-stage flood and final bridge port on lag1_bp.
         """
-        if not npu.run_traffic:
-            pytest.skip("Traffic generation disabled")
         pkt = simple_udp_packet(eth_dst=self.dst_mac, eth_src=self.src_mac)
         tag_pkt = simple_udp_packet(eth_dst=self.dst_mac, eth_src=self.src_mac, dl_vlan_enable=True, vlan_vid=self.vlan_id_int, pktlen=104)
         mv_port = 4
         try:
-            send_packet(dataplane, 0, pkt)
-            verify_each_packet_on_multiple_port_lists(dataplane, [tag_pkt, pkt], [[1], [4, 5, 6]])
-            time.sleep(2)
-            fdb_key = npu.fdb_entry_key(self.vlan_oid, self.src_mac)
-            status, data = npu.get(fdb_key, ["SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID", "oid:0x0"], False)
-            assert status == "SAI_STATUS_SUCCESS"
-            assert data.oid() == self.port0_bp
-            status, data = npu.get(fdb_key, ["SAI_FDB_ENTRY_ATTR_PACKET_ACTION", ""], False)
-            assert status == "SAI_STATUS_SUCCESS"
-            assert data.value() == "SAI_PACKET_ACTION_FORWARD"
-            status, data = npu.get(fdb_key, ["SAI_FDB_ENTRY_ATTR_TYPE", ""], False)
-            assert status == "SAI_STATUS_SUCCESS"
-            assert data.value() == "SAI_FDB_ENTRY_TYPE_DYNAMIC"
+            if npu.run_traffic:
+                send_packet(dataplane, 0, pkt)
+                verify_each_packet_on_multiple_port_lists(dataplane, [tag_pkt, pkt], [[1], [4, 5, 6]])
+                time.sleep(2)
+                fdb_key = npu.fdb_entry_key(self.vlan_oid, self.src_mac)
+                status, data = npu.get(fdb_key, ["SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID", "oid:0x0"], False)
+                assert status == "SAI_STATUS_SUCCESS"
+                assert data.oid() == self.port0_bp
+                status, data = npu.get(fdb_key, ["SAI_FDB_ENTRY_ATTR_PACKET_ACTION", ""], False)
+                assert status == "SAI_STATUS_SUCCESS"
+                assert data.value() == "SAI_PACKET_ACTION_FORWARD"
+                status, data = npu.get(fdb_key, ["SAI_FDB_ENTRY_ATTR_TYPE", ""], False)
+                assert status == "SAI_STATUS_SUCCESS"
+                assert data.value() == "SAI_FDB_ENTRY_TYPE_DYNAMIC"
 
-            send_packet(dataplane, mv_port, pkt)
-            verify_each_packet_on_multiple_port_lists(dataplane, [pkt, tag_pkt], [[0], [1]])
-            time.sleep(2)
-            status, data = npu.get(fdb_key, ["SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID", "oid:0x0"], False)
-            assert status == "SAI_STATUS_SUCCESS"
-            assert data.oid() == self.lag1_bp
-            status, data = npu.get(fdb_key, ["SAI_FDB_ENTRY_ATTR_PACKET_ACTION", ""], False)
-            assert status == "SAI_STATUS_SUCCESS"
-            assert data.value() == "SAI_PACKET_ACTION_FORWARD"
-            status, data = npu.get(fdb_key, ["SAI_FDB_ENTRY_ATTR_TYPE", ""], False)
-            assert status == "SAI_STATUS_SUCCESS"
-            assert data.value() == "SAI_FDB_ENTRY_TYPE_DYNAMIC"
+                send_packet(dataplane, mv_port, pkt)
+                verify_each_packet_on_multiple_port_lists(dataplane, [pkt, tag_pkt], [[0], [1]])
+                time.sleep(2)
+                status, data = npu.get(fdb_key, ["SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID", "oid:0x0"], False)
+                assert status == "SAI_STATUS_SUCCESS"
+                assert data.oid() == self.lag1_bp
+                status, data = npu.get(fdb_key, ["SAI_FDB_ENTRY_ATTR_PACKET_ACTION", ""], False)
+                assert status == "SAI_STATUS_SUCCESS"
+                assert data.value() == "SAI_PACKET_ACTION_FORWARD"
+                status, data = npu.get(fdb_key, ["SAI_FDB_ENTRY_ATTR_TYPE", ""], False)
+                assert status == "SAI_STATUS_SUCCESS"
+                assert data.value() == "SAI_FDB_ENTRY_TYPE_DYNAMIC"
         finally:
             npu.flush_fdb_entries(
                 npu.switch_oid,
@@ -3205,24 +3238,23 @@ class TestFdbEvent:
         1. Learn dynamic MAC, verify attributes, flush dynamic entries for port0 bridge port.
         2. Verify FDB get returns item-not-found for flushed entry.
         """
-        if not npu.run_traffic:
-            pytest.skip("Traffic generation disabled")
         pkt = simple_udp_packet(eth_dst=self.dst_mac, eth_src=self.src_mac)
         tag_pkt = simple_udp_packet(eth_dst=self.dst_mac, eth_src=self.src_mac, dl_vlan_enable=True, vlan_vid=self.vlan_id_int, pktlen=104)
+        fdb_key = npu.fdb_entry_key(self.vlan_oid, self.src_mac)
         try:
-            send_packet(dataplane, 0, pkt)
-            verify_each_packet_on_multiple_port_lists(dataplane, [tag_pkt, pkt], [[1], [4, 5, 6]])
-            time.sleep(2)
-            fdb_key = npu.fdb_entry_key(self.vlan_oid, self.src_mac)
-            status, data = npu.get(fdb_key, ["SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID", "oid:0x0"], False)
-            assert status == "SAI_STATUS_SUCCESS"
-            assert data.oid() == self.port0_bp
-            status, data = npu.get(fdb_key, ["SAI_FDB_ENTRY_ATTR_PACKET_ACTION", ""], False)
-            assert status == "SAI_STATUS_SUCCESS"
-            assert data.value() == "SAI_PACKET_ACTION_FORWARD"
-            status, data = npu.get(fdb_key, ["SAI_FDB_ENTRY_ATTR_TYPE", ""], False)
-            assert status == "SAI_STATUS_SUCCESS"
-            assert data.value() == "SAI_FDB_ENTRY_TYPE_DYNAMIC"
+            if npu.run_traffic:
+                send_packet(dataplane, 0, pkt)
+                verify_each_packet_on_multiple_port_lists(dataplane, [tag_pkt, pkt], [[1], [4, 5, 6]])
+                time.sleep(2)
+                status, data = npu.get(fdb_key, ["SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID", "oid:0x0"], False)
+                assert status == "SAI_STATUS_SUCCESS"
+                assert data.oid() == self.port0_bp
+                status, data = npu.get(fdb_key, ["SAI_FDB_ENTRY_ATTR_PACKET_ACTION", ""], False)
+                assert status == "SAI_STATUS_SUCCESS"
+                assert data.value() == "SAI_PACKET_ACTION_FORWARD"
+                status, data = npu.get(fdb_key, ["SAI_FDB_ENTRY_ATTR_TYPE", ""], False)
+                assert status == "SAI_STATUS_SUCCESS"
+                assert data.value() == "SAI_FDB_ENTRY_TYPE_DYNAMIC"
 
             npu.flush_fdb_entries(
                 npu.switch_oid,
@@ -3248,24 +3280,25 @@ class TestFdbEvent:
         1. Learn dynamic MAC and verify attributes, then remove FDB entry.
         2. Verify FDB get returns item-not-found for deleted entry.
         """
-        if not npu.run_traffic:
-            pytest.skip("Traffic generation disabled")
         pkt = simple_udp_packet(eth_dst=self.dst_mac, eth_src=self.src_mac)
         tag_pkt = simple_udp_packet(eth_dst=self.dst_mac, eth_src=self.src_mac, dl_vlan_enable=True, vlan_vid=self.vlan_id_int, pktlen=104)
+        fdb_key = npu.fdb_entry_key(self.vlan_oid, self.src_mac)
         try:
-            send_packet(dataplane, 0, pkt)
-            verify_each_packet_on_multiple_port_lists(dataplane, [tag_pkt, pkt], [[1], [4, 5, 6]])
-            time.sleep(2)
-            fdb_key = npu.fdb_entry_key(self.vlan_oid, self.src_mac)
-            status, data = npu.get(fdb_key, ["SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID", "oid:0x0"], False)
-            assert status == "SAI_STATUS_SUCCESS"
-            assert data.oid() == self.port0_bp
-            status, data = npu.get(fdb_key, ["SAI_FDB_ENTRY_ATTR_PACKET_ACTION", ""], False)
-            assert status == "SAI_STATUS_SUCCESS"
-            assert data.value() == "SAI_PACKET_ACTION_FORWARD"
-            status, data = npu.get(fdb_key, ["SAI_FDB_ENTRY_ATTR_TYPE", ""], False)
-            assert status == "SAI_STATUS_SUCCESS"
-            assert data.value() == "SAI_FDB_ENTRY_TYPE_DYNAMIC"
+            if npu.run_traffic:
+                send_packet(dataplane, 0, pkt)
+                verify_each_packet_on_multiple_port_lists(dataplane, [tag_pkt, pkt], [[1], [4, 5, 6]])
+                time.sleep(2)
+                status, data = npu.get(fdb_key, ["SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID", "oid:0x0"], False)
+                assert status == "SAI_STATUS_SUCCESS"
+                assert data.oid() == self.port0_bp
+                status, data = npu.get(fdb_key, ["SAI_FDB_ENTRY_ATTR_PACKET_ACTION", ""], False)
+                assert status == "SAI_STATUS_SUCCESS"
+                assert data.value() == "SAI_PACKET_ACTION_FORWARD"
+                status, data = npu.get(fdb_key, ["SAI_FDB_ENTRY_ATTR_TYPE", ""], False)
+                assert status == "SAI_STATUS_SUCCESS"
+                assert data.value() == "SAI_FDB_ENTRY_TYPE_DYNAMIC"
+            else:
+                npu.create_fdb(self.vlan_oid, self.src_mac, self.port0_bp)
 
             npu.remove(fdb_key)
             status, _ = npu.get(fdb_key, ["SAI_FDB_ENTRY_ATTR_TYPE", ""], False)
