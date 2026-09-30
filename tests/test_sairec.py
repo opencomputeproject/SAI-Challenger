@@ -41,7 +41,8 @@ def tofino_teardown(npu):
         "BCM56850/bulk_fdb.rec",
         "BCM56850/bulk_route.rec",
         #"BCM56850/tunnel_map.rec",
-        "BCM56850/remove_create_port.rec"
+        "BCM56850/remove_create_port.rec",
+        "BCM56850/port_bulk_get.rec",
     ],
 )
 def test_apply_sairec(npu, dataplane, fname, bcm56850_teardown):
