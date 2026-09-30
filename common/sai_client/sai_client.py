@@ -106,6 +106,9 @@ class SaiClient:
     def bulk_set(self, obj_type, keys, attrs, do_assert=True):
         raise NotImplementedError
 
+    def bulk_get(self, obj_type, keys, attrs, do_assert=True):
+        raise NotImplementedError
+
     # Host interface
     def remote_iface_exists(self, iface):
         raise NotImplementedError

@@ -317,6 +317,9 @@ class Sai():
     def bulk_set(self, obj_type, keys, attrs, do_assert=True):
         return self.sai_client.bulk_set(obj_type, keys, attrs, do_assert)
 
+    def bulk_get(self, obj_type, keys, attrs, do_assert=True):
+        return self.sai_client.bulk_get(obj_type, keys, attrs, do_assert)
+
     # Stats
     def get_stats(self, obj, attrs, do_assert=True):
         return self.sai_client.get_stats(obj, attrs, do_assert)
@@ -810,6 +813,39 @@ class Sai():
                     oids.append(data.oid(idx))
         return status
 
+    def _process_bulk_get_command(self, record, oids):
+        """Process bulk attribute get command ('B')."""
+        # record = [["B", "sai-object-type"], ["key", "attr=value", ...], ...]
+        bulk_keys = []
+        bulk_attrs = []
+        for idx, entry in enumerate(record[1:]):
+            attrs = []
+            for attr in entry[1:]:
+                attrs += attr.split("=")
+
+            key = record[0][1] + ":" + entry[0]
+            key = self.__update_key(record[0][0], key)
+            if ":" in key:
+                key = key.split(":", 1)[1]
+            if key.startswith("{"):
+                key = json.loads(key)
+
+            bulk_keys.append(key)
+            bulk_attrs.append(attrs)
+
+        _, statuses, data = self.bulk_get(
+            record[0][1], bulk_keys, bulk_attrs, False)
+
+        for obj_status, data in zip(statuses, data):
+            if obj_status != "SAI_STATUS_SUCCESS" or data is None:
+                continue
+            jdata = data.to_json()
+            for attr_idx in range(1, len(jdata), 2):
+                if ":oid:" in jdata[attr_idx]:
+                    oids += data.oids(attr_idx)
+                elif "oid:" in jdata[attr_idx]:
+                    oids.append(data.oid(attr_idx))
+
     def _process_get_response_command(self, rec, oids):
         """Process expected get response command ('G')."""
         attrs = []
@@ -828,6 +864,26 @@ class Sai():
 
         assert len(oids) == len(G_oids), f"Expected data {oids}. Actual data {G_oids}"
 
+        for idx, oid in enumerate(G_oids):
+            self.rec2vid[oid] = oids[idx]
+        oids.clear()
+
+    def _process_bulk_get_response_command(self, record, oids):
+        """Process bulk get response ('G' line with || groups)."""
+        G_oids = []
+        for entry in record[1:]:
+            attrs = []
+            for attr in entry[1:]:
+                if attr:
+                    attrs += attr.split("=")
+            for idx in range(1, len(attrs), 2):
+                G_output = attrs[idx]
+                if ":oid:" in G_output:
+                    start_idx = G_output.find(":") + 1
+                    G_oids += G_output[start_idx:].split(",")
+                elif "oid:" in G_output:
+                    G_oids.append(G_output)
+        assert len(oids) == len(G_oids), f"Expected data {oids}. Actual data {G_oids}"
         for idx, oid in enumerate(G_oids):
             self.rec2vid[oid] = oids[idx]
         oids.clear()
@@ -866,8 +922,13 @@ class Sai():
                 self._process_bulk_remove_command(record)
             elif rec[0] == 'g':
                 status = self._process_get_command(rec, oids)
+            elif rec[0] == 'B':
+                status = self._process_bulk_get_command(record, oids)
             elif rec[0] == 'G':
-                self._process_get_response_command(rec, oids)
+                if len(record) > 1:
+                    self._process_bulk_get_response_command(record, oids)
+                else:
+                    self._process_get_response_command(rec, oids)
             elif rec[0] == 'E':
                 self._process_expected_failure_command(rec, status)
             else:
@@ -882,7 +943,7 @@ class Sai():
         if action == "c" or action == "C":
             # Return object's type in "SAI_OBJECT_TYPE_XXXX" format
             return key_list[0]
-        elif action == "g" or action == "s" or action == "S":
+        elif action == "g" or action == "s" or action == "S" or action == "B":
             vid = self.rec2vid[key_list[1]]
         elif action == "r" or action == "R":
             vid = self.rec2vid.pop(key_list[1])
