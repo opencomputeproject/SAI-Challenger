@@ -1,0 +1,53 @@
+name: sc-standalone-vpp-deb-13
+
+on:
+  pull_request:
+    types: [ opened, synchronize, reopened ]
+    branches: [ "**" ]
+    paths:
+      - '.github/workflows/sc-standalone-vpp-deb-13.yml'
+      - 'dockerfiles/trixie/Dockerfile'
+      - 'npu/vpp/**'
+      - 'common/**'
+      - 'cli/**'
+      - 'scripts/**'
+      - 'configs/**'
+      - 'tests/**'
+      - 'topologies/**'
+      - 'setup.py'
+      - 'build.sh'
+      - 'run.sh'
+      - 'exec.sh'
+      - '.dockerignore'
+      - 'sai.env'
+
+jobs:
+  build-sc-standalone-vpp:
+    name: Build SAI Challenger VPP standalone image
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 2
+
+      - name: Update submodules
+        run: git submodule update --init
+
+      - name: Build VPP standalone Docker image
+        run: ./build.sh -a vpp -t saivpp -o trixie
+
+      - name: Start SAI-C in VPP standalone mode
+        run: ./run.sh -a vpp -t saivpp -p -o trixie
+
+      - name: Update SAI-C package
+        run: ./exec.sh -a vpp -t saivpp --no-tty pip3 install /sai-challenger/common /sai-challenger
+
+      - name: Run basic L2 tests
+        run: ./exec.sh -a vpp -t saivpp --no-tty pytest --testbed=saivpp_standalone -v test_l2_basic.py -k "not test_l2_lag and not test_l2_lag_hash_seed"
+
+      - name: Run basic L3 tests
+        run: ./exec.sh -a vpp -t saivpp --no-tty pytest --testbed=saivpp_standalone -v test_dc_t1.py::test_basic_route
+        
+      - name: Run L2 tests with traffic
+        run: ./exec.sh -a vpp -t saivpp --no-tty pytest --testbed=saivpp_standalone -v test_l2_basic.py -k "not lag and not mtu and not bulk" --traffic

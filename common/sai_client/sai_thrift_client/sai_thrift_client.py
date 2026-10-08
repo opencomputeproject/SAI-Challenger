@@ -320,6 +320,29 @@ class SaiThriftClient(SaiClient):
                 self.set(obj_type + ":" + json.dumps(keys[i]), attr, do_assert)
         return "SAI_STATUS_SUCCESS", statuses
 
+    def bulk_get(self, obj_type, keys, attrs, do_assert=True):
+        # TODO: Provide proper implementation once Thrift bulk API is available
+        statuses = []
+        data = []
+        
+        if isinstance(obj_type, SaiObjType):
+            obj_type = "SAI_OBJECT_TYPE_" + obj_type.name
+
+        for i, key in enumerate(keys):
+            attr = attrs[0] if len(attrs) == 1 else attrs[i]
+            encoded = key if isinstance(key, str) else json.dumps(key)
+
+            status, result = self.get(obj_type + ":" + encoded, attr, False)
+            statuses.append(status)
+            data.append(result)
+
+            if status != "SAI_STATUS_SUCCESS":
+                if do_assert:
+                    assert False, f"bulk_get({obj_type}, {key}, {attr}) --> {status}"
+                return "SAI_STATUS_FAILURE", statuses, data
+
+        return "SAI_STATUS_SUCCESS", statuses, data
+
     def get_stats(self, obj, attrs, do_assert=True):
         obj_type, oid, _ = self.obj_to_items(obj)
         status, result = self._operate_stats('get', attrs=attrs, oid=oid, obj_type=obj_type)

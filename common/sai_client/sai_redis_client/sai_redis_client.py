@@ -443,6 +443,97 @@ class SaiRedisClient(SaiClient):
 
         return status[2], entry_status
 
+    def bulk_get(self, obj_type, keys, attrs, do_assert=True):
+        '''
+        Bulk get objects attributes
+        Parameters:
+            obj_type (SaiObjType): The type of objects whose attributes are to be retrieved
+            keys (list): The list of objects to be queried.
+                    E.g.:
+                    [
+                        {
+                            "bvid"      : vlan_oid,
+                            "mac"       : "00:00:00:00:00:01",
+                            "switch_id" : self.sw_oid
+                        },
+                        {...}
+                    ]
+            attrs (list): The list of requested attribute lists, one set per object.
+                    In case just one set of attributes provided, all objects
+                    will be queried for this set of attributes.
+                    E.g.:
+                    [
+                        [
+                            "SAI_PORT_ATTR_SPEED",
+                            "SAI_PORT_ATTR_ADMIN_STATE"
+                        ],
+                        [...]
+                    ]
+            do_assert (bool): Assert that the bulk get operation overall status succeeded.
+        Usage example:
+            bulk_get(SaiObjType.PORT, [key1, key2, ...], [attrs1, attrs2, ...])
+            bulk_get(SaiObjType.PORT, [key1, key2, ...], [attrs])
+        Returns:
+            The tuple with three elements.
+            The first element contains bulk get operation overall status:
+                * "SAI_STATUS_SUCCESS" on success when the bulk operation succeeded;
+                * "SAI_STATUS_FAILURE" when the bulk operation fails;
+            The second element contains the list of statuses of each individual object
+            get attribute result.
+            The third element contains the list of SaiData objects containing the retrieved
+            attributes for each individual object.
+        '''
+        assert isinstance(obj_type, SaiObjType) or (isinstance(obj_type, str) and obj_type.startswith("SAI_OBJECT_TYPE_"))
+        assert len(keys) == len(attrs) or len(attrs) == 1
+
+        key = "SAI_OBJECT_TYPE_" + obj_type.name if isinstance(obj_type, SaiObjType) else obj_type
+        key = key + ":" + str(len(keys))
+
+        str_attr = ""
+        if (len(attrs) == 1):
+            str_attr = self.__bulk_attr_serialize(attrs[0])
+
+        values = []
+        for i, _ in enumerate(keys):
+            k = keys[i]
+            if type(k) != str:
+                k = json.dumps(k).replace(" ", "")
+            values.append(k)
+            if (len(attrs) > 1):
+                str_attr = self.__bulk_attr_serialize(attrs[i])
+            values.append(str_attr)
+
+        status = self.operate(key, json.dumps(values), "Sbulkget")
+
+        status[1] = status[1].decode("utf-8")
+        status[1] = json.loads(status[1])
+        entry_status = []
+        entry_data = []
+        for i, v in enumerate(status[1]):
+            if i % 2 == 0:
+                entry_status.append(v)
+            else:
+                entry_data.append(self.__bulk_attr_deserialize(v))
+
+        status[2] = status[2].decode("utf-8")
+
+        if do_assert:
+            assert status[2] == 'SAI_STATUS_SUCCESS', f"bulk_get({key}) --> {status[2]} {entry_status}"
+            return status[2], entry_status, entry_data
+
+        return status[2], entry_status, entry_data
+
+    def __bulk_attr_deserialize(self, attr):
+        pairs = []
+        if attr:
+            for item in attr.split("|"):
+                if not item:
+                    continue
+                name, sep, value = item.partition("=")
+                if sep:
+                    pairs.extend([name, value])
+        return SaiData(json.dumps(pairs))
+
     def get_stats(self, obj, attrs, do_assert=True):
         if obj.startswith("oid:"):
             obj = self.vid_to_type(obj) + ":" + obj

@@ -11,6 +11,7 @@ RUN mkdir -p /root/.config/pip \
 # Install generic packages
 RUN apt-get -o Acquire::Check-Valid-Until=false update && apt-get install -y \
         apt-utils \
+        sudo \
         vim \
         curl \
         wget \
