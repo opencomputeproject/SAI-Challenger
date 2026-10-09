@@ -327,6 +327,69 @@ class SaiNpu(Sai):
             if oid not in default_vlan_bp:
                 self.create_vlan_member(self.default_vlan_oid, oid, "SAI_VLAN_TAGGING_MODE_UNTAGGED")
 
+
+    def rebreak_port(self, cases, autoneg="off", fec="none"):
+        target_lanes = ",".join(c["lanes"] for c in cases)
+        target = set(target_lanes.split(","))
+        keep, drop = [], []
+
+        for port_oid, bp_oid in zip(self.port_oids, self.dot1q_bp_oids):
+            status, data = self.get(port_oid, ["SAI_PORT_ATTR_HW_LANE_LIST", self.make_list(8, "0")], do_assert=False)
+            lanes = set(data.to_list()) if status == "SAI_STATUS_SUCCESS" and data else set()
+            (drop if lanes & target else keep).append((port_oid, bp_oid))
+
+        for port_oid, bp_oid in drop:
+            vlan_mbr = self.get_vlan_member(self.default_vlan_oid, bp_oid)
+            if vlan_mbr:
+                self.remove(vlan_mbr)
+            self.remove_bridge_port(bp_oid)
+            status, data = self.get(port_oid, ["SAI_PORT_ATTR_PORT_SERDES_ID"], do_assert=False)
+            if status == "SAI_STATUS_SUCCESS" and data.oid() != "oid:0x0":
+                self.remove(data.oid())
+            self.remove(port_oid)
+
+        created = []
+        for port in cases:
+            lanes = port["lanes"]
+            lanes_attr = f"{lanes.count(',') + 1}:{lanes}"
+            speed = str(port.get("speed_mbps", port.get("speed", "100000")))
+
+            port_attr = [
+                "SAI_PORT_ATTR_ADMIN_STATE", "true",
+                "SAI_PORT_ATTR_PORT_VLAN_ID", self.default_vlan_id,
+                "SAI_PORT_ATTR_MTU", "1514",
+                "SAI_PORT_ATTR_HW_LANE_LIST", lanes_attr,
+                "SAI_PORT_ATTR_SPEED", speed,
+                "SAI_PORT_ATTR_AUTO_NEG_MODE", "true" if autoneg == "on" else "false",
+                "SAI_PORT_ATTR_FEC_MODE", "SAI_PORT_FEC_MODE_" + fec.upper(),
+            ]
+
+            port_oid = self.create(SaiObjType.PORT, port_attr)
+            created.append(port_oid)
+
+        created_bps = []
+        for port_oid in created:
+            bp_oid = self.create(SaiObjType.BRIDGE_PORT, [
+                "SAI_BRIDGE_PORT_ATTR_TYPE", "SAI_BRIDGE_PORT_TYPE_PORT",
+                "SAI_BRIDGE_PORT_ATTR_PORT_ID", port_oid,
+                "SAI_BRIDGE_PORT_ATTR_ADMIN_STATE", "true"
+            ])
+            created_bps.append(bp_oid)
+
+        default_vlan_bp = []
+        vlan_mbr_oids = self.get(self.default_vlan_oid, ["SAI_VLAN_ATTR_MEMBER_LIST"]).to_list()
+        for vlan_mbr_oid in vlan_mbr_oids:
+            oid = self.get(vlan_mbr_oid, ["SAI_VLAN_MEMBER_ATTR_BRIDGE_PORT_ID"]).oid()
+            default_vlan_bp.append(oid)
+
+        for oid in created_bps:
+            if oid not in default_vlan_bp:
+                self.create_vlan_member(self.default_vlan_oid, oid, "SAI_VLAN_TAGGING_MODE_UNTAGGED")
+
+        self.port_oids = [oid for oid, _ in keep] + created
+        self.dot1q_bp_oids = [bp for _, bp in keep] + created_bps
+        return created
+
     def assert_port_oper_up(self, port_oid, tout=15):
         for i in range(tout):
             data = self.get(port_oid, ["SAI_PORT_ATTR_OPER_STATUS"])
