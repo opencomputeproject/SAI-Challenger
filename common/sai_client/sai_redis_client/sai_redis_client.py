@@ -136,6 +136,10 @@ class SaiRedisClient(SaiClient):
             # Wait upto 3 mins for switch init
             tout = 0.5
             attempts = 240
+        elif 'bulk' in op:
+            # Bulk opeeration is longer than regular, so need to wait up to 20 s
+            tout = 0.1
+            attempts = 200
         else:
             tout = 0.01
             attempts = self.attempts
