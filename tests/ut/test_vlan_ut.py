@@ -187,7 +187,7 @@ def test_set_attr_negative(npu, dataplane, sai_vlan_obj, attr, attr_value, expec
         ("4096",        "SAI_STATUS_INVALID_VLAN_ID"),
     ]
 )
-def test_vlan_create_negative(npu, dataplane, vlan_id, expected_status):
+def test_vlan_create_negative(npu, dataplane, sai_vlan_obj, vlan_id, expected_status):
     attrs = []
     if vlan_id is not None:
         attrs = ["SAI_VLAN_ATTR_VLAN_ID", vlan_id]
