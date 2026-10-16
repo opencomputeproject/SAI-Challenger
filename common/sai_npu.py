@@ -328,15 +328,19 @@ class SaiNpu(Sai):
                 self.create_vlan_member(self.default_vlan_oid, oid, "SAI_VLAN_TAGGING_MODE_UNTAGGED")
 
 
-    def rebreak_port(self, cases, autoneg="off", fec="none"):
-        target_lanes = ",".join(c["lanes"] for c in cases)
-        target = set(target_lanes.split(","))
+    def _replace_ports(self, ports):
+        """Remove tracked ports and create replacements.
+
+        ports: specs with lanes, speed, and optional autoneg ("on"/"off") and fec.
+        Returns the created port OIDs. Updates port_oids and dot1q_bp_oids.
+        """
+        target_lanes = set(",".join(port["lanes"].split(",")) for port in ports)
         keep, drop = [], []
 
         for port_oid, bp_oid in zip(self.port_oids, self.dot1q_bp_oids):
             status, data = self.get(port_oid, ["SAI_PORT_ATTR_HW_LANE_LIST", self.make_list(8, "0")], do_assert=False)
             lanes = set(data.to_list()) if status == "SAI_STATUS_SUCCESS" and data else set()
-            (drop if lanes & target else keep).append((port_oid, bp_oid))
+            (drop if lanes & target_lanes else keep).append((port_oid, bp_oid))
 
         for port_oid, bp_oid in drop:
             vlan_mbr = self.get_vlan_member(self.default_vlan_oid, bp_oid)
@@ -349,17 +353,18 @@ class SaiNpu(Sai):
             self.remove(port_oid)
 
         created = []
-        for port in cases:
-            lanes = port["lanes"]
+        for port in ports:
+            lanes = str(port["lanes"])
             lanes_attr = f"{lanes.count(',') + 1}:{lanes}"
-            speed = str(port.get("speed_mbps", port.get("speed", "100000")))
+            autoneg = port.get("autoneg", "off")
+            fec = port.get("fec", "none")
 
             port_attr = [
                 "SAI_PORT_ATTR_ADMIN_STATE", "true",
                 "SAI_PORT_ATTR_PORT_VLAN_ID", self.default_vlan_id,
                 "SAI_PORT_ATTR_MTU", "1514",
                 "SAI_PORT_ATTR_HW_LANE_LIST", lanes_attr,
-                "SAI_PORT_ATTR_SPEED", speed,
+                "SAI_PORT_ATTR_SPEED", str(port["speed"]),
                 "SAI_PORT_ATTR_AUTO_NEG_MODE", "true" if autoneg == "on" else "false",
                 "SAI_PORT_ATTR_FEC_MODE", "SAI_PORT_FEC_MODE_" + fec.upper(),
             ]
