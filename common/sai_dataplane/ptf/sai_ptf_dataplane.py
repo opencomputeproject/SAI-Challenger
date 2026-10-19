@@ -94,6 +94,13 @@ class SaiPtfDataPlane(SaiDataPlane, TestCase):
 
     def setUp(self):
         assert self.dataplane is not None
+        target_asic = os.getenv("SC_ASIC", "").lower()
+        target_name = os.getenv("SC_TARGET", "").lower()
+        if target_asic == "vpp" or target_name == "saivpp":
+            import ptf.testutils as testutils
+            testutils.reset_filters()
+            testutils.add_filter(testutils.not_ipv6_filter)
+
         self.dataplane.flush()
         if config["log_dir"] is not None:
             filename = os.path.join(config["log_dir"], str(self)) + ".pcap"
@@ -109,6 +116,12 @@ class SaiPtfDataPlane(SaiDataPlane, TestCase):
         assert self.dataplane is not None
         if config["log_dir"] is not None:
             self.dataplane.stop_pcap()
+
+        target_asic = os.getenv("SC_ASIC", "").lower()
+        target_name = os.getenv("SC_TARGET", "").lower()
+        if target_asic == "vpp" or target_name == "saivpp":
+            import ptf.testutils as testutils
+            testutils.reset_filters()
 
     @staticmethod
     def getPortMap():

@@ -1,7 +1,7 @@
 ARG BASE_OS=trixie
 FROM sc-base:${BASE_OS}
 
-MAINTAINER maksym.parfeniuk.dev@gmail.com
+MAINTAINER maksym.parfeniuk@plvision.eu
 
 ENV SC_PLATFORM=vpp
 ENV SC_ASIC=vpp
