@@ -846,7 +846,7 @@ class SaiRedisClient(SaiClient):
             return f"ASIC_STATE_CHANNEL@{self.asic_db}"
         return None
 
-    def __assert_syncd_running(self, tout=60):
+    def __assert_syncd_running(self, tout=120):
         for i in range(tout + 1):
             self.asic_channel = self.__check_syncd_running()
             if self.asic_channel:
