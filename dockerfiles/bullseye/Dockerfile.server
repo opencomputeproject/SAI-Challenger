@@ -6,7 +6,11 @@ MAINTAINER andriy.kokhan@gmail.com
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Install generic packages
-RUN apt-get -o Acquire::Check-Valid-Until=false update && apt-get install -y \
+RUN sed -i \
+        's|http://deb.debian.org/debian-security|http://archive.debian.org/debian-security|' \
+        /etc/apt/sources.list \
+    && apt-get -o Acquire::Check-Valid-Until=false update \
+    && apt-get install -y \          
         apt-utils \
         vim \
         curl \
