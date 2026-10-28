@@ -37,9 +37,9 @@ RUN git clone https://github.com/sonic-net/sonic-sairedis.git \
         # Disable -Werror=overloaded-virtual and -Werror=template-id-cdtor for GCC 14
         && GCC_VER=$(gcc -dumpversion | cut -d. -f1) \
         && if [ "$GCC_VER" -ge 14 ]; then \
-                export DEB_CXXFLAGS_APPEND="-Wno-error=overloaded-virtual -Wno-error=template-id-cdtor"; \
+                export DEB_CXXFLAGS_APPEND="-Wno-error=overloaded-virtual -Wno-error=template-id-cdtor -Wno-error=disabled-optimization"; \
            else \
-                export DEB_CXXFLAGS_APPEND="-Wno-error=overloaded-virtual"; \
+                export DEB_CXXFLAGS_APPEND="-Wno-error=overloaded-virtual -Wno-error=disabled-optimization"; \
            fi \
         && dpkg-buildpackage -us -uc -b -Psyncd,vs,nopython2 --jobs=auto \
         && cd .. \
