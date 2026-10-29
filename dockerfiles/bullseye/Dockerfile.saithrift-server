@@ -63,8 +63,9 @@ ARG GIT_TOKEN
 
 RUN . /sai.env \
     && git clone ${SAI_URL} SAI \
-    && cd SAI && git fetch origin \
+    && cd SAI \
     && git checkout ${SAI_ID} \
+    && git update-ref refs/remotes/origin/master ${SAI_ID} \
     && cd meta \
     # Workaround for SAI issue #2018
     && sed -i 's/\.\/checkenumlock.sh/#\.\/checkenumlock.sh/g' Makefile \

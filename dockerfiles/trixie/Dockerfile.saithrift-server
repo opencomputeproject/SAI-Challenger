@@ -73,6 +73,7 @@ RUN curl -fsSL https://downloads.sourceforge.net/project/doxygen/rel-1.8.17/doxy
     && git clone ${SAI_URL} SAI \
     && cd SAI \
     && git checkout ${SAI_ID} \
+    && git update-ref refs/remotes/origin/master ${SAI_ID} \
     && cd meta \
     && sed -i '/HTML_TIMESTAMP/d; /FORMULA_TRANSPARENT/d; /DOT_FONTNAME/d; /DOT_FONTSIZE/d; /DOT_TRANSPARENT/d' Doxyfile \
     # Workaround for SAI issue #2018
