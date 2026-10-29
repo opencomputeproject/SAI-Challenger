@@ -17,7 +17,7 @@ def pytest_generate_tests(metafunc):
         port_obj = {"name": name, "lanes": p_data["lanes"]}
         for mode in sorted(p_data["modes"]):
             pairs.append((port_obj, mode))
-    metafunc.parametrize("port,breakout_mode", pairs, ids=[f"{p['name']}-{m}" for p, m in pairs])
+    metafunc.parametrize("port,breakout_mode", pairs, ids=[f"{p['name']}-{m}" for p, m in pairs], scope="class")
 
 
 @pytest.fixture(scope="module", autouse=True)
