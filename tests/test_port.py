@@ -5,19 +5,24 @@ from saichallenger.common.sai_npu import SaiNpu
 
 
 def pytest_generate_tests(metafunc):
-    if "port" not in metafunc.fixturenames or "breakout_mode" not in metafunc.fixturenames:
+    if "case" not in metafunc.fixturenames:
         return
     testbed = metafunc.config.getoption("--testbed")
     base_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
     ports = SaiNpu.get_port_breakout_modes(base_dir=base_dir, testbed=testbed)
 
     pairs = []
-    for name in sorted(ports):
+    for name in ports:
         p_data = ports[name]
         port_obj = {"name": name, "lanes": p_data["lanes"]}
         for mode in sorted(p_data["modes"]):
             pairs.append((port_obj, mode))
-    metafunc.parametrize("port,breakout_mode", pairs, ids=[f"{p['name']}-{m}" for p, m in pairs], scope="class")
+    metafunc.parametrize(
+        "case",
+        pairs,
+        ids=[f"{p['name']}-{m}" for p, m in pairs],
+        scope="class",
+    )
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -43,7 +48,7 @@ def restore_ports(npu):
     npu.reset()
 
 
-def port_caching(npu, port):
+def port_caching(npu, port, autoneg, fec):
     """Snapshot initial state of the platform port into cache if not already done."""
     port_name = port["name"]
     if port_name in original_port_cache:
@@ -57,17 +62,11 @@ def port_caching(npu, port):
         lanes_list = data.to_list() if status == "SAI_STATUS_SUCCESS" and data else []
         
         if set(lanes_list) & parent_lanes:
-            fec_val = npu.get(oid, ["SAI_PORT_ATTR_FEC_MODE"]).value()
-            if fec_val.startswith("SAI_PORT_FEC_MODE_"):
-                fec_val = fec_val[len("SAI_PORT_FEC_MODE_"):].lower()
-                
-            autoneg_val = npu.get(oid, ["SAI_PORT_ATTR_AUTO_NEG_MODE"]).value()
-            
             cached_specs.append({
                 "lanes": ",".join(lanes_list),
                 "speed": str(npu.get(oid, ["SAI_PORT_ATTR_SPEED"]).uint32()),
-                "autoneg": "on" if autoneg_val == "true" else "off",
-                "fec": fec_val,
+                "autoneg": autoneg,
+                "fec": fec,
             })
             
     original_port_cache[port_name] = cached_specs
@@ -75,7 +74,7 @@ def port_caching(npu, port):
 
 def rebreak_port(npu, port, cases, autoneg="off", fec="none"):
     """Replace ports on the breakout lanes with the logical ports in cases."""
-    port_caching(npu, port)
+    port_caching(npu, port, autoneg, fec)
 
     specs = [
         {
@@ -116,13 +115,21 @@ class TestDynamicPortBreakout:
     """Port create and attribute checks driven by platform.json breakout modes."""
 
     @pytest.mark.dependency()
-    def test_dynamic_port_breakout(self, npu, port, breakout_mode):
+    def test_dynamic_port_breakout(self, npu, case):
+        port, breakout_mode = case
         port_name = port["name"]
         cases = SaiNpu.get_port_breakout_modes(npu=npu, port_name=port_name, breakout_mode=breakout_mode)
         created = rebreak_port(npu, port, cases, autoneg="off", fec="none")
         assert len(created) == len(cases)
 
-        for port_oid, case in zip(created, cases):
+    @pytest.mark.dependency()
+    def test_supported_speed(self, request, npu, case, subtests):
+        port, breakout_mode = case
+        port_name = port["name"]
+        depends(request, [f"TestDynamicPortBreakout::test_dynamic_port_breakout[{port_name}-{breakout_mode}]"])
+        cases = SaiNpu.get_port_breakout_modes(npu=npu,port_name=port_name,breakout_mode=breakout_mode)
+
+        for port_oid, case in _resolve_breakout_ports(npu, cases):
             expected_speeds = set(case["supported_speeds_mbps"])
             supported = npu.get(port_oid, ["SAI_PORT_ATTR_SUPPORTED_SPEED", npu.make_list(10, "0")]).to_list()
             actual_speeds = {int(s) for s in supported if int(s) != 0}
@@ -132,17 +139,20 @@ class TestDynamicPortBreakout:
             )
 
     @pytest.mark.dependency()
-    def test_port_admin_state(self, request, npu, port, breakout_mode):
+    def test_port_admin_state(self, request, npu, case, subtests):
+        port, breakout_mode = case
         port_name = port["name"]
         depends(request, [f"TestDynamicPortBreakout::test_dynamic_port_breakout[{port_name}-{breakout_mode}]"])
         cases = SaiNpu.get_port_breakout_modes(npu=npu, port_name=port_name, breakout_mode=breakout_mode)
-        for port_oid, _case in _resolve_breakout_ports(npu, cases):
+        for port_oid, case in _resolve_breakout_ports(npu, cases):
             for value in ("true", "false", "true"):
-                npu.set(port_oid, ["SAI_PORT_ATTR_ADMIN_STATE", value])
-                assert npu.get(port_oid, ["SAI_PORT_ATTR_ADMIN_STATE"]).value() == value
+                with subtests.test(port_alias=case["alias"], admin_state=value):
+                    npu.set(port_oid, ["SAI_PORT_ATTR_ADMIN_STATE", value])
+                    assert npu.get(port_oid, ["SAI_PORT_ATTR_ADMIN_STATE"]).value() == value
 
     @pytest.mark.dependency()
-    def test_speed_and_fec_change(self, request, npu, port, breakout_mode, subtests):
+    def test_speed_and_fec_change(self, request, npu, case, subtests):
+        port, breakout_mode = case
         port_name = port["name"]
         depends(request, [f"TestDynamicPortBreakout::test_dynamic_port_breakout[{port_name}-{breakout_mode}]"])
         cases = SaiNpu.get_port_breakout_modes(npu=npu, port_name=port_name, breakout_mode=breakout_mode)
@@ -160,7 +170,8 @@ class TestDynamicPortBreakout:
                             assert npu.get(port_oid, ["SAI_PORT_ATTR_FEC_MODE"]).value() == fec
 
     @pytest.mark.dependency()
-    def test_port_loopback_modes(self, request, npu, port, breakout_mode, subtests):
+    def test_port_loopback_modes(self, request, npu, case, subtests):
+        port, breakout_mode = case
         port_name = port["name"]
         depends(request, [f"TestDynamicPortBreakout::test_dynamic_port_breakout[{port_name}-{breakout_mode}]"])
         cases = SaiNpu.get_port_breakout_modes(npu=npu, port_name=port_name, breakout_mode=breakout_mode)
@@ -186,7 +197,8 @@ class TestDynamicPortBreakout:
             )
 
     @pytest.mark.dependency()
-    def test_port_recovery(self, request, npu, port, breakout_mode):
+    def test_port_recovery(self, request, npu, case):
+        port, breakout_mode = case
         port_name = port["name"]
         depends(request, [f"TestDynamicPortBreakout::test_dynamic_port_breakout[{port_name}-{breakout_mode}]"])
         restored = restore_port(npu, port)

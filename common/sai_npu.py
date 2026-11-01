@@ -334,7 +334,9 @@ class SaiNpu(Sai):
         ports: specs with lanes, speed, and optional autoneg ("on"/"off") and fec.
         Returns the created port OIDs. Updates port_oids and dot1q_bp_oids.
         """
-        target_lanes = set(",".join(port["lanes"].split(",")) for port in ports)
+        target_lanes = {
+            lane for port in ports for lane in port["lanes"].split(",")
+        }
         keep, drop = [], []
 
         for port_oid, bp_oid in zip(self.port_oids, self.dot1q_bp_oids):
