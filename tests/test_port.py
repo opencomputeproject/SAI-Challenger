@@ -32,12 +32,6 @@ def skip_all(testbed_instance):
         pytest.skip('invalid for "{}" testbed'.format(testbed.name))
 
 
-@pytest.fixture(scope="module", autouse=True)
-def skip_saivs(npu):
-    if npu is not None and npu.target == "saivs":
-        pytest.skip('not supported for "{}" target'.format(npu.target))
-
-
 original_port_cache = {}
 
 
@@ -68,20 +62,25 @@ def port_caching(npu, port, autoneg, fec):
                 "autoneg": autoneg,
                 "fec": fec,
             })
+    
+    assert cached_specs, (
+    f"No original port state cached for {port_name}; "
+    "cannot perform breakout safely"
+    )
             
     original_port_cache[port_name] = cached_specs
 
 
-def rebreak_port(npu, port, cases, autoneg="off", fec="none"):
+def rebreak_port(npu, port, cases):
     """Replace ports on the breakout lanes with the logical ports in cases."""
-    port_caching(npu, port, autoneg, fec)
+    port_caching(npu, port, autoneg="off", fec="none")
 
     specs = [
         {
             "lanes": str(case["lanes"]),
             "speed": str(case.get("speed_mbps", case.get("speed", "100000"))),
-            "autoneg": autoneg,
-            "fec": fec,
+            "autoneg": "off",
+            "fec": "none",
         }
         for case in cases
     ]
@@ -119,7 +118,7 @@ class TestDynamicPortBreakout:
         port, breakout_mode = case
         port_name = port["name"]
         cases = SaiNpu.get_port_breakout_modes(npu=npu, port_name=port_name, breakout_mode=breakout_mode)
-        created = rebreak_port(npu, port, cases, autoneg="off", fec="none")
+        created = rebreak_port(npu, port, cases)
         assert len(created) == len(cases)
 
     @pytest.mark.dependency()
@@ -128,15 +127,23 @@ class TestDynamicPortBreakout:
         port_name = port["name"]
         depends(request, [f"TestDynamicPortBreakout::test_dynamic_port_breakout[{port_name}-{breakout_mode}]"])
         cases = SaiNpu.get_port_breakout_modes(npu=npu,port_name=port_name,breakout_mode=breakout_mode)
+        resolved_ports = _resolve_breakout_ports(npu, cases)
+        status, data = npu.get(resolved_ports[0][0], ["SAI_PORT_ATTR_SUPPORTED_SPEED", npu.make_list(10, "0")], do_assert=False)
+        if status == "SAI_STATUS_NOT_IMPLEMENTED":
+            pytest.skip("SAI_PORT_ATTR_SUPPORTED_SPEED is not implemented")
+        assert status == "SAI_STATUS_SUCCESS", (f"Failed to get supported speeds: {status}")
 
-        for port_oid, case in _resolve_breakout_ports(npu, cases):
-            expected_speeds = set(case["supported_speeds_mbps"])
-            supported = npu.get(port_oid, ["SAI_PORT_ATTR_SUPPORTED_SPEED", npu.make_list(10, "0")]).to_list()
-            actual_speeds = {int(s) for s in supported if int(s) != 0}
-            assert expected_speeds <= actual_speeds, (
-                f"alias {case['alias']} mode {case['mode']}: "
-                f"platform {expected_speeds} not in supported {actual_speeds}"
-            )
+        for port_oid, case in resolved_ports:
+            with subtests.test(port=case["alias"], expected_speeds=case["supported_speeds_mbps"]):
+                expected_speeds = set(case["supported_speeds_mbps"])
+                status, data = npu.get(port_oid, ["SAI_PORT_ATTR_SUPPORTED_SPEED", npu.make_list(10, "0")], do_assert=False)
+                supported = data.to_list()
+
+                actual_speeds = {int(s) for s in supported if int(s) != 0}
+                assert expected_speeds <= actual_speeds, (
+                    f"alias {case['alias']} mode {case['mode']}: "
+                    f"platform {expected_speeds} not in supported {actual_speeds}"
+                )
 
     @pytest.mark.dependency()
     def test_port_admin_state(self, request, npu, case, subtests):
@@ -156,7 +163,14 @@ class TestDynamicPortBreakout:
         port_name = port["name"]
         depends(request, [f"TestDynamicPortBreakout::test_dynamic_port_breakout[{port_name}-{breakout_mode}]"])
         cases = SaiNpu.get_port_breakout_modes(npu=npu, port_name=port_name, breakout_mode=breakout_mode)
-        for port_oid, case in _resolve_breakout_ports(npu, cases):
+        resolved_ports = _resolve_breakout_ports(npu, cases)
+
+        status, data = npu.get(resolved_ports[0][0], ["SAI_PORT_ATTR_SUPPORTED_FEC_MODE", npu.make_list(10, "0")], do_assert=False)
+        if status == "SAI_STATUS_NOT_IMPLEMENTED":
+            pytest.skip("SAI_PORT_ATTR_SUPPORTED_FEC_MODE is not implemented")
+        assert status == "SAI_STATUS_SUCCESS", (f"Failed to get supported FEC modes: {status}")
+
+        for port_oid, case in resolved_ports:
             for speed_mbps in case["supported_speeds_mbps"]:
                 with subtests.test(port_alias=case["alias"], speed=speed_mbps):
                     npu.set(port_oid, ["SAI_PORT_ATTR_SPEED", str(speed_mbps)])
