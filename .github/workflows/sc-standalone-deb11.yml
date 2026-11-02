@@ -91,7 +91,9 @@ jobs:
       run: ./exec.sh --no-tty pytest --testbed=saivs_standalone -v test_l2_basic_dd.py
     - name: Run API tests
       run: ./exec.sh --no-tty pytest --testbed=saivs_standalone -v api/
-
+    - name: Run dynamic port breakout tests
+      run: ./exec.sh --no-tty pytest --testbed=saivs_standalone -v test_port.py -k "Ethernet1- or Ethernet5- or Ethernet9- or Ethernet13- or Ethernet17- or Ethernet21- or Ethernet25- or Ethernet29-"
+    
     - name: Start SAI-C in standalone mode with SAI ZMQ
       run: ./run.sh -i standalone -s zmq -o deb11
     - name: Update SAI-C package

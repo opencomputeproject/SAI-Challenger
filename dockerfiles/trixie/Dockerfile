@@ -102,7 +102,7 @@ RUN echo "#mock" > /ptf/ptf && pip3 install /ptf
 COPY scripts/gen_attr_list /sai/gen_attr_list
 
 # Install SAI-C dependencies
-RUN pip3 install pytest pytest_dependency pytest-html aenum pdbpp macaddress click==8.0 zombie-imp
+RUN pip3 install pytest pytest_dependency pytest-subtests pytest-html aenum pdbpp macaddress click==8.0 zombie-imp
 RUN apt-get install -y python3-paramiko
 
 # Fix invoke/loader.py:3: DeprecationWarning caused by load_module()
