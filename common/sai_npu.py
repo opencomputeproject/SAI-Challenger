@@ -328,7 +328,7 @@ class SaiNpu(Sai):
                 self.create_vlan_member(self.default_vlan_oid, oid, "SAI_VLAN_TAGGING_MODE_UNTAGGED")
 
 
-    def _replace_ports(self, ports):
+    def recreate_ports(self, ports):
         """Remove tracked ports and create replacements.
 
         ports: specs with lanes, speed, and optional autoneg ("on"/"off") and fec.
