@@ -129,6 +129,32 @@ class TestDynamicPortBreakout:
                     assert npu.get(port_oid, ["SAI_PORT_ATTR_ADMIN_STATE"]).value() == value
 
     @pytest.mark.dependency()
+    def test_port_mtu(self, request, npu, case, subtests):
+        port, breakout_mode = case
+        port_name = port["name"]
+        depends(request, [
+            f"TestDynamicPortBreakout::test_dynamic_port_breakout[{port_name}-{breakout_mode}]"
+        ])
+
+        resolved_ports = self.breakout_ports[(port_name, breakout_mode)]
+
+        for port_oid, case in resolved_ports:
+            original_mtu = npu.get(port_oid, ["SAI_PORT_ATTR_MTU"]).uint32()
+
+            try:
+                for mtu in (100, 1000):
+                    with subtests.test(port_alias=case["alias"], mtu=mtu):
+                        npu.set(port_oid, ["SAI_PORT_ATTR_MTU", str(mtu)])
+                        actual_mtu = npu.get(port_oid, ["SAI_PORT_ATTR_MTU"]).uint32()
+
+                        assert actual_mtu == mtu, (
+                            f"alias {case['alias']}: "
+                            f"expected MTU {mtu}, got {actual_mtu}"
+                        )
+            finally:
+                npu.set(port_oid, ["SAI_PORT_ATTR_MTU", str(original_mtu)])
+
+    @pytest.mark.dependency()
     def test_speed_and_fec_change(self, request, npu, case, subtests):
         port, breakout_mode = case
         port_name = port["name"]
