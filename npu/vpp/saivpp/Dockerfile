@@ -55,7 +55,7 @@ RUN git clone https://github.com/sonic-net/sonic-sairedis.git \
             # Fix missing cstdint include (GCC 14 / Debian 13)
             sed -i '/#include <string>/a #include <cstdint>' syncd/RequestShutdownCommandLineOptions.h; \
         fi \
-    && find . -type f -name Makefile.am | xargs sed -ri 's/^TESTS =/# TESTS =/' \
+    && find . -type f -name Makefile.am | xargs sed -ri 's/^TESTS =/# TESTS =/; s/^TESTS \+=/# TESTS +=/' \
     && sed -i \
         's/^SUBDIRS = py2 py3/SUBDIRS = py3/' pyext/Makefile.am \
     && ./autogen.sh \
