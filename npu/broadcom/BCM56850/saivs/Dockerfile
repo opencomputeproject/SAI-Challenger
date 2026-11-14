@@ -31,7 +31,7 @@ RUN git clone https://github.com/sonic-net/sonic-sairedis.git \
                 sed -i '/#include <string>/a #include <cstdint>' syncd/RequestShutdownCommandLineOptions.h; \
            fi \
         # Exclude sairedis tests that require Redis to be running
-        && find . -type f -name Makefile.am | xargs sed -ri 's/^TESTS =/# TESTS =/' \
+        && find . -type f -name Makefile.am | xargs sed -ri 's/^TESTS =/# TESTS =/; s/^TESTS \+=/# TESTS +=/' \
         && sed -i "s/^SUBDIRS = py2 py3/SUBDIRS = py3/" pyext/Makefile.am \
         && ./autogen.sh \
         # Disable -Werror=overloaded-virtual and -Werror=template-id-cdtor for GCC 14
