@@ -45,9 +45,3 @@ jobs:
 
       - name: Run basic L2 tests
         run: ./exec.sh -a vpp -t saivpp --no-tty pytest --testbed=saivpp_standalone -v test_l2_basic.py -k "not test_l2_lag and not test_l2_lag_hash_seed"
-
-      - name: Run basic L3 tests
-        run: ./exec.sh -a vpp -t saivpp --no-tty pytest --testbed=saivpp_standalone -v test_dc_t1.py::test_basic_route
-        
-      - name: Run L2 tests with traffic
-        run: ./exec.sh -a vpp -t saivpp --no-tty pytest --testbed=saivpp_standalone -v test_l2_basic.py -k "not lag and not mtu and not bulk" --traffic

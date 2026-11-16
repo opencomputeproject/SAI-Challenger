@@ -8,6 +8,10 @@ MTU=9100
 sysctl -w net.ipv6.conf.all.disable_ipv6=1
 sysctl -w net.ipv6.conf.default.disable_ipv6=1
 
+# ::1 is unusable after IPv6 is disabled. Drop it so localhost resolves only
+# to 127.0.0.1 (redis-cmd-listener uses host=localhost; Redis binds 127.0.0.1).
+sed -i '/^::1[[:space:]]/d' /etc/hosts || true
+
 # Creating veth pairs in Linux
 for num in $(seq 1 $PORT_COUNT); do
     ip link delete eth"$num" 2>/dev/null || true

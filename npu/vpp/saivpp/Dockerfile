@@ -13,7 +13,10 @@ ENV VPP_INSTALL_SKIP_SYSCTL=1
 COPY configs/get_vpp.sh /tmp/get_vpp.sh
 RUN mkdir -p /var/log/vpp /run/vpp /etc/vpp \
     && chmod +x /tmp/get_vpp.sh \
-    && /tmp/get_vpp.sh \
+    && . /sai.env \
+    && PLATFORM_VPP="${PLATFORM_VPP}" \
+       VPP_VERSION_SONIC="${VPP_VERSION_SONIC}" \
+      /tmp/get_vpp.sh \
     && apt-get update \
     && apt-get install -y --no-install-recommends /tmp/vpp-artifacts/*.deb \
     && ldconfig \
@@ -108,6 +111,7 @@ COPY configs/lanemap.ini       /usr/share/sonic/hwsku/lanemap.ini
 COPY configs/supervisord.conf  /etc/supervisor/conf.d/supervisord.conf
 COPY configs/syncd_startup.sh /usr/bin/syncd_startup.sh
 COPY configs/vpp_hostif_reset.sh /usr/bin/vpp_hostif_reset.sh
+COPY configs/port_config.ini /usr/share/sonic/hwsku/port_config.ini
 
 WORKDIR /sai-challenger/tests
 
