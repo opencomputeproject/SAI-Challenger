@@ -49,7 +49,7 @@ RUN git clone https://github.com/sonic-net/sonic-sairedis.git \
         && sed -i '/#include <saitypes.h>/a #include <saiswitch.h>' experimental/saiswitchextensions.h \
         && cd .. \
         # Exclude sairedis tests that require Redis to be running
-        && find . -type f -name Makefile.am | xargs sed -ri 's/^TESTS =/# TESTS =/' \
+        && find . -type f -name Makefile.am | xargs sed -ri 's/^TESTS =/# TESTS =/; s/^TESTS \+=/# TESTS +=/' \
         && sed -i "s/^SUBDIRS = py2 py3/SUBDIRS = py3/" pyext/Makefile.am \
         && sed -i '/#include <string>/a #include <cstdint>' syncd/RequestShutdownCommandLineOptions.h \
         && ./autogen.sh \

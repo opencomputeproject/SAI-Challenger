@@ -1,7 +1,9 @@
 #!/bin/bash
 set -e
 
-VPP_VERSION_SONIC="2606-0.2+b1sonic1"
+: "${PLATFORM_VPP:?PLATFORM_VPP is not set}"
+: "${VPP_VERSION_SONIC:?VPP_VERSION_SONIC is not set}"
+
 CONFIGURED_ARCH="amd64"
 
 VPP_DEB_URL="https://packages.buildkite.com/sonic-vpp/vpp/any/pool/any/main/v/vpp"
@@ -52,7 +54,7 @@ git clone --filter=blob:none \
     /tmp/sonic-platform-vpp
 
 cd /tmp/sonic-platform-vpp
-git checkout a38dedf
+git checkout "${PLATFORM_VPP}"
 
 cd vppbld
 
