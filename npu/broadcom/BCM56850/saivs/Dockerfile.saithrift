@@ -67,11 +67,11 @@ RUN git clone https://github.com/sonic-net/sonic-sairedis.git \
         && cp meta/saimetadatautils.c /sai/gen_attr_list/ \
         && cp meta/saimetadata.c /sai/gen_attr_list/ \
         && cp meta/saiserialize.c /sai/gen_attr_list/ \
+        && sed -i 's|^SAI_HEADERS = .*|SAI_HEADERS = $(SAI_HEADER_DIR)/sai*.h ../../experimental/sai*.h|' test/saithriftv2/Makefile \
         && GEN_SAIRPC_OPTS="-cve" make saithrift-install \
         && mv /sai/sonic-sairedis/tests /sai/ \
         && rm -rf /sai/sonic-sairedis/* \
-        && mv /sai/tests /sai/sonic-sairedis/ \
-        && find /usr/local/lib -name sai_adapter.py -exec bash -c 'grep -o "SAI_[A-Z0-9_]*_STAT_[A-Z0-9_]*" "$1" | sort -u | awk "{print \$1 \" = 0\"}" > /tmp/patch.py && cat "$1" >> /tmp/patch.py && mv /tmp/patch.py "$1"' _ {} +
+        && mv /sai/tests /sai/sonic-sairedis/
 
 # Build SAI attributes metadata JSON generator and generate /etc/sai/sai.json
 RUN cd /sai/gen_attr_list \
