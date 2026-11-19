@@ -29,6 +29,10 @@ SAI_COUNTER_TYPE_TO_ID_LIST = {
     "SAI_ACL_COUNTER_ATTR": "ACL_COUNTER_ATTR_ID_LIST",
 }
 
+SAI_OBJECT_TYPE_EXTENSIONS_RANGE_BASE = 0x20000000
+SAI_REDIS_OBJECT_TYPE_MASK = 0xFF
+SAI_REDIS_OBJECT_TYPE_EXTENSIONS_FLAG_SHIFT = 39
+
 class SaiRedisClient(SaiClient):
     """Redis SAI client implementation to wrap low level SAI calls"""
     attempts = 100
@@ -790,6 +794,16 @@ class SaiRedisClient(SaiClient):
         assert not self.is_dut_mbr, "Operation is not supported in SONiC environment"
         return self.__remote_cmd_operate("stop_nn_agent") == "ok"
 
+    @staticmethod
+    def _object_type_from_vid(vid):
+        object_id = int(vid[4:], 16)
+        object_type = (object_id >> 48) & SAI_REDIS_OBJECT_TYPE_MASK
+
+        if (object_id >> SAI_REDIS_OBJECT_TYPE_EXTENSIONS_FLAG_SHIFT) & 1:
+            object_type += SAI_OBJECT_TYPE_EXTENSIONS_RANGE_BASE
+
+        return SaiObjType(object_type)
+
     def get_object_key(self, obj_type=None):
         oids = []
         all_oids = []
@@ -802,7 +816,7 @@ class SaiRedisClient(SaiClient):
         if obj_type is None:
             all_oids.sort()
             for idx, oid in enumerate(all_oids):
-                obj_type = SaiObjType(int(oid[4:], 16) >> 48)
+                obj_type = SaiRedisClient._object_type_from_vid(oid)
                 if obj_type.name not in oids_by_type:
                     oids_by_type[obj_type.name] = list()
                 oids_by_type[obj_type.name].append(oid)
@@ -810,7 +824,7 @@ class SaiRedisClient(SaiClient):
             return oids_by_type
 
         for oid in all_oids:
-            if obj_type == SaiObjType(int(oid[4:], 16) >> 48):
+            if obj_type == SaiRedisClient._object_type_from_vid(oid):
                 oids.append(oid)
         oids.sort()
         oids_by_type[obj_type.name] = oids
@@ -828,7 +842,14 @@ class SaiRedisClient(SaiClient):
                 vid = 0
         if vid is None:
             vid = self.r.incr("VIDCOUNTER")
-        return "oid:" + hex((obj_type.value << 48) | vid)
+
+        object_type = obj_type.value
+        extensions_flag = 0
+        if object_type >= SAI_OBJECT_TYPE_EXTENSIONS_RANGE_BASE:
+            object_type -= SAI_OBJECT_TYPE_EXTENSIONS_RANGE_BASE
+            extensions_flag = 1 << SAI_REDIS_OBJECT_TYPE_EXTENSIONS_FLAG_SHIFT
+
+        return "oid:" + hex((object_type << 48) | extensions_flag | vid)
 
     def vid_to_rid(self, vid):
         assert vid.startswith("oid:"), f"Invalid VID format {vid}"
@@ -891,11 +912,10 @@ class SaiRedisClient(SaiClient):
                 if len(data) > 0:
                     data += "|"
                 data += v + "="
-            else:
+            else:   
                 data += v
         return data
 
     @staticmethod
     def vid_to_type(vid):
-        obj_type = int(vid[4:], 16) >> 48
-        return "SAI_OBJECT_TYPE_" + SaiObjType(obj_type).name
+        return "SAI_OBJECT_TYPE_" + SaiRedisClient._object_type_from_vid(vid).name
