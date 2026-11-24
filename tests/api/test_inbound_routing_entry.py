@@ -27,7 +27,7 @@ class TestSaiInboundRoutingEntry:
             },
             {'name': 'inbound_routing_entry_1', 'op': 'create', 'type': 'SAI_OBJECT_TYPE_INBOUND_ROUTING_ENTRY', 
                 'attributes': [
-                                "SAI_INBOUND_ROUTING_ENTRY_ATTR_ACTION","SAI_INBOUND_ROUTING_ENTRY_ACTION_VXLAN_DECAP_PA_VALIDATE",
+                                "SAI_INBOUND_ROUTING_ENTRY_ATTR_ACTION","SAI_INBOUND_ROUTING_ENTRY_ACTION_TUNNEL_DECAP_PA_VALIDATE",
                                 "SAI_INBOUND_ROUTING_ENTRY_ATTR_SRC_VNET_ID","$vnet"
                             ], 
                 'key': {'switch_id': '$SWITCH_ID', 'eni_id': "33", 'vni': '2000', 'sip': '1.1.1.1', 'sip_mask': '32', 'priority': '0'}
@@ -49,7 +49,7 @@ class TestSaiInboundRoutingEntry:
                 "op": "set",
                 "attributes": [
 					"SAI_INBOUND_ROUTING_ENTRY_ATTR_ACTION",
-					'SAI_INBOUND_ROUTING_ENTRY_ACTION_VXLAN_DECAP'
+					'SAI_INBOUND_ROUTING_ENTRY_ACTION_TUNNEL_DECAP'
 				],
             }
         ]
