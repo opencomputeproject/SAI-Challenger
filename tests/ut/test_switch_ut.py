@@ -42,6 +42,32 @@ class TestSwitch:
         npu.assert_status_success(status)
         self.state[attr] = data.value()
 
+    def test_multi_attribute_get_status(self, npu, dataplane):
+        """
+        Multi-attribute switch get: list attribute with insufficient buffer must report
+        SAI_STATUS_BUFFER_OVERFLOW
+        """
+        active_ports = npu.get(
+            npu.switch_oid,
+            ["SAI_SWITCH_ATTR_NUMBER_OF_ACTIVE_PORTS"],
+        ).uint32()
+        assert active_ports > 1
+
+        status, _ = npu.get(
+            npu.switch_oid,
+            [
+                "SAI_SWITCH_ATTR_NUMBER_OF_ACTIVE_PORTS",
+                "0",
+                "SAI_SWITCH_ATTR_DEFAULT_VIRTUAL_ROUTER_ID",
+                "oid:0x0",
+                "SAI_SWITCH_ATTR_PORT_LIST",
+                npu.make_list(1, "oid:0x0"),
+            ],
+            do_assert=False,
+        )
+
+        assert status == "SAI_STATUS_BUFFER_OVERFLOW"
+
     @pytest.mark.parametrize(
             "attr,attr_value",
             [
