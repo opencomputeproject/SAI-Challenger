@@ -1,0 +1,355 @@
+From: SAI-Challenger <noreply@local>
+Subject: [PATCH] vslib: add OCS port and cross-connect support
+
+- Seed OCS port read-only attrs (OPER_STATUS=BLOCKED, empty PHYSICAL_MAPPING)
+- Validate cross-connect: A != B, ports not already in use
+- Update OPER_STATUS on XC create/remove and OVERRIDE_STATE set
+  (NORMAL+XC -> TUNED, otherwise BLOCKED)
+
+--- a/vslib/Makefile.am	2026-11-25 12:32:47.756303363 -0500
++++ b/vslib/Makefile.am	2026-11-25 12:32:47.813542426 -0500
+@@ -70,6 +70,7 @@
+ 					  SwitchStateBaseFdb.cpp \
+ 					  SwitchStateBaseHostif.cpp \
+ 					  SwitchStateBaseMACsec.cpp \
++					  SwitchStateBaseOcs.cpp \
+ 					  SwitchState.cpp \
+ 					  TrafficFilterPipes.cpp \
+ 					  TrafficForwarder.cpp \
+
+--- a/vslib/SwitchStateBase.cpp	2026-11-25 12:32:47.749116704 -0500
++++ b/vslib/SwitchStateBase.cpp	2026-11-25 12:32:47.815144341 -0500
+@@ -204,6 +204,20 @@
+         return createTamTelemetry(object_id, switch_id, attr_count, attr_list);
+     }
+ 
++    if (object_type == static_cast<sai_object_type_t>(SAI_OBJECT_TYPE_OCS_PORT))
++    {
++        sai_object_id_t object_id;
++        sai_deserialize_object_id(serializedObjectId, object_id);
++        return createOcsPort(object_id, switch_id, attr_count, attr_list);
++    }
++
++    if (object_type == static_cast<sai_object_type_t>(SAI_OBJECT_TYPE_OCS_CROSS_CONNECT))
++    {
++        sai_object_id_t object_id;
++        sai_deserialize_object_id(serializedObjectId, object_id);
++        return createOcsCrossConnect(object_id, switch_id, attr_count, attr_list);
++    }
++
+     if (object_type == SAI_OBJECT_TYPE_MACSEC)
+     {
+         bool enable_post = false;
+@@ -456,6 +470,13 @@
+         return removeMACsecSA(objectId);
+     }
+ 
++    if (object_type == static_cast<sai_object_type_t>(SAI_OBJECT_TYPE_OCS_CROSS_CONNECT))
++    {
++        sai_object_id_t objectId;
++        sai_deserialize_object_id(serializedObjectId, objectId);
++        return removeOcsCrossConnect(objectId);
++    }
++
+     return remove_internal(object_type, serializedObjectId);
+ }
+ 
+@@ -610,6 +631,13 @@
+         return setTamTelType(objectId, attr);
+     }
+ 
++    if (objectType == static_cast<sai_object_type_t>(SAI_OBJECT_TYPE_OCS_PORT))
++    {
++        sai_object_id_t objectId;
++        sai_deserialize_object_id(serializedObjectId, objectId);
++        return setOcsPort(objectId, attr);
++    }
++
+     return set_internal(objectType, serializedObjectId, attr);
+ }
+ 
+@@ -2887,6 +2915,16 @@
+                 return SAI_STATUS_SUCCESS;
+         }
+     }
++
++    if (meta->objecttype == static_cast<sai_object_type_t>(SAI_OBJECT_TYPE_OCS_PORT))
++    {
++        switch (meta->attrid)
++        {
++            case SAI_OCS_PORT_ATTR_OPER_STATUS:
++            case SAI_OCS_PORT_ATTR_PHYSICAL_MAPPING:
++                return SAI_STATUS_SUCCESS;
++        }
++    }
+ 
+     if (meta->objecttype == SAI_OBJECT_TYPE_SCHEDULER_GROUP)
+     {
+
+--- a/vslib/SwitchStateBase.h	2026-11-25 12:32:47.752831039 -0500
++++ b/vslib/SwitchStateBase.h	2026-11-25 12:32:47.814091740 -0500
+@@ -652,6 +652,31 @@
+                     _In_ uint32_t attr_count,
+                     _In_ const sai_attribute_t *attr_list);
+ 
++            sai_status_t createOcsPort(
++                    _In_ sai_object_id_t object_id,
++                    _In_ sai_object_id_t switch_id,
++                    _In_ uint32_t attr_count,
++                    _In_ const sai_attribute_t *attr_list);
++
++            sai_status_t setOcsPort(
++                    _In_ sai_object_id_t object_id,
++                    _In_ const sai_attribute_t *attr);
++
++            sai_status_t createOcsCrossConnect(
++                    _In_ sai_object_id_t object_id,
++                    _In_ sai_object_id_t switch_id,
++                    _In_ uint32_t attr_count,
++                    _In_ const sai_attribute_t *attr_list);
++
++            sai_status_t removeOcsCrossConnect(
++                    _In_ sai_object_id_t object_id);
++
++            bool isOcsPortUsedInCrossConnect(
++                    _In_ sai_object_id_t port_id);
++
++            sai_status_t updateOcsPortOperStatus(
++                    _In_ sai_object_id_t port_id);
++
+             sai_status_t removeMACsecPort(
+                     _In_ sai_object_id_t macsec_port_id);
+ 
+
+--- a/vslib/SwitchStateBaseOcs.cpp	2026-11-04 04:58:33.449996054 -0500
++++ b/vslib/SwitchStateBaseOcs.cpp	2026-11-25 12:32:47.829847056 -0500
+@@ -0,0 +1,229 @@
++#include "SwitchStateBase.h"
++
++#include "swss/logger.h"
++#include "meta/sai_serialize.h"
++
++using namespace saivs;
++
++static constexpr sai_object_type_t OCS_PORT_OT =
++    static_cast<sai_object_type_t>(SAI_OBJECT_TYPE_OCS_PORT);
++
++static constexpr sai_object_type_t OCS_XC_OT =
++    static_cast<sai_object_type_t>(SAI_OBJECT_TYPE_OCS_CROSS_CONNECT);
++
++sai_status_t SwitchStateBase::createOcsPort(
++        _In_ sai_object_id_t object_id,
++        _In_ sai_object_id_t switch_id,
++        _In_ uint32_t attr_count,
++        _In_ const sai_attribute_t *attr_list)
++{
++    SWSS_LOG_ENTER();
++
++    auto sid = sai_serialize_object_id(object_id);
++
++    CHECK_STATUS(create_internal(OCS_PORT_OT, sid, switch_id, attr_count, attr_list));
++
++    /*
++     * Read-only attributes can't be passed on create, but get() looks them up
++     * in the attribute hash (after refresh_read_only), so seed defaults here.
++     */
++    sai_attribute_t attr;
++
++    attr.id = SAI_OCS_PORT_ATTR_OPER_STATUS;
++    attr.value.s32 = SAI_OCS_PORT_STATUS_BLOCKED;
++    CHECK_STATUS(set_internal(OCS_PORT_OT, sid, &attr));
++
++    attr.id = SAI_OCS_PORT_ATTR_PHYSICAL_MAPPING;
++    attr.value.u8list.count = 0;
++    attr.value.u8list.list = nullptr;
++
++    return set_internal(OCS_PORT_OT, sid, &attr);
++}
++
++sai_status_t SwitchStateBase::setOcsPort(
++        _In_ sai_object_id_t object_id,
++        _In_ const sai_attribute_t *attr)
++{
++    SWSS_LOG_ENTER();
++
++    auto sid = sai_serialize_object_id(object_id);
++
++    CHECK_STATUS(set_internal(OCS_PORT_OT, sid, attr));
++
++    if (attr && attr->id == SAI_OCS_PORT_ATTR_OVERRIDE_STATE)
++    {
++        return updateOcsPortOperStatus(object_id);
++    }
++
++    return SAI_STATUS_SUCCESS;
++}
++
++bool SwitchStateBase::isOcsPortUsedInCrossConnect(
++        _In_ sai_object_id_t port_id)
++{
++    SWSS_LOG_ENTER();
++
++    auto *meta_a = sai_metadata_get_attr_metadata(
++            OCS_XC_OT,
++            SAI_OCS_CROSS_CONNECT_ATTR_A_SIDE_PORT_ID);
++    auto *meta_b = sai_metadata_get_attr_metadata(
++            OCS_XC_OT,
++            SAI_OCS_CROSS_CONNECT_ATTR_B_SIDE_PORT_ID);
++
++    if (meta_a == nullptr || meta_b == nullptr)
++    {
++        SWSS_LOG_ERROR("failed to get OCS cross-connect attribute metadata");
++        return false;
++    }
++
++    for (const auto &xc: m_objectHash.at(OCS_XC_OT))
++    {
++        auto ita = xc.second.find(meta_a->attridname);
++        auto itb = xc.second.find(meta_b->attridname);
++
++        if (ita != xc.second.end() &&
++                ita->second->getAttr()->value.oid == port_id)
++        {
++            return true;
++        }
++
++        if (itb != xc.second.end() &&
++                itb->second->getAttr()->value.oid == port_id)
++        {
++            return true;
++        }
++    }
++
++    return false;
++}
++
++sai_status_t SwitchStateBase::updateOcsPortOperStatus(
++        _In_ sai_object_id_t port_id)
++{
++    SWSS_LOG_ENTER();
++
++    sai_attribute_t override_attr;
++    override_attr.id = SAI_OCS_PORT_ATTR_OVERRIDE_STATE;
++
++    sai_status_t status = get(OCS_PORT_OT, port_id, 1, &override_attr);
++
++    if (status != SAI_STATUS_SUCCESS)
++    {
++        SWSS_LOG_ERROR("failed to get OVERRIDE_STATE for OCS port %s: %s",
++                sai_serialize_object_id(port_id).c_str(),
++                sai_serialize_status(status).c_str());
++
++        return status;
++    }
++
++    sai_ocs_port_status_t oper_status = SAI_OCS_PORT_STATUS_BLOCKED;
++
++    if (override_attr.value.s32 == SAI_OCS_PORT_OVERRIDE_STATE_FORCE_BLOCKED)
++    {
++        oper_status = SAI_OCS_PORT_STATUS_BLOCKED;
++    }
++    else if (isOcsPortUsedInCrossConnect(port_id))
++    {
++        /*
++         * saivs models switching as instantaneous: with a cross-connect and
++         * NORMAL override the port is TUNED. TUNING/FAILED are left for real HW.
++         */
++        oper_status = SAI_OCS_PORT_STATUS_TUNED;
++    }
++
++    sai_attribute_t oper_attr;
++    oper_attr.id = SAI_OCS_PORT_ATTR_OPER_STATUS;
++    oper_attr.value.s32 = oper_status;
++
++    return set_internal(OCS_PORT_OT, sai_serialize_object_id(port_id), &oper_attr);
++}
++
++sai_status_t SwitchStateBase::createOcsCrossConnect(
++        _In_ sai_object_id_t object_id,
++        _In_ sai_object_id_t switch_id,
++        _In_ uint32_t attr_count,
++        _In_ const sai_attribute_t *attr_list)
++{
++    SWSS_LOG_ENTER();
++
++    sai_object_id_t a_side = SAI_NULL_OBJECT_ID;
++    sai_object_id_t b_side = SAI_NULL_OBJECT_ID;
++
++    for (uint32_t i = 0; i < attr_count; i++)
++    {
++        if (attr_list[i].id == SAI_OCS_CROSS_CONNECT_ATTR_A_SIDE_PORT_ID)
++        {
++            a_side = attr_list[i].value.oid;
++        }
++        else if (attr_list[i].id == SAI_OCS_CROSS_CONNECT_ATTR_B_SIDE_PORT_ID)
++        {
++            b_side = attr_list[i].value.oid;
++        }
++    }
++
++    if (a_side == SAI_NULL_OBJECT_ID || b_side == SAI_NULL_OBJECT_ID)
++    {
++        SWSS_LOG_ERROR("OCS cross-connect missing mandatory A/B side port IDs");
++        return SAI_STATUS_MANDATORY_ATTRIBUTE_MISSING;
++    }
++
++    if (a_side == b_side)
++    {
++        SWSS_LOG_ERROR("OCS cross-connect A and B side ports must be different: %s",
++                sai_serialize_object_id(a_side).c_str());
++        return SAI_STATUS_INVALID_PARAMETER;
++    }
++
++    if (isOcsPortUsedInCrossConnect(a_side))
++    {
++        SWSS_LOG_ERROR("OCS port %s is already used in a cross-connect",
++                sai_serialize_object_id(a_side).c_str());
++        return SAI_STATUS_ITEM_ALREADY_EXISTS;
++    }
++
++    if (isOcsPortUsedInCrossConnect(b_side))
++    {
++        SWSS_LOG_ERROR("OCS port %s is already used in a cross-connect",
++                sai_serialize_object_id(b_side).c_str());
++        return SAI_STATUS_ITEM_ALREADY_EXISTS;
++    }
++
++    auto sid = sai_serialize_object_id(object_id);
++
++    CHECK_STATUS(create_internal(OCS_XC_OT, sid, switch_id, attr_count, attr_list));
++
++    CHECK_STATUS(updateOcsPortOperStatus(a_side));
++    CHECK_STATUS(updateOcsPortOperStatus(b_side));
++
++    return SAI_STATUS_SUCCESS;
++}
++
++sai_status_t SwitchStateBase::removeOcsCrossConnect(
++        _In_ sai_object_id_t object_id)
++{
++    SWSS_LOG_ENTER();
++
++    sai_attribute_t attrs[2];
++    attrs[0].id = SAI_OCS_CROSS_CONNECT_ATTR_A_SIDE_PORT_ID;
++    attrs[1].id = SAI_OCS_CROSS_CONNECT_ATTR_B_SIDE_PORT_ID;
++
++    sai_status_t status = get(OCS_XC_OT, object_id, 2, attrs);
++
++    if (status != SAI_STATUS_SUCCESS)
++    {
++        SWSS_LOG_ERROR("failed to get ports for OCS cross-connect %s: %s",
++                sai_serialize_object_id(object_id).c_str(),
++                sai_serialize_status(status).c_str());
++        return status;
++    }
++
++    sai_object_id_t a_side = attrs[0].value.oid;
++    sai_object_id_t b_side = attrs[1].value.oid;
++
++    CHECK_STATUS(remove_internal(OCS_XC_OT, sai_serialize_object_id(object_id)));
++
++    CHECK_STATUS(updateOcsPortOperStatus(a_side));
++    CHECK_STATUS(updateOcsPortOperStatus(b_side));
++
++    return SAI_STATUS_SUCCESS;
++}

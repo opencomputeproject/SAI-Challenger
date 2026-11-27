@@ -912,7 +912,7 @@ class SaiRedisClient(SaiClient):
                 if len(data) > 0:
                     data += "|"
                 data += v + "="
-            else:   
+            else:
                 data += v
         return data
 
