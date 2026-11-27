@@ -9,10 +9,15 @@ ENV SC_TARGET=saivs
 
 WORKDIR /sai
 
+COPY configs/0001-ocs-port-changes.patch /tmp/0001-ocs-port-changes.patch
+
+
 RUN git clone https://github.com/sonic-net/sonic-sairedis.git \
         && cd sonic-sairedis \
         && . /sai.env \
         && git checkout ${SAIREDIS_ID} \
+        && git apply --check /tmp/0001-ocs-port-changes.patch \
+        && git apply /tmp/0001-ocs-port-changes.patch \
         && git submodule update --init \
         && cd SAI && git fetch origin \
         && git checkout ${SAI_ID} \
